@@ -1,0 +1,7 @@
+{
+  "name": "NexSheet AI",
+  "description": "The futuristic, agentic spreadsheet of tomorrow. Open any spreadsheet file, analyze data with Gemini AI, and visualize insights instantly.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

@@ -1,0 +1,998 @@
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { Upload, FileSpreadsheet, LayoutGrid, Activity, Menu, X, Download, Undo2, Redo2, Database, Layers, User, Plus, FileText, Calendar, DollarSign, List, Zap, Users, Shield, Grid3X3, Table, CheckCircle, BarChart3, Sigma, GitBranch, PieChart, Shapes, Image, PaintBucket, Type, ListOrdered, Lock, Cloud, MousePointerClick, Code, Search, Wand2, DatabaseZap, Waypoints, Target, SplitSquareHorizontal, FileMinus, Filter, Gauge, SearchCode, LayoutList, LineChart, Cpu, Table2, Eye, Group, ToggleLeft, ScanEye, ArrowDownToLine, FileUp, Webhook, ListFilter, Binary, FileDown, Calculator, Crown, Share2, Home } from 'lucide-react';
+import Grid from './components/Grid';
+import Agent from './components/Agent';
+import Dashboard from './components/Dashboard';
+import FormattingModal from './components/FormattingModal';
+import DataToolsModal from './components/DataToolsModal';
+import PivotModal from './components/PivotModal';
+import ChartWizardModal from './components/ChartWizardModal';
+import SmartFillModal from './components/SmartFillModal';
+import GoalSeekModal from './components/GoalSeekModal';
+import WatchWindow from './components/WatchWindow';
+import FormulaBar from './components/FormulaBar';
+import CommandPalette from './components/CommandPalette';
+import ToastContainer, { ToastMessage, ToastType } from './components/Toast';
+import UpgradeModal from './components/UpgradeModal';
+import ShareModal from './components/ShareModal';
+import HomeView from './components/HomeView';
+import UserMenu from './components/UserMenu';
+import SettingsModal from './components/SettingsModal';
+import ShortcutsModal from './components/ShortcutsModal';
+import { parseExcelFile, exportToCSV, createBlankSheet, getTemplateData } from './services/excelService';
+import { generateSmartColumnData } from './services/geminiService';
+import { SheetData, DashboardItem, ChartConfig, FormattingRule, SelectionRange } from './types';
+import { evaluateCellValue, indexToExcelCol, goalSeek, parseCellReference } from './services/formulaService';
+import { saveFile, loadFile } from './services/storageService';
+
+const App: React.FC = () => {
+  const [view, setView] = useState<'home' | 'editor'>('home');
+  const [sheetData, setSheetData] = useState<SheetData | null>(null);
+  const [history, setHistory] = useState<SheetData[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState<'grid' | 'dashboard'>('grid');
+  const [dragActive, setDragActive] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [dashboardItems, setDashboardItems] = useState<DashboardItem[]>([]);
+  
+  // Selection State
+  const [selectedRange, setSelectedRange] = useState<SelectionRange | null>(null);
+
+  // Modals
+  const [isFormattingModalOpen, setIsFormattingModalOpen] = useState(false);
+  
+  // Data Tools State
+  const [dataToolsState, setDataToolsState] = useState<{ isOpen: boolean; mode: 'duplicates' | 'split' | 'find' | 'clean'; initialColumn?: string }>({
+    isOpen: false,
+    mode: 'duplicates'
+  });
+
+  const [isPivotModalOpen, setIsPivotModalOpen] = useState(false);
+  const [isChartWizardOpen, setIsChartWizardOpen] = useState(false);
+  const [isSmartFillModalOpen, setIsSmartFillModalOpen] = useState(false);
+  const [isGoalSeekModalOpen, setIsGoalSeekModalOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  
+  // Watch Window State
+  const [isWatchWindowOpen, setIsWatchWindowOpen] = useState(false);
+  
+  const [smartFillSourceColumn, setSmartFillSourceColumn] = useState('');
+
+  // Agent State triggers
+  const [agentPromptOverride, setAgentPromptOverride] = useState<string | null>(null);
+
+  // Notifications
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = useCallback((type: ToastType, title: string, message?: string) => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, type, title, message }]);
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  // --- Persistence (File Based) ---
+  // Autosave
+  useEffect(() => {
+    if (sheetData && view === 'editor') {
+      const timer = setTimeout(() => {
+        saveFile(sheetData);
+      }, 1500); // Debounce save
+      return () => clearTimeout(timer);
+    }
+  }, [sheetData, view]);
+
+  // --- History Management ---
+  const pushToHistory = useCallback((newData: SheetData) => {
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push(newData);
+      if (newHistory.length > 30) newHistory.shift();
+      return newHistory;
+    });
+    setHistoryIndex(prev => {
+      const maxIndex = historyIndex + 1;
+      return maxIndex > 29 ? 29 : maxIndex;
+    });
+    setSheetData(newData);
+  }, [historyIndex]);
+
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setSheetData(history[newIndex]);
+    }
+  }, [history, historyIndex]);
+
+  const handleRedo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setSheetData(history[newIndex]);
+    }
+  }, [history, historyIndex]);
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleRedo();
+        } else {
+          handleUndo();
+        }
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
+        e.preventDefault();
+        handleRedo();
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo]);
+
+  const handleFile = async (file: File) => {
+      try {
+        const data = await parseExcelFile(file);
+        loadData(data);
+        addToast('success', 'File Uploaded', `Successfully loaded ${file.name}`);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to parse file. Please ensure it is a valid Spreadsheet (.xlsx) or CSV file.");
+        addToast('error', 'Upload Failed', 'Invalid file format or corrupted data.');
+      }
+  };
+
+  const loadData = (data: SheetData) => {
+      setSheetData(data);
+      setHistory([data]);
+      setHistoryIndex(0);
+      setDashboardItems([]);
+      setActiveTab('grid');
+      setSelectedRange(null);
+      setView('editor'); // Switch to editor view
+      // Initial Save to ensure it's in the list
+      saveFile(data);
+  };
+
+  // --- Home View Handlers ---
+  const handleOpenFile = (id: string) => {
+      const data = loadFile(id);
+      if (data) {
+          loadData(data);
+      } else {
+          addToast('error', 'Load Failed', 'File not found.');
+      }
+  };
+
+  const handleCreateBlank = () => {
+      loadData(createBlankSheet());
+  };
+
+  const handleTemplate = (type: 'budget' | 'invoice' | 'schedule') => {
+      loadData(getTemplateData(type));
+  };
+
+  const handleGoHome = () => {
+      if (sheetData) saveFile(sheetData); // Ensure saved
+      setSheetData(null);
+      setView('home');
+  };
+
+  const handleDownload = () => {
+    if (!sheetData) return;
+    const csvContent = exportToCSV(sheetData);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    const fileName = sheetData.name.replace(/\.[^/.]+$/, "") + ".csv";
+    link.setAttribute("download", fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    addToast('success', 'Export Complete', 'File downloaded successfully.');
+  };
+
+  const addToDashboard = (config: ChartConfig) => {
+    const newItem: DashboardItem = {
+        id: Date.now().toString(),
+        chartConfig: config,
+        createdAt: new Date()
+    };
+    setDashboardItems(prev => [newItem, ...prev]);
+    setActiveTab('dashboard'); // Switch to dashboard to see new item
+    addToast('success', 'Chart Pinned', 'Added to dashboard.');
+  };
+
+  const removeFromDashboard = (id: string) => {
+      setDashboardItems(prev => prev.filter(item => item.id !== id));
+      addToast('info', 'Chart Removed');
+  };
+
+  const handleCellEdit = useCallback((rowIndex: number, colKey: string, value: string) => {
+    if (!sheetData) return;
+    const newRows = [...sheetData.rows];
+    let finalValue: string | number = value;
+    const num = parseFloat(value);
+    if (!isNaN(num) && isFinite(num) && String(num) === value.trim()) {
+        finalValue = num;
+    }
+    newRows[rowIndex] = { ...newRows[rowIndex], [colKey]: finalValue };
+    const newData = { ...sheetData, rows: newRows };
+    pushToHistory(newData);
+  }, [sheetData, pushToHistory]);
+
+  const handleAddFormattingRule = (rule: FormattingRule) => {
+      if (!sheetData) return;
+      const newRules = [...(sheetData.formattingRules || []), rule];
+      const newData = { ...sheetData, formattingRules: newRules };
+      pushToHistory(newData);
+      addToast('success', 'Rule Applied', 'Conditional formatting updated.');
+  };
+
+  // --- Data Operations ---
+
+  const handleRemoveDuplicates = (selectedColumns: string[]) => {
+    if (!sheetData || selectedColumns.length === 0) return;
+    const seen = new Set();
+    const newRows = sheetData.rows.filter(row => {
+        const signature = selectedColumns.map(col => String(row[col])).join('|||');
+        if (seen.has(signature)) return false;
+        seen.add(signature);
+        return true;
+    });
+    if (newRows.length < sheetData.rows.length) {
+        pushToHistory({ ...sheetData, rows: newRows });
+        addToast('success', 'Duplicates Removed', `Removed ${sheetData.rows.length - newRows.length} duplicate rows.`);
+    } else {
+        addToast('info', 'No Duplicates Found');
+    }
+  };
+
+  const handleTextToColumns = (column: string, delimiter: string) => {
+      if (!sheetData || !column || !delimiter) return;
+      let maxSplits = 0;
+      sheetData.rows.forEach(r => {
+          const val = String(r[column] || '');
+          const parts = val.split(delimiter);
+          if (parts.length > maxSplits) maxSplits = parts.length;
+      });
+      if (maxSplits <= 1) {
+          addToast('warning', 'No Split Occurred', 'The delimiter was not found in the selected column.');
+          return;
+      }
+      const newHeaders = [...sheetData.columns];
+      const colIndex = newHeaders.indexOf(column);
+      const addedHeaders: string[] = [];
+      for(let i=1; i<=maxSplits; i++) addedHeaders.push(`${column}_Split_${i}`);
+      newHeaders.splice(colIndex + 1, 0, ...addedHeaders);
+      const newRows = sheetData.rows.map(row => {
+          const val = String(row[column] || '');
+          const parts = val.split(delimiter);
+          const newRow = { ...row };
+          addedHeaders.forEach((h, idx) => {
+              newRow[h] = parts[idx] !== undefined ? parts[idx].trim() : '';
+          });
+          return newRow;
+      });
+      pushToHistory({ ...sheetData, columns: newHeaders, rows: newRows });
+      addToast('success', 'Text Split', `Column split into ${maxSplits} parts.`);
+  };
+
+  const handleFindReplace = (findText: string, replaceText: string, column: string, matchCase: boolean) => {
+      if (!sheetData || !findText) return;
+      let count = 0;
+      const newRows = sheetData.rows.map(row => {
+          const newRow = { ...row };
+          const colsToSearch = column === 'All Columns' ? sheetData.columns : [column];
+          colsToSearch.forEach(col => {
+              const val = newRow[col];
+              if (val === null || val === undefined) return;
+              const strVal = String(val);
+              let newVal = strVal;
+              if (matchCase) {
+                  newVal = strVal.split(findText).join(replaceText);
+              } else {
+                  const regex = new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+                  newVal = strVal.replace(regex, replaceText);
+              }
+              if (newVal !== strVal) {
+                  count++;
+                  const num = parseFloat(newVal);
+                  if (!isNaN(num) && isFinite(num) && String(num) === newVal.trim()) {
+                      newRow[col] = num;
+                  } else {
+                      newRow[col] = newVal;
+                  }
+              }
+          });
+          return newRow;
+      });
+      
+      if (count > 0) {
+          pushToHistory({ ...sheetData, rows: newRows });
+          addToast('success', 'Replacements Made', `Replaced ${count} occurrences.`);
+      } else {
+          addToast('info', 'No Matches Found');
+      }
+  };
+
+  const handleMagicClean = async (column: string, instruction: string) => {
+      if (!sheetData) return;
+      setIsSidebarOpen(true);
+      const prompt = `Please clean and standardize the column '${column}'. Instruction: ${instruction}. Replace the values in place.`;
+      setAgentPromptOverride(prompt);
+      addToast('info', 'AI Assistant Activated', 'Follow instructions in the sidebar.');
+  };
+
+  const handleCreatePivot = (groupCol: string, valueCol: string, operation: 'sum' | 'avg' | 'count' | 'min' | 'max') => {
+      if (!sheetData) return;
+      const groups: Record<string, number[]> = {};
+      sheetData.rows.forEach(row => {
+          const key = String(row[groupCol] || '(Blank)');
+          const val = Number(row[valueCol]);
+          if (!groups[key]) groups[key] = [];
+          if (!isNaN(val)) groups[key].push(val);
+      });
+      const newRows = Object.keys(groups).map(key => {
+          const values = groups[key];
+          let result = 0;
+          switch(operation) {
+              case 'sum': result = values.reduce((a, b) => a + b, 0); break;
+              case 'avg': result = values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0; break;
+              case 'count': result = values.length; break;
+              case 'min': result = values.length ? Math.min(...values) : 0; break;
+              case 'max': result = values.length ? Math.max(...values) : 0; break;
+          }
+          if (operation !== 'count') result = Math.round(result * 100) / 100;
+          return {
+              [groupCol]: key,
+              [`${operation}_${valueCol}`]: result
+          };
+      });
+      const newSheetData: SheetData = {
+          name: `Pivot_${sheetData.name}`,
+          columns: [groupCol, `${operation}_${valueCol}`],
+          rows: newRows,
+          formattingRules: []
+      };
+      pushToHistory(newSheetData);
+      addToast('success', 'Pivot Table Created');
+  };
+
+  // --- Column & Row Management ---
+
+  const handleDeleteColumn = (colKey: string) => {
+      if (!sheetData) return;
+      const newColumns = sheetData.columns.filter(c => c !== colKey);
+      const newRows = sheetData.rows.map(row => {
+          const newRow = { ...row };
+          delete newRow[colKey];
+          return newRow;
+      });
+      pushToHistory({ ...sheetData, columns: newColumns, rows: newRows });
+  };
+
+  const handleRenameColumn = (oldKey: string, newKey: string) => {
+      if (!sheetData || !newKey.trim()) return;
+      const newColumns = sheetData.columns.map(c => c === oldKey ? newKey : c);
+      const newRows = sheetData.rows.map(row => {
+          const newRow: any = {};
+          Object.keys(row).forEach(k => {
+              if (k === oldKey) newRow[newKey] = row[k];
+              else newRow[k] = row[k];
+          });
+          return newRow;
+      });
+      pushToHistory({ ...sheetData, columns: newColumns, rows: newRows });
+  };
+  
+  const handleInsertRow = (index: number) => {
+      if (!sheetData) return;
+      const newRow: any = {};
+      sheetData.columns.forEach(c => newRow[c] = '');
+      const newRows = [...sheetData.rows];
+      newRows.splice(index, 0, newRow);
+      pushToHistory({ ...sheetData, rows: newRows });
+  };
+
+  const handleDeleteRow = (index: number) => {
+      if (!sheetData) return;
+      const newRows = [...sheetData.rows];
+      newRows.splice(index, 1);
+      pushToHistory({ ...sheetData, rows: newRows });
+  };
+  
+  const handleInsertColumn = (index: number) => {
+      if (!sheetData) return;
+      // Generate a new column name like "Column X"
+      let newColName = "New Column";
+      let counter = 1;
+      while (sheetData.columns.includes(newColName)) {
+          newColName = `New Column ${counter++}`;
+      }
+      
+      const newColumns = [...sheetData.columns];
+      newColumns.splice(index + 1, 0, newColName);
+      
+      const newRows = sheetData.rows.map(row => ({
+          ...row,
+          [newColName]: ''
+      }));
+      
+      pushToHistory({ ...sheetData, columns: newColumns, rows: newRows });
+  };
+
+  const handleClearRange = (range: SelectionRange) => {
+      if (!sheetData) return;
+      const { start, end } = range;
+      const minRow = Math.min(start.rowIndex, end.rowIndex);
+      const maxRow = Math.max(start.rowIndex, end.rowIndex);
+      const minCol = Math.min(start.colIndex, end.colIndex);
+      const maxCol = Math.max(start.colIndex, end.colIndex);
+      
+      const newRows = [...sheetData.rows];
+      for (let r = minRow; r <= maxRow; r++) {
+          const rowCopy = { ...newRows[r] };
+          for (let c = minCol; c <= maxCol; c++) {
+              rowCopy[sheetData.columns[c]] = '';
+          }
+          newRows[r] = rowCopy;
+      }
+      pushToHistory({ ...sheetData, rows: newRows });
+  };
+
+  const handleSmartFill = async (targetColumn: string, prompt: string) => {
+      if (!sheetData) return;
+      const newValues = await generateSmartColumnData(sheetData, targetColumn, prompt);
+      const newColumns = [...sheetData.columns];
+      if (!newColumns.includes(targetColumn)) {
+          newColumns.push(targetColumn);
+      }
+      const newRows = sheetData.rows.map((row, index) => {
+          return {
+              ...row,
+              [targetColumn]: newValues[index] !== undefined ? newValues[index] : (row[targetColumn] || "")
+          };
+      });
+      pushToHistory({ ...sheetData, columns: newColumns, rows: newRows });
+      addToast('success', 'Smart Fill Complete', 'New column generated.');
+  };
+
+  const handleSmartFillTrigger = (colKey: string) => {
+      setSmartFillSourceColumn(colKey);
+      setIsSmartFillModalOpen(true);
+  };
+  
+  const handleAddComment = (rowIndex: number, colIndex: number, text: string) => {
+      if (!sheetData) return;
+      const key = `${rowIndex}-${colIndex}`;
+      const newComments = { ...(sheetData.comments || {}), [key]: text };
+      pushToHistory({ ...sheetData, comments: newComments });
+      addToast('success', 'Comment Added');
+  };
+  
+  const handleClearFilter = () => {
+      if (!sheetData) return;
+      const { filter, ...rest } = sheetData;
+      pushToHistory({ ...rest });
+      addToast('info', 'Filter Cleared');
+  };
+  
+  const handleGoalSeek = async (targetRef: string, targetValue: number, changingRef: string) => {
+      if (!sheetData) return { success: false, newValue: 0, error: "No data loaded" };
+      
+      const result = goalSeek(targetRef, targetValue, changingRef, sheetData);
+      
+      if (result.success) {
+          // Update the changing cell with the new value
+          const changing = parseCellReference(changingRef);
+          if (changing) {
+              const newRows = [...sheetData.rows];
+              const colKey = sheetData.columns[changing.colIndex];
+              newRows[changing.rowIndex] = { ...newRows[changing.rowIndex], [colKey]: result.newValue };
+              pushToHistory({ ...sheetData, rows: newRows });
+          }
+      }
+      
+      return result;
+  };
+  
+  // Watch Window Handlers
+  const handleAddWatch = (cellRef: string) => {
+      if (!sheetData) return;
+      const currentWatches = sheetData.watchedCells || [];
+      if (!currentWatches.includes(cellRef)) {
+          pushToHistory({ ...sheetData, watchedCells: [...currentWatches, cellRef] });
+          setIsWatchWindowOpen(true);
+          addToast('success', 'Added to Watch Window', cellRef);
+      } else {
+          setIsWatchWindowOpen(true);
+      }
+  };
+
+  const handleRemoveWatch = (cellRef: string) => {
+      if (!sheetData || !sheetData.watchedCells) return;
+      const newWatches = sheetData.watchedCells.filter(w => w !== cellRef);
+      pushToHistory({ ...sheetData, watchedCells: newWatches });
+  };
+
+  // --- Statistics Calculation ---
+  const rangeStats = useMemo(() => {
+    if (!sheetData || !selectedRange) return null;
+    
+    const { start, end } = selectedRange;
+    const minRow = Math.min(start.rowIndex, end.rowIndex);
+    const maxRow = Math.max(start.rowIndex, end.rowIndex);
+    const minCol = Math.min(start.colIndex, end.colIndex);
+    const maxCol = Math.max(start.colIndex, end.colIndex);
+
+    let sum = 0;
+    let count = 0;
+    let min = Infinity;
+    let max = -Infinity;
+    let numericCount = 0;
+
+    for (let r = minRow; r <= maxRow; r++) {
+        for (let c = minCol; c <= maxCol; c++) {
+            const colKey = sheetData.columns[c];
+            // Evaluate formula first
+            const raw = sheetData.rows[r][colKey];
+            const val = evaluateCellValue(raw, sheetData.rows, sheetData.columns);
+            
+            if (val !== null && val !== '') {
+                count++;
+                const num = Number(val);
+                if (!isNaN(num)) {
+                    sum += num;
+                    if (num < min) min = num;
+                    if (num > max) max = num;
+                    numericCount++;
+                }
+            }
+        }
+    }
+
+    if (numericCount === 0) return { count };
+    
+    return {
+        sum: Math.round(sum * 100) / 100,
+        avg: Math.round((sum / numericCount) * 100) / 100,
+        min: min === Infinity ? '-' : min,
+        max: max === -Infinity ? '-' : max,
+        count
+    };
+  }, [sheetData, selectedRange]);
+
+  const handleAnalyzeRange = (range: SelectionRange) => {
+     if(!sheetData) return;
+     // Construct prompt context
+     setIsSidebarOpen(true);
+     const context = `I have selected a range of cells from ${indexToExcelCol(range.start.colIndex)}${range.start.rowIndex+1} to ${indexToExcelCol(range.end.colIndex)}${range.end.rowIndex+1}. Analyze this specific data.`;
+     setAgentPromptOverride(context);
+  };
+
+  const handleOpenDataTool = (mode: 'duplicates' | 'split' | 'find' | 'clean', colKey?: string) => {
+      setDataToolsState({ isOpen: true, mode, initialColumn: colKey });
+  };
+
+  const handleColumnResize = (colKey: string, width: number) => {
+      if (!sheetData) return;
+      const newWidths = { ...(sheetData.columnWidths || {}), [colKey]: width };
+      // Note: We don't necessarily need to push to undo history for resize events to avoid clutter
+      // But we must update the state. For now let's treat it as a state update.
+      // To avoid massive history stack, we could update state directly but not push to history stack
+      // However, simplified approach:
+      setSheetData({ ...sheetData, columnWidths: newWidths });
+  };
+
+  // Command Palette Actions
+  const commandActions = [
+      { id: 'smart-fill', label: 'Smart Fill / AI Generate', icon: Wand2, action: () => setIsSmartFillModalOpen(true) },
+      { id: 'goal-seek', label: 'Goal Seek (What-If)', icon: Target, action: () => setIsGoalSeekModalOpen(true) },
+      { id: 'watch-window', label: 'Toggle Watch Window', icon: Eye, action: () => setIsWatchWindowOpen(prev => !prev) },
+      { id: 'pivot', label: 'Create Pivot Table', icon: Table, action: () => setIsPivotModalOpen(true) },
+      { id: 'chart', label: 'Create Chart', icon: BarChart3, action: () => setIsChartWizardOpen(true) },
+      { id: 'format', label: 'Conditional Formatting', icon: PaintBucket, action: () => setIsFormattingModalOpen(true) },
+      { id: 'tools', label: 'Data Tools (Dedup, Split)', icon: DatabaseZap, action: () => setDataToolsState({ isOpen: true, mode: 'duplicates' }) },
+      { id: 'export', label: 'Export to CSV', icon: FileDown, action: handleDownload },
+      { id: 'dashboard', label: 'Go to Dashboard', icon: LayoutGrid, action: () => setActiveTab('dashboard') },
+      { id: 'grid', label: 'Go to Data Grid', icon: FileSpreadsheet, action: () => setActiveTab('grid') },
+      { id: 'agent', label: 'Toggle AI Agent', icon: Zap, action: () => setIsSidebarOpen(prev => !prev) },
+      { id: 'upgrade', label: 'Upgrade to Pro', icon: Crown, action: () => setIsUpgradeModalOpen(true) },
+      { id: 'share', label: 'Share Spreadsheet', icon: Share2, action: () => setIsShareModalOpen(true) },
+      { id: 'settings', label: 'Open Settings', icon: User, action: () => setIsSettingsOpen(true) },
+      { id: 'shortcuts', label: 'Keyboard Shortcuts', icon: Code, action: () => setIsShortcutsOpen(true) },
+      { id: 'home', label: 'Back to Home', icon: Home, action: handleGoHome },
+  ];
+  
+  // Helper to get selected cell address
+  const getSelectedCellAddress = () => {
+      if (selectedRange) {
+          return `${indexToExcelCol(selectedRange.start.colIndex)}${selectedRange.start.rowIndex + 1}`;
+      }
+      return '';
+  };
+
+  return (
+    <div className="saas-layout">
+        <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+        <UpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} />
+        <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} fileName={sheetData?.name || 'Untitled'} onNotify={addToast} />
+        <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+        <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
+        
+        <div className="saas-main">
+            {/* Header */}
+            <header className="saas-header">
+                <div className="flex items-center gap-6">
+                    <div className="brand-logo cursor-pointer" onClick={handleGoHome}>
+                        <div className="icon-box">
+                            <Activity className="w-5 h-5" />
+                        </div>
+                        <span className="text-white">NexSheet</span>
+                    </div>
+                    
+                    {/* Navigation Pills */}
+                    {sheetData && view === 'editor' && (
+                        <div className="hidden md:flex bg-slate-800/50 rounded-lg p-1 border border-slate-700/50 animate-in fade-in zoom-in">
+                             <button 
+                                onClick={() => setActiveTab('grid')}
+                                className={`tab-pill ${activeTab === 'grid' ? 'active' : ''}`}
+                            >
+                                <FileSpreadsheet className="w-4 h-4" />
+                                Data
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('dashboard')}
+                                className={`tab-pill ${activeTab === 'dashboard' ? 'active' : ''}`}
+                            >
+                                <LayoutGrid className="w-4 h-4" />
+                                Dashboard
+                                {dashboardItems.length > 0 && (
+                                    <span className="ml-1 px-1.5 py-0.5 rounded-full bg-nexus-accent/20 text-nexus-accent text-[10px] border border-nexus-accent/30">
+                                        {dashboardItems.length}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-4">
+                    {/* Search/Command Trigger */}
+                    <button 
+                        onClick={() => setIsCommandPaletteOpen(true)}
+                        className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 border border-slate-700/50 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-700/50 transition-colors"
+                    >
+                        <Search className="w-3.5 h-3.5" />
+                        <span>Search commands...</span>
+                        <span className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px]">⌘K</span>
+                    </button>
+
+                    {/* Tools (Only in Editor) */}
+                    {view === 'editor' && (
+                        <div className="toolbar-group animate-in fade-in slide-in-from-top-1">
+                             <button onClick={handleUndo} disabled={!sheetData || historyIndex <= 0} className="btn-icon" title="Undo">
+                                <Undo2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={handleRedo} disabled={!sheetData || historyIndex >= history.length - 1} className="btn-icon" title="Redo">
+                                <Redo2 className="w-4 h-4" />
+                            </button>
+                            <div className="w-px h-4 bg-slate-700 mx-1"></div>
+                            <button 
+                                onClick={() => setIsFormattingModalOpen(true)} 
+                                disabled={!sheetData} 
+                                className="btn-icon" 
+                                title="Conditional Formatting"
+                            >
+                                <PaintBucket className="w-4 h-4" />
+                            </button>
+                             <button 
+                                onClick={() => setDataToolsState({ isOpen: true, mode: 'duplicates' })} 
+                                disabled={!sheetData} 
+                                className="btn-icon" 
+                                title="Data Tools"
+                            >
+                                <DatabaseZap className="w-4 h-4" />
+                            </button>
+                             <button 
+                                onClick={() => setIsGoalSeekModalOpen(true)} 
+                                disabled={!sheetData} 
+                                className="btn-icon" 
+                                title="Goal Seek"
+                            >
+                                <Target className="w-4 h-4" />
+                            </button>
+                            <button 
+                                onClick={() => setIsWatchWindowOpen(!isWatchWindowOpen)} 
+                                disabled={!sheetData} 
+                                className={`btn-icon ${isWatchWindowOpen ? 'active' : ''}`}
+                                title="Watch Window"
+                            >
+                                <Eye className="w-4 h-4" />
+                            </button>
+                            <button 
+                                onClick={() => setIsSmartFillModalOpen(true)} 
+                                disabled={!sheetData} 
+                                className="btn-icon text-indigo-400 hover:text-indigo-300" 
+                                title="AI Smart Fill"
+                            >
+                                <Wand2 className="w-4 h-4" />
+                            </button>
+                            <button 
+                                onClick={() => setIsPivotModalOpen(true)} 
+                                disabled={!sheetData} 
+                                className="btn-icon" 
+                                title="Pivot Table"
+                            >
+                                <Table className="w-4 h-4" />
+                            </button>
+                            <button 
+                                onClick={() => setIsChartWizardOpen(true)} 
+                                disabled={!sheetData} 
+                                className="btn-icon" 
+                                title="Create Chart"
+                            >
+                                <BarChart3 className="w-4 h-4" />
+                            </button>
+                            <button 
+                                onClick={() => setIsShareModalOpen(true)} 
+                                disabled={!sheetData} 
+                                className="btn-icon text-blue-400 hover:text-blue-300" 
+                                title="Share"
+                            >
+                                <Share2 className="w-4 h-4" />
+                            </button>
+                            <div className="w-px h-4 bg-slate-700 mx-1"></div>
+                             <button onClick={handleDownload} disabled={!sheetData} className="btn-icon" title="Export">
+                                <Download className="w-4 h-4" />
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="h-6 w-px bg-slate-700/50"></div>
+                    
+                    {view === 'editor' && (
+                        <button 
+                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                            className={`btn-icon ${isSidebarOpen ? 'active' : ''}`}
+                            title="Toggle Agent"
+                        >
+                            {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                        </button>
+                    )}
+                    
+                    <button onClick={() => setIsUpgradeModalOpen(true)} className="flex items-center justify-center p-1.5 rounded-full bg-gradient-to-r from-amber-200 to-yellow-400 text-slate-900 shadow-lg shadow-amber-500/20 hover:scale-105 transition-transform" title="Upgrade to Pro">
+                        <Crown className="w-4 h-4" />
+                    </button>
+
+                    <div className="relative">
+                        <button 
+                            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                            className="w-8 h-8 rounded-full bg-gradient-to-tr from-nexus-accent to-purple-600 flex items-center justify-center border border-white/10 text-white shadow-inner hover:ring-2 hover:ring-white/20 transition-all font-bold text-xs"
+                        >
+                            JD
+                        </button>
+                        <UserMenu 
+                            isOpen={isUserMenuOpen} 
+                            onClose={() => setIsUserMenuOpen(false)} 
+                            onOpenSettings={() => setIsSettingsOpen(true)}
+                            onOpenShortcuts={() => setIsShortcutsOpen(true)}
+                            onOpenUpgrade={() => setIsUpgradeModalOpen(true)}
+                            onLogout={() => { handleGoHome(); addToast('info', 'Signed Out'); }}
+                        />
+                    </div>
+                </div>
+            </header>
+
+            {/* Formula Bar (Only in Editor) */}
+            {view === 'editor' && sheetData && activeTab === 'grid' && (
+                <>
+                    <FormulaBar 
+                        selectedCell={selectedRange?.start || null}
+                        value={selectedRange ? sheetData.rows[selectedRange.start.rowIndex][sheetData.columns[selectedRange.start.colIndex]] : null}
+                        columns={sheetData.columns}
+                        onChange={(val) => {
+                            if (selectedRange) handleCellEdit(selectedRange.start.rowIndex, sheetData.columns[selectedRange.start.colIndex], val);
+                        }}
+                    />
+                    
+                    {/* Active Filter Bar */}
+                    {sheetData.filter && (
+                        <div className="h-8 bg-cyan-900/30 border-b border-cyan-800/50 flex items-center px-4 justify-between animate-in fade-in slide-in-from-top-1">
+                            <div className="flex items-center gap-2 text-cyan-200 text-xs">
+                                <Filter className="w-3.5 h-3.5" />
+                                <span className="font-semibold">Active Filter:</span>
+                                <span className="italic opacity-80">{sheetData.filter.description}</span>
+                            </div>
+                            <button 
+                                onClick={handleClearFilter}
+                                className="text-cyan-300 hover:text-white p-1 hover:bg-cyan-800/50 rounded flex items-center gap-1 text-[10px]"
+                            >
+                                <X className="w-3 h-3" /> Clear
+                            </button>
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* Main Content Area */}
+            <main className="saas-workspace">
+                {view === 'home' ? (
+                    <HomeView 
+                        onOpenFile={handleOpenFile} 
+                        onNewFile={handleCreateBlank} 
+                        onUpload={handleFile}
+                        onTemplate={handleTemplate}
+                    />
+                ) : (
+                    <>
+                        <div className="flex-1 overflow-hidden p-6 relative z-0">
+                            {activeTab === 'grid' && sheetData ? (
+                                <div className="h-full w-full data-grid-container">
+                                    <Grid 
+                                        data={sheetData} 
+                                        selectedRange={selectedRange}
+                                        onRangeSelect={setSelectedRange}
+                                        onCellEdit={handleCellEdit}
+                                        onDeleteColumn={handleDeleteColumn}
+                                        onRenameColumn={handleRenameColumn}
+                                        onSmartFillTrigger={handleSmartFillTrigger}
+                                        onAnalyzeRange={handleAnalyzeRange}
+                                        onInsertRow={handleInsertRow}
+                                        onDeleteRow={handleDeleteRow}
+                                        onInsertColumn={handleInsertColumn}
+                                        onClearRange={handleClearRange}
+                                        onAddComment={handleAddComment}
+                                        onAddWatch={handleAddWatch}
+                                        onNotify={addToast}
+                                        onOpenDataTool={handleOpenDataTool}
+                                        onColumnResize={handleColumnResize}
+                                    />
+                                </div>
+                            ) : sheetData ? (
+                                <Dashboard items={dashboardItems} sheetData={sheetData} onRemoveItem={removeFromDashboard} />
+                            ) : null}
+                        </div>
+                        
+                        {/* Watch Window */}
+                        {sheetData && (
+                            <WatchWindow 
+                                isOpen={isWatchWindowOpen}
+                                onClose={() => setIsWatchWindowOpen(false)}
+                                data={sheetData}
+                                onRemoveWatch={handleRemoveWatch}
+                                onAddWatch={handleAddWatch}
+                            />
+                        )}
+
+                        {/* Status Bar */}
+                        <div className="status-bar flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="status-item">
+                                    <Database className="w-3.5 h-3.5" />
+                                    <span className="text-slate-300 font-medium">{sheetData?.name || 'Untitled'}</span>
+                                </div>
+                                <div className="separator" />
+                                <div className="status-item">
+                                    <Layers className="w-3.5 h-3.5" />
+                                    <span>{sheetData?.rows.length.toLocaleString()} Rows</span>
+                                </div>
+                            </div>
+
+                            {rangeStats && (
+                                    <div className="flex items-center gap-4 animate-in fade-in slide-in-from-bottom-1">
+                                        <div className="flex items-center gap-1.5 text-nexus-accent bg-nexus-accent/5 px-2 py-0.5 rounded">
+                                            <span className="font-bold text-[10px] uppercase">Sum</span>
+                                            <span className="font-mono">{rangeStats.sum}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-purple-400 bg-purple-500/5 px-2 py-0.5 rounded">
+                                            <span className="font-bold text-[10px] uppercase">Avg</span>
+                                            <span className="font-mono">{rangeStats.avg}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-slate-400">
+                                            <span className="font-bold text-[10px] uppercase">Count</span>
+                                            <span className="font-mono">{rangeStats.count}</span>
+                                        </div>
+                                    </div>
+                            )}
+
+                            <div className="status-item">
+                                <span className={historyIndex > 0 ? "text-amber-400" : "text-green-400"}>
+                                    {historyIndex > 0 ? "● Saving..." : "● Saved"}
+                                </span>
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {/* Right Panel: Agent (Only in Editor) */}
+                {view === 'editor' && (
+                    <aside className={`saas-sidebar-panel ${!isSidebarOpen ? 'hidden-panel' : ''}`}>
+                        <Agent 
+                            sheetData={sheetData} 
+                            onAddToDashboard={addToDashboard} 
+                            onUpdateData={pushToHistory} 
+                            promptOverride={agentPromptOverride}
+                            onClearPromptOverride={() => setAgentPromptOverride(null)}
+                        />
+                    </aside>
+                )}
+
+                {/* Modals */}
+                <FormattingModal 
+                    isOpen={isFormattingModalOpen}
+                    onClose={() => setIsFormattingModalOpen(false)}
+                    columns={sheetData?.columns || []}
+                    onSave={handleAddFormattingRule}
+                />
+                
+                <DataToolsModal
+                    isOpen={dataToolsState.isOpen}
+                    onClose={() => setDataToolsState(prev => ({ ...prev, isOpen: false }))}
+                    columns={sheetData?.columns || []}
+                    onRemoveDuplicates={handleRemoveDuplicates}
+                    onTextToColumns={handleTextToColumns}
+                    onFindReplace={handleFindReplace}
+                    onMagicClean={handleMagicClean}
+                    initialMode={dataToolsState.mode}
+                    initialColumn={dataToolsState.initialColumn}
+                />
+
+                <GoalSeekModal 
+                    isOpen={isGoalSeekModalOpen}
+                    onClose={() => setIsGoalSeekModalOpen(false)}
+                    initialTargetCell={getSelectedCellAddress()}
+                    onSolve={handleGoalSeek}
+                />
+
+                <PivotModal
+                    isOpen={isPivotModalOpen}
+                    onClose={() => setIsPivotModalOpen(false)}
+                    columns={sheetData?.columns || []}
+                    onCreatePivot={handleCreatePivot}
+                />
+
+                <ChartWizardModal
+                    isOpen={isChartWizardOpen}
+                    onClose={() => setIsChartWizardOpen(false)}
+                    columns={sheetData?.columns || []}
+                    onAddChart={addToDashboard}
+                />
+
+                <SmartFillModal
+                    isOpen={isSmartFillModalOpen}
+                    onClose={() => setIsSmartFillModalOpen(false)}
+                    initialColumnName=""
+                    onApply={handleSmartFill}
+                />
+
+                <CommandPalette 
+                    isOpen={isCommandPaletteOpen}
+                    onClose={() => setIsCommandPaletteOpen(false)}
+                    actions={commandActions}
+                />
+            </main>
+        </div>
+    </div>
+  );
+};
+
+export default App;
