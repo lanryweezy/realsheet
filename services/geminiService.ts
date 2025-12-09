@@ -1,11 +1,18 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { SheetData, ChartConfig, AnalysisResult } from "../types";
 
-// Initialize Gemini
-// Note: process.env.API_KEY is injected by the environment.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 const MODEL_NAME = "gemini-2.5-flash";
+
+// Helper to initialize Gemini safely
+const getAiClient = () => {
+  const apiKey = process.env.API_KEY;
+  // Prevent crash if key is missing during initial load/render
+  if (!apiKey) {
+    console.warn("Gemini API Key is missing. AI features will be disabled.");
+    return null;
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 /**
  * Sends a portion of the spreadsheet data to Gemini for analysis or chat.
@@ -17,6 +24,15 @@ export const analyzeDataWithGemini = async (
 ): Promise<AnalysisResult> => {
   if (!sheetData) {
     throw new Error("No data available to analyze.");
+  }
+
+  const ai = getAiClient();
+  if (!ai) {
+    return {
+      textResponse: "⚠️ API Key is missing. Please configure the `API_KEY` environment variable to use the AI Agent.",
+      chartConfig: undefined,
+      transformationCode: undefined
+    };
   }
 
   // Optimize context: Send headers and top 50 rows to save tokens/bandwidth
@@ -163,6 +179,12 @@ export const generateSmartColumnData = async (
     targetColumn: string,
     prompt: string
 ): Promise<string[]> => {
+    const ai = getAiClient();
+    if (!ai) {
+        console.error("API Key missing for Smart Fill");
+        return [];
+    }
+
     // We can only process a limited amount of rows reliably in one go for this demo.
     // Let's cap at 50 for speed and consistency.
     const rowsToProcess = sheetData.rows.slice(0, 50);
@@ -212,6 +234,9 @@ export const generateFormulaFromDescription = async (
     description: string,
     columns: string[]
 ): Promise<string> => {
+    const ai = getAiClient();
+    if (!ai) return "";
+
     const context = `
         You are an expert spreadsheet formula generator.
         Columns available: ${columns.join(", ")}
