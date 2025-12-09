@@ -1,5 +1,9 @@
-import * as XLSX from 'xlsx';
+import * as XLSX_PKG from 'xlsx';
 import { SheetData, Row } from '../types';
+
+// Handle different import structures (Default vs Named) for CDN compatibility
+// @ts-ignore
+const XLSX = XLSX_PKG.default || XLSX_PKG;
 
 export const parseExcelFile = async (file: File): Promise<SheetData> => {
   return new Promise((resolve, reject) => {
@@ -8,6 +12,11 @@ export const parseExcelFile = async (file: File): Promise<SheetData> => {
     reader.onload = (e) => {
       try {
         const data = e.target?.result;
+        // Ensure XLSX.read exists
+        if (!XLSX.read) {
+            throw new Error("XLSX library not loaded correctly. Please refresh.");
+        }
+        
         const workbook = XLSX.read(data, { type: 'binary' });
 
         // Get the first sheet name
