@@ -1,9 +1,12 @@
-import * as XLSX_PKG from 'xlsx';
 import { SheetData, Row } from '../types';
 
-// Handle different import structures (Default vs Named) for CDN compatibility
-// @ts-ignore
-const XLSX = XLSX_PKG.default || XLSX_PKG;
+// Access global XLSX loaded via script tag
+const getXLSX = () => {
+    // @ts-ignore
+    const X = window.XLSX;
+    if (!X) throw new Error("XLSX library not loaded. Please refresh the page.");
+    return X;
+};
 
 export const parseExcelFile = async (file: File): Promise<SheetData> => {
   return new Promise((resolve, reject) => {
@@ -11,11 +14,8 @@ export const parseExcelFile = async (file: File): Promise<SheetData> => {
 
     reader.onload = (e) => {
       try {
+        const XLSX = getXLSX();
         const data = e.target?.result;
-        // Ensure XLSX.read exists
-        if (!XLSX.read) {
-            throw new Error("XLSX library not loaded correctly. Please refresh.");
-        }
         
         const workbook = XLSX.read(data, { type: 'binary' });
 
@@ -34,7 +34,7 @@ export const parseExcelFile = async (file: File): Promise<SheetData> => {
         const headers = jsonData[0] as string[];
         const rawRows = jsonData.slice(1) as any[];
 
-        const rows: Row[] = rawRows.map((rowArray) => {
+        const rows: Row[] = rawRows.map((rowArray: any) => {
           const rowObject: Row = {};
           headers.forEach((header, index) => {
             // Basic sanitization

@@ -6,46 +6,53 @@
     <title>NexSheet AI - SaaS Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./index.css" />
+    
+    <!-- Load XLSX globally to avoid ESM import issues -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <script>
-      // CRITICAL: Polyfill process for libraries that expect it (avoids "process is not defined" crash)
-      window.process = {
-        env: {
-          NODE_ENV: 'production'
-        }
-      };
+      // CRITICAL POLYFILLS
+      window.process = { env: { NODE_ENV: 'production' } };
+      window.global = window; 
+      window.Buffer = window.Buffer || { isBuffer: () => false };
       
-      // Global error handler to verify if app crashes before React mounts
-      window.addEventListener('error', function(event) {
-        console.error("Global Error:", event.error);
-        // Only show UI if root is empty (React failed to mount)
+      // Global error handler
+      window.onerror = function(message, source, lineno, colno, error) {
+        console.error("Global Error:", error);
+        showErrorUI(message);
+      };
+
+      window.onunhandledrejection = function(event) {
+        console.error("Unhandled Rejection:", event.reason);
+        showErrorUI(event.reason);
+      };
+
+      function showErrorUI(msg) {
         const root = document.getElementById('root');
         if (root && !root.hasChildNodes()) {
            document.body.style.backgroundColor = '#0f172a';
-           document.body.style.color = '#f8fafc';
-           document.body.style.display = 'flex';
-           document.body.style.alignItems = 'center';
-           document.body.style.justifyContent = 'center';
-           document.body.style.height = '100vh';
            document.body.innerHTML = `
-             <div style="padding: 2rem; max-width: 600px; text-align: center; border: 1px solid #334155; border-radius: 12px; background: #1e293b;">
-               <h2 style="color: #f87171; margin-bottom: 1rem; font-family: sans-serif;">Application Startup Error</h2>
-               <p style="color: #94a3b8; margin-bottom: 1rem; font-family: monospace; background: #0f172a; padding: 10px; border-radius: 6px; text-align: left;">${event.message}</p>
-               <button onclick="window.location.reload()" style="background: #06b6d4; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">Reload Page</button>
+             <div style="padding: 2rem; color: #f87171; font-family: sans-serif; text-align: center; max-width: 600px; margin: 0 auto;">
+               <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">Application Startup Error</h2>
+               <p style="color: #94a3b8; font-family: monospace; background: #1e293b; padding: 1rem; border-radius: 8px; text-align: left; overflow: auto;">${msg}</p>
+               <button onclick="window.location.reload()" style="margin-top: 1rem; background: #06b6d4; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600;">Reload Page</button>
              </div>
            `;
         }
-      });
+      }
     </script>
   <script type="importmap">
 {
   "imports": {
-    "react/": "https://aistudiocdn.com/react@^19.2.1/",
     "react": "https://aistudiocdn.com/react@^19.2.1",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.1",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+    "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.1/client",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.31.0",
     "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
-    "xlsx": "https://aistudiocdn.com/xlsx@^0.18.5"
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0"
   }
 }
 </script>

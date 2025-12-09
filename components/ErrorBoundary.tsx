@@ -2,7 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 
 interface Props {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 interface State {
@@ -10,6 +10,7 @@ interface State {
   error: Error | null;
 }
 
+// Explicitly use React.Component to ensure correct inheritance in all environments
 class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
@@ -34,7 +35,7 @@ class ErrorBoundary extends Component<Props, State> {
             </div>
             <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
             <p className="text-slate-400 mb-6">
-              The application encountered an unexpected error. This might be due to a configuration issue or a temporary glitch.
+              The application encountered an unexpected error.
             </p>
             <div className="bg-slate-950 rounded-lg p-4 mb-6 text-left border border-slate-800 overflow-auto max-h-32">
                 <code className="text-xs font-mono text-red-400">
