@@ -2,9 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
-// NOTE: CSS is imported via <link> in index.html to support native ESM environments.
-// import './index.css'; 
-
 console.log("Mounting React App...");
 
 const rootElement = document.getElementById('root');
@@ -22,5 +19,6 @@ try {
   console.log("React App Mounted.");
 } catch (err) {
   console.error("React Mount Error:", err);
-  throw err; // Re-throw to trigger global handler
+  // @ts-ignore
+  if (window.showErrorUI) window.showErrorUI(err.toString());
 }
