@@ -1,5 +1,5 @@
 import React, { useState, useEffect, memo, useMemo, useRef, useCallback } from 'react';
-import { SheetData, CellValue, SelectionRange } from '../types';
+import { SheetData, CellValue, SelectionRange, FormattingRule } from '../types';
 import { AlertCircle, Hash, Calendar, Type as TypeIcon, ArrowUpDown, ArrowUp, ArrowDown, MoreVertical, Trash2, Edit2, Sparkles, Copy, XCircle, Calculator, MoveRight, MoveDown, PlusSquare, MinusSquare, MessageSquare, Eye, SplitSquareHorizontal, CopyMinus } from 'lucide-react';
 import { evaluateCellValue, indexToExcelCol } from '../services/formulaService';
 import { ToastType } from './Toast';
@@ -206,17 +206,17 @@ const Grid: React.FC<GridProps> = ({
   onCellEdit, 
   onDeleteColumn, 
   onRenameColumn, 
-  onSmartFillTrigger,
-  onAnalyzeRange,
-  onInsertRow,
-  onDeleteRow,
-  onInsertColumn,
-  onClearRange,
-  onAddComment,
-  onAddWatch,
-  onNotify,
-  onOpenDataTool,
-  onColumnResize
+  onSmartFillTrigger, 
+  onAnalyzeRange, 
+  onInsertRow, 
+  onDeleteRow, 
+  onInsertColumn, 
+  onClearRange, 
+  onAddComment, 
+  onAddWatch, 
+  onNotify, 
+  onOpenDataTool, 
+  onColumnResize 
 }) => {
   const columnTypes = useMemo(() => inferColumnTypes(data), [data]);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
@@ -446,8 +446,22 @@ const Grid: React.FC<GridProps> = ({
       return stats;
   }, [data]);
 
+  // Optimization: Group rules by column
+  const rulesByColumn = useMemo(() => {
+      const map: Record<string, FormattingRule[]> = {};
+      if (data.formattingRules) {
+          data.formattingRules.forEach(rule => {
+              if (!map[rule.column]) map[rule.column] = [];
+              map[rule.column].push(rule);
+          });
+      }
+      return map;
+  }, [data.formattingRules]);
+
   const getFormattingStyle = (col: string, value: CellValue) => {
-     if (!data.formattingRules || value === null || value === '') return {};
+     const rules = rulesByColumn[col];
+     if (!rules || value === null || value === '') return {};
+     
      let computedStyle: React.CSSProperties = {};
       let barWidth: number | undefined = undefined;
       let barColor: string | undefined = undefined;
@@ -456,8 +470,7 @@ const Grid: React.FC<GridProps> = ({
       const strValue = String(value).toLowerCase();
       const stats = columnStats[col];
 
-      data.formattingRules.forEach(rule => {
-          if (rule.column !== col) return;
+      rules.forEach(rule => {
           try {
               if (rule.type === 'colorScale' && stats) {
                    const { min, max } = stats;

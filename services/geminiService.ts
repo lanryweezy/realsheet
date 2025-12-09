@@ -5,7 +5,18 @@ const MODEL_NAME = "gemini-2.5-flash";
 
 // Helper to initialize Gemini safely
 const getAiClient = () => {
-  const apiKey = process.env.API_KEY;
+  let apiKey: string | undefined;
+  try {
+    // Safely check for process.env to avoid ReferenceError in pure browser environments
+    // @ts-ignore
+    if (typeof process !== 'undefined' && process.env) {
+        // @ts-ignore
+        apiKey = process.env.API_KEY;
+    }
+  } catch (e) {
+    // Ignore error if process is not defined
+  }
+
   // Prevent crash if key is missing during initial load/render
   if (!apiKey) {
     console.warn("Gemini API Key is missing. AI features will be disabled.");
@@ -29,7 +40,7 @@ export const analyzeDataWithGemini = async (
   const ai = getAiClient();
   if (!ai) {
     return {
-      textResponse: "⚠️ API Key is missing. Please configure the `API_KEY` environment variable to use the AI Agent.",
+      textResponse: "⚠️ API Key is missing or not configured. AI features are currently disabled. You can still use the spreadsheet features manually.",
       chartConfig: undefined,
       transformationCode: undefined
     };

@@ -19,13 +19,14 @@ import HomeView from './components/HomeView';
 import UserMenu from './components/UserMenu';
 import SettingsModal from './components/SettingsModal';
 import ShortcutsModal from './components/ShortcutsModal';
+import ErrorBoundary from './components/ErrorBoundary';
 import { parseExcelFile, exportToCSV, createBlankSheet, getTemplateData } from './services/excelService';
 import { generateSmartColumnData } from './services/geminiService';
 import { SheetData, DashboardItem, ChartConfig, FormattingRule, SelectionRange } from './types';
 import { evaluateCellValue, indexToExcelCol, goalSeek, parseCellReference } from './services/formulaService';
 import { saveFile, loadFile } from './services/storageService';
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [view, setView] = useState<'home' | 'editor'>('home');
   const [sheetData, setSheetData] = useState<SheetData | null>(null);
   const [history, setHistory] = useState<SheetData[]>([]);
@@ -595,10 +596,6 @@ const App: React.FC = () => {
   const handleColumnResize = (colKey: string, width: number) => {
       if (!sheetData) return;
       const newWidths = { ...(sheetData.columnWidths || {}), [colKey]: width };
-      // Note: We don't necessarily need to push to undo history for resize events to avoid clutter
-      // But we must update the state. For now let's treat it as a state update.
-      // To avoid massive history stack, we could update state directly but not push to history stack
-      // However, simplified approach:
       setSheetData({ ...sheetData, columnWidths: newWidths });
   };
 
@@ -622,7 +619,6 @@ const App: React.FC = () => {
       { id: 'home', label: 'Back to Home', icon: Home, action: handleGoHome },
   ];
   
-  // Helper to get selected cell address
   const getSelectedCellAddress = () => {
       if (selectedRange) {
           return `${indexToExcelCol(selectedRange.start.colIndex)}${selectedRange.start.rowIndex + 1}`;
@@ -802,37 +798,6 @@ const App: React.FC = () => {
                 </div>
             </header>
 
-            {/* Formula Bar (Only in Editor) */}
-            {view === 'editor' && sheetData && activeTab === 'grid' && (
-                <>
-                    <FormulaBar 
-                        selectedCell={selectedRange?.start || null}
-                        value={selectedRange ? sheetData.rows[selectedRange.start.rowIndex][sheetData.columns[selectedRange.start.colIndex]] : null}
-                        columns={sheetData.columns}
-                        onChange={(val) => {
-                            if (selectedRange) handleCellEdit(selectedRange.start.rowIndex, sheetData.columns[selectedRange.start.colIndex], val);
-                        }}
-                    />
-                    
-                    {/* Active Filter Bar */}
-                    {sheetData.filter && (
-                        <div className="h-8 bg-cyan-900/30 border-b border-cyan-800/50 flex items-center px-4 justify-between animate-in fade-in slide-in-from-top-1">
-                            <div className="flex items-center gap-2 text-cyan-200 text-xs">
-                                <Filter className="w-3.5 h-3.5" />
-                                <span className="font-semibold">Active Filter:</span>
-                                <span className="italic opacity-80">{sheetData.filter.description}</span>
-                            </div>
-                            <button 
-                                onClick={handleClearFilter}
-                                className="text-cyan-300 hover:text-white p-1 hover:bg-cyan-800/50 rounded flex items-center gap-1 text-[10px]"
-                            >
-                                <X className="w-3 h-3" /> Clear
-                            </button>
-                        </div>
-                    )}
-                </>
-            )}
-
             {/* Main Content Area */}
             <main className="saas-workspace">
                 {view === 'home' ? (
@@ -992,6 +957,14 @@ const App: React.FC = () => {
             </main>
         </div>
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
   );
 };
 
