@@ -25,6 +25,7 @@ import { generateSmartColumnData } from './services/geminiService';
 import { SheetData, DashboardItem, ChartConfig, FormattingRule, SelectionRange } from './types';
 import { evaluateCellValue, indexToExcelCol, goalSeek, parseCellReference } from './services/formulaService';
 import { saveFile, loadFile } from './services/storageService';
+import './index.css';
 
 const AppContent: React.FC = () => {
   const [view, setView] = useState<'home' | 'editor'>('home');

@@ -2,6 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+@layer components {
+  .cell {
+    @apply border border-gray-300 p-1 text-xs;
+  }
+  .cell-header {
+    @apply bg-gray-100 font-semibold;
+  }
+  .cell-selected {
+    @apply ring-2 ring-blue-500;
+  }
+}
+
 :root {
   --nexus-bg: #0f172a; /* slate-900 */
   --nexus-surface: #1e293b; /* slate-800 */

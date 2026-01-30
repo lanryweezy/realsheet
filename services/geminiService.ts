@@ -1,5 +1,109 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { SheetData, ChartConfig, AnalysisResult } from "../types";
+
+// In-memory cache for API key
+let apiKeyCache: string | null = null;
+
+export const geminiService = {
+  setApiKey(key: string) {
+    apiKeyCache = key;
+  },
+
+  getApiKey(): string | null {
+    return apiKeyCache;
+  },
+
+  async generateSmartColumnData(
+    sheetData: any,
+    targetColumn: string,
+    prompt: string
+  ): Promise<string[]> {
+    // Fallback if no API key
+    if (!apiKeyCache) {
+      return this.generateOfflineFallback(sheetData, targetColumn, prompt);
+    }
+
+    try {
+      const genAI = new GoogleGenerativeAI(apiKeyCache);
+      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+      const sampleRows = sheetData.rows.slice(0, 10);
+      const sampleData = sampleRows.map((row: any) => {
+        const rowData: any = {};
+        sheetData.columns.forEach((col: string) => {
+          rowData[col] = row[col];
+        });
+        return rowData;
+      });
+
+      const fullPrompt = `
+        Given this spreadsheet data:
+        ${JSON.stringify(sampleData, null, 2)}
+
+        Generate 20 realistic values for column "${targetColumn}" based on this instruction:
+        ${prompt}
+
+        Return ONLY a JSON array of 20 string values. No other text.
+      `;
+
+      const result = await model.generateContent(fullPrompt);
+      const response = await result.response;
+      const text = response.text();
+
+      try {
+        const values = JSON.parse(text);
+        if (Array.isArray(values) && values.length === 20) {
+          return values;
+        }
+      } catch (e) {
+        // Fallback if parsing fails
+      }
+
+      // Final fallback
+      return this.generateOfflineFallback(sheetData, targetColumn, prompt);
+    } catch (error) {
+      console.error("Gemini API error:", error);
+      return this.generateOfflineFallback(sheetData, targetColumn, prompt);
+    }
+  },
+
+  generateOfflineFallback(
+    sheetData: any,
+    targetColumn: string,
+    prompt: string
+  ): string[] {
+    console.warn("Using offline fallback for smart column generation");
+    
+    // Simple pattern-based fallbacks
+    const lowerPrompt = prompt.toLowerCase();
+    
+    if (lowerPrompt.includes("name") || lowerPrompt.includes("person")) {
+      const names = ["John", "Jane", "Bob", "Alice", "Charlie", "Diana", "Eve", "Frank", "Grace", "Henry"];
+      return Array(20).fill(0).map((_, i) => names[i % names.length]);
+    }
+    
+    if (lowerPrompt.includes("email")) {
+      return Array(20).fill(0).map((_, i) => `user${i + 1}@example.com`);
+    }
+    
+    if (lowerPrompt.includes("date")) {
+      const today = new Date();
+      return Array(20).fill(0).map((_, i) => {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        return date.toISOString().split('T')[0];
+      });
+    }
+    
+    if (lowerPrompt.includes("number") || lowerPrompt.includes("amount")) {
+      return Array(20).fill(0).map((_, i) => String(Math.floor(Math.random() * 1000) + 1));
+    }
+    
+    // Default fallback
+    return Array(20).fill(0).map((_, i) => `Value ${i + 1}`);
+  }
+};
 
 const MODEL_NAME = "gemini-2.5-flash";
 
@@ -267,7 +371,7 @@ export const generateFormulaFromDescription = async (
            Columns: ${columns.map((c, i) => `${c} -> ${String.fromCharCode(65+i)}`).join(", ")}
            
         4. If ambiguous, pick the most likely valid formula.
-        5. Return ONLY the formula string. No markdown.
+        5. Return ONLY the formula string. No other text.
     `;
 
     try {
