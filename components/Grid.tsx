@@ -1,14 +1,13 @@
 import React, { useState, useEffect, memo, useMemo, useRef, useCallback, useLayoutEffect } from 'react';
 import { SheetData, CellValue, SelectionRange, FormattingRule } from '../types';
-import { AlertCircle, Hash, Calendar, Type as TypeIcon, ArrowUpDown, ArrowUp, ArrowDown, MoreVertical, Trash2, Edit2, Sparkles, Copy, XCircle, Calculator, MoveRight, MoveDown, PlusSquare, MinusSquare, MessageSquare, Eye, SplitSquareHorizontal, CopyMinus } from 'lucide-react';
-import { evaluateCellValue, indexToExcelCol, excelColToIndex } from '../services/formulaService';
+import { AlertCircle, Hash, Calendar, Type as TypeIcon, ArrowUpDown, ArrowUp, ArrowDown, MoreVertical, Trash2, Edit2, Sparkles, Copy, XCircle, Calculator, MoveRight, MoveDown, PlusSquare, MinusSquare, MessageSquare, Eye, SplitSquareHorizontal, CopyMinus, PanelTopOpen, PanelLeftOpen } from 'lucide-react';
+import { evaluateCellValue, indexToExcelCol } from '../services/formulaService';
 import { ToastType } from './Toast';
-import { expandSheet } from '../services/excelService';
 
 // Virtual scrolling constants
 const ROW_HEIGHT = 32;
 const HEADER_HEIGHT = 32;
-const VISIBLE_ROWS_BUFFER = 10;
+const VISIBLE_ROWS_BUFFER = 10; // How many extra rows to render beyond viewport
 const EXPANSION_THRESHOLD = 5; // Expand when within 5 rows/columns of edge
 
 interface GridProps {
@@ -30,6 +29,7 @@ interface GridProps {
   onOpenDataTool: (mode: 'duplicates' | 'split' | 'find' | 'clean', colKey?: string) => void;
   onColumnResize: (colKey: string, width: number) => void;
   onSheetExpand: (rows: number, cols: number) => void;
+  frozenPanes?: { rows: number, cols: number };
 }
 
 type ColumnType = 'string' | 'number' | 'date';
@@ -194,7 +194,8 @@ const Grid: React.FC<GridProps> = ({
   onNotify, 
   onOpenDataTool, 
   onColumnResize,
-  onSheetExpand // New prop for expansion
+  onSheetExpand, // New prop for expansion
+  frozenPanes // New prop for frozen panes
 }) => {
   const isMobile = window.innerWidth < 768;
   const gridContainerRef = useRef<HTMLDivElement>(null);
@@ -203,7 +204,11 @@ const Grid: React.FC<GridProps> = ({
   const [containerHeight, setContainerHeight] = useState(600);
   const [containerWidth, setContainerWidth] = useState(800);
   
-  // Optimize cell sizing for mobile
+  // Use frozen panes from props or default to 0
+  const frozenRows = frozenPanes?.rows || 0;
+  const frozenCols = frozenPanes?.cols || 0;
+  
+  // Optimize cell sizing for mobile (moved before it's used)
   const getCellWidth = (col: string) => {
     const defaultWidth = isMobile ? 100 : 120;
     return data.columnWidths?.[col] || defaultWidth;

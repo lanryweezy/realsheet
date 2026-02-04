@@ -48,6 +48,10 @@ export interface Workbook {
   activeSheetIndex: number;
   createdAt: Date;
   lastModified: Date;
+  frozenPanes?: {
+    rows: number; // Number of frozen rows
+    cols: number; // Number of frozen columns
+  };
 }
 
 export interface FileMetadata {
@@ -112,4 +116,23 @@ export interface DataValidation {
   };
   errorMessage?: string;
   showErrorMessage: boolean;
+}
+
+// Find & Replace functionality
+export interface FindReplaceOptions {
+  findText: string;
+  replaceText?: string;
+  matchCase: boolean;
+  matchWholeCell: boolean;
+  searchDirection: 'forward' | 'backward';
+  searchScope: 'current-sheet' | 'all-sheets' | 'selected-range';
+  searchWithin: 'values' | 'formulas' | 'both';
+}
+
+export interface SearchResult {
+  rowIndex: number;
+  colIndex: number;
+  sheetIndex: number;
+  oldValue: string;
+  newValue?: string;
 }
