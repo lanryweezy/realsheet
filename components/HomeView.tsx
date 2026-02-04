@@ -49,21 +49,78 @@ const HomeView: React.FC<HomeViewProps> = ({ onOpenFile, onNewFile, onUpload, on
       setRenamingId(null);
   };
 
+  // Enhanced drag and drop with visual feedback
+  const [isDragActive, setIsDragActive] = useState(false);
+
   const handleDragOver = (e: React.DragEvent) => {
       e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+      e.preventDefault();
+      // Only deactivate if we're leaving the drop zone entirely
+      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setIsDragActive(false);
+      }
   };
 
   const handleDrop = (e: React.DragEvent) => {
       e.preventDefault();
+      setIsDragActive(false);
+      
       if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-          onUpload(e.dataTransfer.files[0]);
+          handleFileUpload(e.dataTransfer.files[0]);
       }
+  };
+
+  // Enhanced file upload with better validation and feedback
+  const handleFileUpload = (file: File) => {
+    // File validation
+    const validTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+      'text/csv', // .csv
+      '.xlsx',
+      '.xls',
+      '.csv'
+    ];
+    
+    const maxSize = 10 * 1024 * 1024; // 10MB limit
+    
+    // Check file type
+    if (!validTypes.some(type => 
+      file.type === type || file.name.toLowerCase().endsWith(type)
+    )) {
+      alert('Please upload a valid Excel (.xlsx, .xls) or CSV file.');
+      return;
+    }
+    
+    // Check file size
+    if (file.size > maxSize) {
+      alert('File size exceeds 10MB limit. Please choose a smaller file.');
+      return;
+    }
+    
+    // Process the file
+    onUpload(file);
   };
 
   const filteredFiles = files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
-    <div className="flex-1 overflow-y-auto bg-slate-950 p-6 md:p-10" onDragOver={handleDragOver} onDrop={handleDrop}>
+    <div 
+      className={`flex-1 overflow-y-auto bg-slate-950 p-6 md:p-10 ${isDragActive ? 'bg-slate-900/50 border-2 border-dashed border-nexus-accent' : ''}`} 
+      onDragOver={handleDragOver} 
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
         <div className="max-w-6xl mx-auto space-y-10">
             
             {/* Hero / Start Section */}
@@ -105,7 +162,13 @@ const HomeView: React.FC<HomeViewProps> = ({ onOpenFile, onNewFile, onUpload, on
                             <Upload className="w-8 h-8 text-slate-500 group-hover:text-white" />
                         </div>
                         <span className="text-sm font-medium text-slate-200">Upload .xlsx</span>
-                        <input type="file" className="hidden" accept=".xlsx, .xls, .csv" onChange={(e) => e.target.files && onUpload(e.target.files[0])} />
+                        <input type="file" className="hidden" accept=".xlsx, .xls, .csv" onChange={(e) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFileUpload(e.target.files[0]);
+      // Reset input to allow uploading the same file again
+      e.target.value = '';
+    }
+  }} />
                     </label>
                 </div>
             </section>

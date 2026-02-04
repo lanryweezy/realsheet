@@ -148,15 +148,34 @@ const AppContent: React.FC = () => {
   }, [handleUndo, handleRedo]);
 
   const handleFile = async (file: File) => {
-      try {
+    try {
+        // Show loading state
+        addToast('info', 'Processing File', `Loading ${file.name}...`);
+        
         const data = await parseExcelFile(file);
         loadData(data);
         addToast('success', 'File Uploaded', `Successfully loaded ${file.name}`);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to parse file. Please ensure it is a valid Spreadsheet (.xlsx) or CSV file.");
-        addToast('error', 'Upload Failed', 'Invalid file format or corrupted data.');
-      }
+        
+        // Save to recent files
+        saveFile(data);
+        
+    } catch (err: any) {
+        console.error("File upload error:", err);
+        
+        // More specific error messages
+        let errorMessage = 'Invalid file format or corrupted data.';
+        
+        if (err.message?.includes('XLSX library not loaded')) {
+            errorMessage = 'Required library not loaded. Please refresh the page and try again.';
+        } else if (err.message?.includes('Sheet is empty')) {
+            errorMessage = 'The uploaded file is empty. Please check your spreadsheet.';
+        } else if (err.message?.includes('parse')) {
+            errorMessage = 'Unable to parse the file. Please ensure it is a valid Excel or CSV file.';
+        }
+        
+        setError(errorMessage);
+        addToast('error', 'Upload Failed', errorMessage);
+    }
   };
 
   const loadData = (data: SheetData) => {

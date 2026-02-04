@@ -31,7 +31,6 @@ interface SortConfig {
   direction: SortDirection;
 }
 
-// ... color helpers ...
 const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
@@ -70,134 +69,104 @@ const inferColumnTypes = (data: SheetData): Record<string, ColumnType> => {
   return types;
 };
 
-const EditableCell = memo(({ 
-  rawValue, 
-  displayValue,
-  onChange,
-  onMouseDown,
-  onMouseEnter,
-  onMouseUp,
+// Memoize the Cell component for better performance
+const Cell = memo(({ 
+  rowIndex, 
+  colIndex, 
+  col, 
+  value, 
+  isSelected, 
+  isHeader,
+  columnType,
+  onCellEdit,
   onContextMenu,
-  isSelected,
-  isInRange,
-  className,
-  style,
-  dataBarWidth,
-  dataBarColor,
-  isEditing,
-  setIsEditing,
-  comment,
-  selectionBorders
-}: { 
-  rawValue: CellValue; 
-  displayValue: CellValue;
-  onChange: (value: string) => void;
-  onMouseDown: () => void;
-  onMouseEnter: () => void;
-  onMouseUp: () => void;
-  onContextMenu: (e: React.MouseEvent) => void;
+  onDoubleClick
+}: {
+  rowIndex: number;
+  colIndex: number;
+  col: string;
+  value: CellValue;
   isSelected: boolean;
-  isInRange: boolean;
-  className?: string;
-  style?: React.CSSProperties;
-  dataBarWidth?: number;
-  dataBarColor?: string;
-  isEditing: boolean;
-  setIsEditing: (val: boolean) => void;
-  comment?: string;
-  selectionBorders?: { top: boolean, right: boolean, bottom: boolean, left: boolean };
+  isHeader: boolean;
+  columnType: string;
+  onCellEdit: (rowIndex: number, col: string, value: string) => void;
+  onContextMenu: (e: React.MouseEvent, rowIndex: number, colIndex: number, isHeader: boolean) => void;
+  onDoubleClick: (rowIndex: number, colIndex: number) => void;
 }) => {
-  const [editValue, setEditValue] = useState<string>(String(rawValue ?? ''));
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!isEditing) {
-        setEditValue(String(rawValue ?? ''));
-    } else {
-        setTimeout(() => inputRef.current?.focus(), 0);
+  const displayValue = useMemo(() => {
+    if (isHeader) return col;
+    return evaluateCellValue(value, [], []);
+  }, [isHeader, col, value]);
+
+  const handleDoubleClick = useCallback(() => {
+    if (!isHeader) {
+      setIsEditing(true);
+      setEditValue(String(displayValue));
     }
-  }, [rawValue, isEditing]);
+    onDoubleClick(rowIndex, colIndex);
+  }, [isHeader, displayValue, rowIndex, colIndex, onDoubleClick]);
 
-  const handleDoubleClick = () => {
-    setIsEditing(true);
-  };
-
-  const handleBlur = () => {
-    setIsEditing(false);
-    if (editValue !== String(rawValue ?? '')) {
-      onChange(editValue);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      e.currentTarget.blur();
-    }
-  };
-
-  let selectionClass = '';
-  if (isSelected) {
-      selectionClass = 'ring-2 ring-nexus-accent ring-inset z-20 bg-nexus-accent/10';
-  } else if (isInRange) {
-      selectionClass = 'bg-nexus-accent/5';
-      if (selectionBorders) {
-          if (selectionBorders.top) selectionClass += ' border-t-2 border-t-nexus-accent';
-          if (selectionBorders.bottom) selectionClass += ' border-b-2 border-b-nexus-accent';
-          if (selectionBorders.left) selectionClass += ' border-l-2 border-l-nexus-accent';
-          if (selectionBorders.right) selectionClass += ' border-r-2 border-r-nexus-accent';
+      if (isEditing) {
+        onCellEdit(rowIndex, col, editValue);
+        setIsEditing(false);
+      } else if (!isHeader) {
+        setIsEditing(true);
+        setEditValue(String(displayValue));
       }
+    } else if (e.key === 'Escape') {
+      setIsEditing(false);
+    }
+  }, [isEditing, isHeader, displayValue, rowIndex, col, editValue, onCellEdit]);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  if (isEditing && !isHeader) {
+    return (
+      <td className={`border border-gray-300 p-0 ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
+        <input
+          ref={inputRef}
+          type="text"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={() => {
+            onCellEdit(rowIndex, col, editValue);
+            setIsEditing(false);
+          }}
+          onKeyDown={handleKeyDown}
+          className="w-full h-full p-1 border-none outline-none"
+        />
+      </td>
+    );
   }
 
   return (
-    <div 
-        className={`relative w-full h-full select-none group/cell ${selectionClass}`} 
-        style={style}
-        onMouseDown={onMouseDown}
-        onMouseEnter={onMouseEnter}
-        onMouseUp={onMouseUp}
-        onDoubleClick={handleDoubleClick}
-        onContextMenu={onContextMenu}
+    <td
+      className={`border border-gray-300 p-1 text-xs relative ${isHeader ? 'bg-gray-100 font-semibold' : ''} ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+      onDoubleClick={handleDoubleClick}
+      onContextMenu={(e) => onContextMenu(e, rowIndex, colIndex, isHeader)}
     >
-        {dataBarWidth !== undefined && (
-            <div 
-                className="absolute top-1 bottom-1 left-1 opacity-30 rounded-sm pointer-events-none"
-                style={{ 
-                    width: `${Math.min(100, Math.max(0, dataBarWidth))}%`, 
-                    backgroundColor: dataBarColor || '#22d3ee' 
-                }}
-            />
-        )}
-        
-        {comment && (
-            <div className="absolute top-0 right-0 w-0 h-0 border-l-[6px] border-l-transparent border-t-[6px] border-t-red-500 z-30" />
-        )}
-        {comment && (
-            <div className="absolute top-full left-0 z-50 hidden group-hover/cell:block min-w-[150px] p-2 bg-slate-800 text-xs text-white rounded shadow-xl border border-slate-700 pointer-events-none animate-in fade-in zoom-in-95">
-                {comment}
-            </div>
-        )}
-
-        {isEditing ? (
-            <input
-                ref={inputRef}
-                type="text"
-                className="cell-input absolute inset-0 z-30 bg-slate-800 text-white px-2 focus:ring-2 focus:ring-nexus-accent"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onBlur={handleBlur}
-                onKeyDown={handleKeyDown}
-                spellCheck={false}
-            />
-        ) : (
-             <div className="w-full h-full flex items-center px-2 overflow-hidden text-ellipsis whitespace-nowrap relative z-10 cursor-cell" style={{ color: style?.color }}>
-                 {displayValue}
-             </div>
-        )}
-    </div>
+      <div className="truncate" title={String(displayValue)}>
+        {displayValue}
+      </div>
+      {columnType !== 'string' && !isHeader && (
+        <div className="absolute top-0 right-0 w-2 h-2 bg-blue-500 rounded-full opacity-60"></div>
+      )}
+    </td>
   );
 });
 
-EditableCell.displayName = 'EditableCell';
+Cell.displayName = 'Cell';
 
 const Grid: React.FC<GridProps> = ({ 
   data, 
@@ -590,6 +559,12 @@ const Grid: React.FC<GridProps> = ({
       setContextMenu(null);
   };
 
+  const handleCellDoubleClick = useCallback((rowIndex: number, colIndex: number) => {
+    // Handle cell double click logic here
+    // This could be used for cell selection or other actions
+    console.log('Cell double clicked:', rowIndex, colIndex);
+  }, []);
+
   return (
     <div className="w-full h-full overflow-auto relative select-none">
       <table ref={tableRef} className="data-grid-table">
@@ -719,27 +694,17 @@ const Grid: React.FC<GridProps> = ({
                         className="p-0 border-b border-r border-slate-700/50 overflow-hidden"
                         style={{ width: `${width}px`, maxWidth: `${width}px`, minWidth: `${width}px` }}
                     >
-                        <EditableCell 
-                            rawValue={rawVal} 
-                            displayValue={displayVal}
-                            onChange={(val) => {
-                                onCellEdit(originalIndex, col, val);
-                                setEditingCell(null);
-                            }}
-                            onMouseDown={() => handleMouseDown(originalIndex, colIdx)}
-                            onMouseEnter={() => handleMouseEnter(originalIndex, colIdx)}
-                            onMouseUp={handleMouseUp}
-                            onContextMenu={(e) => handleContextMenu(e, originalIndex, colIdx)}
-                            isSelected={isSelected}
-                            isInRange={isInRange}
-                            selectionBorders={selectionBorders}
-                            className=""
-                            style={style}
-                            dataBarWidth={dataBarWidth}
-                            dataBarColor={dataBarColor}
-                            isEditing={isEditing}
-                            setIsEditing={(val) => val ? setEditingCell({ r: originalIndex, c: colIdx }) : setEditingCell(null)}
-                            comment={comment}
+                        <Cell 
+                          rowIndex={originalIndex}
+                          colIndex={colIdx}
+                          col={col}
+                          value={rawVal}
+                          isSelected={isSelected}
+                          isHeader={false}
+                          columnType={columnTypes[col] || 'string'}
+                          onCellEdit={onCellEdit}
+                          onContextMenu={handleContextMenu}
+                          onDoubleClick={handleCellDoubleClick}
                         />
                     </td>
                   );

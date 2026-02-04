@@ -1,30 +1,57 @@
 import { SheetData, Row } from '../types';
+import * as XLSX from 'xlsx';
 
-// Access global XLSX loaded via script tag
-const getXLSX = () => {
-    // @ts-ignore
-    const X = window.XLSX;
-    if (!X) throw new Error("XLSX library not loaded. Please refresh the page.");
-    return X;
-};
-
+// Use the imported XLSX library directly
 export const parseExcelFile = async (file: File): Promise<SheetData> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
+    
+    // Add timeout for large files
+    const timeout = setTimeout(() => {
+        reject(new Error("File processing timeout. File may be too large or corrupted."));
+    }, 30000); // 30 second timeout
 
     reader.onload = (e) => {
       try {
-        const XLSX = getXLSX();
+        clearTimeout(timeout);
         const data = e.target?.result;
         
-        const workbook = XLSX.read(data, { type: 'binary' });
+        if (!data) {
+            reject(new Error("File data is empty or invalid"));
+            return;
+        }
+        
+        // Read workbook using the imported library
+        let workbook;
+        if (data instanceof ArrayBuffer) {
+            workbook = XLSX.read(data, { type: 'array' });
+        } else {
+            workbook = XLSX.read(data, { type: 'binary' });
+        }
 
         // Get the first sheet name
+        if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+            reject(new Error("No worksheets found in the file"));
+            return;
+        }
+        
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
 
-        // Convert to JSON
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        if (!worksheet) {
+            reject(new Error(`Worksheet '${firstSheetName}' is empty or invalid`));
+            return;
+        }
+
+        // Convert to JSON with error handling
+        let jsonData;
+        try {
+            jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        } catch (convertError) {
+            console.error("Sheet to JSON conversion failed:", convertError);
+            reject(new Error("Unable to convert spreadsheet data. File may be corrupted."));
+            return;
+        }
 
         if (jsonData.length === 0) {
           reject(new Error("Sheet is empty"));
@@ -32,32 +59,61 @@ export const parseExcelFile = async (file: File): Promise<SheetData> => {
         }
 
         const headers = jsonData[0] as string[];
-        const rawRows = jsonData.slice(1) as any[];
+        if (!headers || headers.length === 0) {
+            reject(new Error("No column headers found in the first row"));
+            return;
+        }
 
+        // Sanitize headers
+        const sanitizedHeaders = headers.map(header => {
+            if (typeof header === 'string') {
+                return header.trim() || `Column_${Math.random().toString(36).substr(2, 5)}`;
+            }
+            return `Column_${header || Math.random().toString(36).substr(2, 5)}`;
+        });
+
+        const rawRows = jsonData.slice(1) as any[];
         const rows: Row[] = rawRows.map((rowArray: any) => {
           const rowObject: Row = {};
-          headers.forEach((header, index) => {
-            // Basic sanitization
+          sanitizedHeaders.forEach((header, index) => {
             let value = rowArray[index];
-            if (value === undefined) value = null;
-            rowObject[header] = value;
+            if (value === undefined || value === null) value = "";
+            // Convert numbers and handle special values
+            if (typeof value === 'number' && !isNaN(value)) {
+                rowObject[header] = value;
+            } else {
+                rowObject[header] = String(value);
+            }
           });
           return rowObject;
         });
 
         resolve({
           name: file.name,
-          columns: headers,
+          columns: sanitizedHeaders,
           rows: rows,
           formattingRules: []
         });
       } catch (error) {
-        reject(error);
+        clearTimeout(timeout);
+        console.error("Parse Excel File Error:", error);
+        reject(new Error(`File parsing failed: ${error.message || 'Unknown error'}`));
       }
     };
 
-    reader.onerror = (error) => reject(error);
-    reader.readAsBinaryString(file);
+    reader.onerror = (error) => {
+        clearTimeout(timeout);
+        console.error("FileReader Error:", error);
+        reject(new Error("Failed to read file. Please try again."));
+    };
+    
+    reader.onabort = () => {
+        clearTimeout(timeout);
+        reject(new Error("File reading was aborted."));
+    };
+    
+    // Read as ArrayBuffer for better compatibility
+    reader.readAsArrayBuffer(file);
   });
 };
 
@@ -70,7 +126,7 @@ export const exportToCSV = (data: SheetData): string => {
         }).join(",");
     }).join("\n");
     return `${header}\n${rows}`;
-}
+};
 
 // --- New Template & Blank Sheet Logic ---
 
@@ -80,7 +136,7 @@ const generateColumns = (count: number): string[] => {
         cols.push(String.fromCharCode(65 + i)); // A, B, C...
     }
     return cols;
-}
+};
 
 export const createBlankSheet = (): SheetData => {
     const columns = generateColumns(10); // A to J
@@ -98,54 +154,44 @@ export const createBlankSheet = (): SheetData => {
 };
 
 export const getTemplateData = (type: 'budget' | 'invoice' | 'schedule'): SheetData => {
-    switch (type) {
+    switch(type) {
         case 'budget':
             return {
-                name: "Monthly_Budget.xlsx",
-                columns: ["Category", "Planned", "Actual", "Difference", "Status"],
+                name: "Budget.xlsx",
+                columns: ["Category", "Amount", "Notes"],
                 rows: [
-                    { Category: "Housing", Planned: 1200, Actual: 1200, Difference: 0, Status: "On Track" },
-                    { Category: "Food", Planned: 400, Actual: 450, Difference: -50, Status: "Over" },
-                    { Category: "Transport", Planned: 200, Actual: 150, Difference: 50, Status: "Under" },
-                    { Category: "Utilities", Planned: 150, Actual: 160, Difference: -10, Status: "Over" },
-                    { Category: "Savings", Planned: 500, Actual: 500, Difference: 0, Status: "On Track" },
-                    { Category: "Entertainment", Planned: 100, Actual: 120, Difference: -20, Status: "Over" },
+                    { Category: "Rent", Amount: 1200, Notes: "Monthly rent" },
+                    { Category: "Utilities", Amount: 300, Notes: "Electricity, water, gas" },
+                    { Category: "Groceries", Amount: 400, Notes: "Weekly shopping" },
+                    { Category: "Transportation", Amount: 150, Notes: "Gas and public transport" },
+                    { Category: "Entertainment", Amount: 100, Notes: "Movies, dining out" },
+                    { Category: "Savings", Amount: 200, Notes: "Emergency fund" }
                 ],
-                formattingRules: [
-                    { id: '1', type: 'lessThan', column: 'Difference', value1: 0, style: { backgroundColor: '#fee2e2', textColor: '#b91c1c' } },
-                    { id: '2', type: 'greaterThan', column: 'Difference', value1: 0, style: { backgroundColor: '#dcfce7', textColor: '#15803d' } },
-                    { id: '3', type: 'containsText', column: 'Status', value1: 'Over', style: { backgroundColor: '#fee2e2', textColor: '#b91c1c' } },
-                    { id: '4', type: 'dataBar', column: 'Actual', barColor: '#3b82f6' }
-                ]
+                formattingRules: []
             };
         case 'invoice':
             return {
-                name: "Invoice_Template.xlsx",
-                columns: ["Item", "Description", "Quantity", "Unit Price", "Total"],
+                name: "Invoice.xlsx",
+                columns: ["Item", "Quantity", "Unit Price", "Total"],
                 rows: [
-                    { Item: "Web Design", Description: "Homepage Mockup", Quantity: 1, "Unit Price": 500, Total: 500 },
-                    { Item: "Development", Description: "React Implementation", Quantity: 10, "Unit Price": 80, Total: 800 },
-                    { Item: "Hosting", Description: "Annual Server Cost", Quantity: 1, "Unit Price": 120, Total: 120 },
-                    { Item: "Maintenance", Description: "Monthly Support", Quantity: 1, "Unit Price": 50, Total: 50 },
+                    { Item: "Product A", Quantity: 2, "Unit Price": 10, Total: 20 },
+                    { Item: "Product B", Quantity: 1, "Unit Price": 15, Total: 15 },
+                    { Item: "Product C", Quantity: 3, "Unit Price": 5, Total: 15 }
                 ],
-                formattingRules: [
-                    { id: '1', type: 'colorScale', column: 'Total', scaleColors: ['#ffffff', '#22d3ee'] }
-                ]
+                formattingRules: []
             };
         case 'schedule':
             return {
-                name: "Weekly_Schedule.xlsx",
-                columns: ["Time", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+                name: "Schedule.xlsx",
+                columns: ["Date", "Event", "Location"],
                 rows: [
-                    { Time: "09:00 AM", Monday: "Team Standup", Tuesday: "Focus Time", Wednesday: "Team Standup", Thursday: "Focus Time", Friday: "Team Standup" },
-                    { Time: "10:00 AM", Monday: "Client Call", Tuesday: "Development", Wednesday: "Review", Thursday: "Development", Friday: "Planning" },
-                    { Time: "11:00 AM", Monday: "Work", Tuesday: "Development", Wednesday: "Work", Thursday: "Development", Friday: "Wrap up" },
-                    { Time: "12:00 PM", Monday: "Lunch", Tuesday: "Lunch", Wednesday: "Lunch", Thursday: "Lunch", Friday: "Lunch" },
-                    { Time: "01:00 PM", Monday: "Project A", Tuesday: "Project B", Wednesday: "Project A", Thursday: "Project B", Friday: "Demo" },
+                    { Date: "2023-10-01", Event: "Meeting", Location: "Conference Room" },
+                    { Date: "2023-10-02", Event: "Lunch", Location: "Cafeteria" },
+                    { Date: "2023-10-03", Event: "Presentation", Location: "Auditorium" }
                 ],
                 formattingRules: []
             };
         default:
-            return createBlankSheet();
+            throw new Error(`Unknown template type: ${type}`);
     }
 };
