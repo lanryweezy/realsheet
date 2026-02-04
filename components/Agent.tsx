@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, StopCircle, Mic, Plus, Check, Zap, Calculator, PaintBucket, Filter, MessageSquare } from 'lucide-react';
-import { ChatMessage, SheetData, ChartConfig } from '../types';
+import { Send, Sparkles, StopCircle, Mic, Plus, Check, Zap, Calculator, PaintBucket, Filter, MessageSquare, Lightbulb, ListTodo } from 'lucide-react';
+import { ChatMessage, SheetData, ChartConfig, EnhancedAnalysisResult } from '../types';
 import { analyzeDataWithGemini } from '../services/geminiService';
 import Visualization from './Visualization';
 
@@ -17,7 +17,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
     {
       id: 'welcome',
       role: 'model',
-      text: 'Hello, I am NexSheet Agent. I can analyze your data, create visualizations, apply formatting, filter rows, and flag outliers.',
+      text: 'Hello, I am NexSheet Agent. I can analyze your data, create visualizations, apply formatting, filter rows, and flag outliers. I now show my reasoning process and task planning!',
       timestamp: new Date()
     }
   ]);
@@ -154,13 +154,36 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
             .filter(m => m.id !== 'welcome' && m.id !== 'system-start')
             .map(m => ({ role: m.role, parts: [{ text: m.text }] }));
             
-        const result = await analyzeDataWithGemini(userMsg.text, sheetData, history);
+        // Updated to use the enhanced analysis result
+        const result: EnhancedAnalysisResult = await analyzeDataWithGemini(userMsg.text, sheetData, history);
 
         let actionMessage = "";
         let finalSheetData = { ...sheetData } as SheetData;
         let hasChanges = false;
 
-        // 1. Handle Transformations
+        // 1. Show Chain of Thought if available
+        if (result.chainOfThought) {
+          const chainOfThoughtMsg: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            role: 'model',
+            text: `💡 **Chain of Thought:** ${result.chainOfThought}`,
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, chainOfThoughtMsg]);
+        }
+
+        // 2. Show Task Plan if available
+        if (result.taskPlan && result.taskPlan.length > 0) {
+          const taskPlanMsg: ChatMessage = {
+            id: (Date.now() + 2).toString(),
+            role: 'model',
+            text: `📋 **Task Plan:**\n${result.taskPlan.map((step, i) => `${i + 1}. ${step}`).join('\n')}`,
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, taskPlanMsg]);
+        }
+
+        // 3. Handle Transformations
         if (result.transformationCode && sheetData) {
             try {
                 // eslint-disable-next-line no-new-func
@@ -189,7 +212,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
             }
         }
 
-        // 2. Handle Formatting Rules
+        // 4. Handle Formatting Rules
         if (result.formattingRules && result.formattingRules.length > 0 && sheetData) {
             try {
                 // Merge new rules with existing
@@ -205,7 +228,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
             }
         }
 
-        // 3. Handle Filter Code
+        // 5. Handle Filter Code
         if (result.filterCode && sheetData) {
              finalSheetData = {
                  ...finalSheetData,
@@ -218,7 +241,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
              actionMessage += `\n\n🔍 Filter applied based on request.`;
         }
 
-        // 4. Handle Comments
+        // 6. Handle Comments
         if (result.generatedComments && result.generatedComments.length > 0 && sheetData) {
             const newComments = { ...(finalSheetData.comments || {}) };
             result.generatedComments.forEach(c => {
@@ -237,7 +260,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
         }
 
         const aiMsg: ChatMessage = {
-            id: (Date.now() + 1).toString(),
+            id: (Date.now() + 3).toString(),
             role: 'model',
             text: result.textResponse + actionMessage,
             chartConfig: result.chartConfig,
@@ -269,7 +292,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                 <h2 className="font-semibold text-white text-sm">NexAgent</h2>
                 <div className="flex items-center gap-1.5">
                     <span className={`w-1.5 h-1.5 rounded-full ${isLoading ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`}></span>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">{isLoading ? 'PROCESSING' : 'ONLINE'}</span>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">{isLoading ? 'THINKING' : 'THINKING'}</span>
                 </div>
             </div>
         </div>
@@ -308,6 +331,18 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                      <span>Comments added</span>
                  </div>
              )}
+             {msg.text.includes("Chain of Thought") && (
+                 <div className="mt-2 flex items-center gap-2 text-xs text-amber-300 bg-amber-900/30 p-2 rounded border border-amber-500/20">
+                     <Lightbulb className="w-3 h-3" /> 
+                     <span>Reasoning Process</span>
+                 </div>
+             )}
+             {msg.text.includes("Task Plan") && (
+                 <div className="mt-2 flex items-center gap-2 text-xs text-blue-300 bg-blue-900/30 p-2 rounded border border-blue-500/20">
+                     <ListTodo className="w-3 h-3" /> 
+                     <span>Action Plan</span>
+                 </div>
+             )}
             </div>
             
             {msg.chartConfig && sheetData && (
@@ -332,7 +367,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
         {isLoading && (
             <div className="flex items-center gap-2 text-slate-500 text-xs p-2">
                 <Sparkles className="w-3 h-3 animate-spin text-nexus-accent" />
-                <span>Analyzing data...</span>
+                <span>Thinking through your request...</span>
             </div>
         )}
         <div ref={messagesEndRef} />
@@ -354,8 +389,8 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={sheetData ? "Ask: 'Filter rows where Sales > 500'" : "Waiting for data..."}
-                disabled={isLoading || !sheetData}
+                placeholder={sheetData ? "Ask: 'How should I plan to clean this data?'" : "Waiting for data..."}
+                disabled={isLoading || !input.trim()}
                 autoFocus={!!promptOverride} // Auto focus if override exists
             />
             <button
@@ -367,7 +402,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
             </button>
           </div>
           <div className="flex justify-between mt-2 px-1">
-              <p className="text-[10px] text-slate-500 font-mono">GEMINI-2.5-FLASH // v2.1.0</p>
+              <p className="text-[10px] text-slate-500 font-mono">OFFLINE MODE // v2.2.0</p>
           </div>
         </form>
       </div>

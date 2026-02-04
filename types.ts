@@ -89,6 +89,14 @@ export interface AnalysisResult {
   generatedComments?: { rowIndex: number; colIndex: number; text: string }[];
 }
 
+// Enhanced analysis result with chain of thought and task planning
+export interface EnhancedAnalysisResult extends AnalysisResult {
+  chainOfThought?: string; // Explanation of the reasoning process
+  taskPlan?: string[]; // Step-by-step plan of actions to execute
+  confidence?: number; // Confidence level of the analysis (0-1)
+  executionSteps?: string[]; // Detailed steps for execution
+}
+
 export interface DashboardItem {
   id: string;
   chartConfig: ChartConfig;
