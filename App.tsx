@@ -19,7 +19,7 @@ import HomeView from './components/HomeView';
 import UserMenu from './components/UserMenu';
 import SettingsModal from './components/SettingsModal';
 import ShortcutsModal from './components/ShortcutsModal';
-import ErrorBoundary from './components/ErrorBoundary';
+import ErrorBoundary, { GridErrorBoundary } from './components/ErrorBoundary';
 import { parseExcelFile, exportToCSV, createBlankSheet, getTemplateData } from './services/excelService';
 import { generateSmartColumnData } from './services/geminiService';
 import { SheetData, DashboardItem, ChartConfig, FormattingRule, SelectionRange } from './types';
@@ -27,7 +27,25 @@ import { evaluateCellValue, indexToExcelCol, goalSeek, parseCellReference } from
 import { saveFile, loadFile } from './services/storageService';
 import './index.css';
 
+// Add mobile detection hook
+const useMobileDetection = () => {
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
+  return isMobile;
+};
+
 const AppContent: React.FC = () => {
+  const isMobile = useMobileDetection();
   const [view, setView] = useState<'home' | 'editor'>('home');
   const [sheetData, setSheetData] = useState<SheetData | null>(null);
   const [history, setHistory] = useState<SheetData[]>([]);
@@ -657,32 +675,32 @@ const AppContent: React.FC = () => {
         <div className="saas-main">
             {/* Header */}
             <header className="saas-header">
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3 sm:gap-6">
                     <div className="brand-logo cursor-pointer" onClick={handleGoHome}>
                         <div className="icon-box">
-                            <Activity className="w-5 h-5" />
+                            <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
-                        <span className="text-white">NexSheet</span>
+                        <span className="text-white text-sm sm:text-base">NexSheet</span>
                     </div>
                     
-                    {/* Navigation Pills */}
-                    {sheetData && view === 'editor' && (
+                    {/* Navigation Pills - Hide on mobile */}
+                    {sheetData && view === 'editor' && !isMobile && (
                         <div className="hidden md:flex bg-slate-800/50 rounded-lg p-1 border border-slate-700/50 animate-in fade-in zoom-in">
                              <button 
                                 onClick={() => setActiveTab('grid')}
                                 className={`tab-pill ${activeTab === 'grid' ? 'active' : ''}`}
                             >
                                 <FileSpreadsheet className="w-4 h-4" />
-                                Data
+                                <span className="mobile-hidden">Data</span>
                             </button>
                             <button 
                                 onClick={() => setActiveTab('dashboard')}
                                 className={`tab-pill ${activeTab === 'dashboard' ? 'active' : ''}`}
                             >
                                 <LayoutGrid className="w-4 h-4" />
-                                Dashboard
+                                <span className="mobile-hidden">Dashboard</span>
                                 {dashboardItems.length > 0 && (
-                                    <span className="ml-1 px-1.5 py-0.5 rounded-full bg-nexus-accent/20 text-nexus-accent text-[10px] border border-nexus-accent/30">
+                                    <span className="ml-1 px-1.5 py-0.5 rounded-full bg-nexus-accent/20 text-nexus-accent text-[10px] border border-nexus-accent/30 mobile-hidden">
                                         {dashboardItems.length}
                                     </span>
                                 )}
@@ -691,129 +709,139 @@ const AppContent: React.FC = () => {
                     )}
                 </div>
 
-                <div className="flex items-center gap-4">
-                    {/* Search/Command Trigger */}
+                <div className="flex items-center gap-2 sm:gap-4">
+                    {/* Search/Command Trigger - Compact on mobile */}
                     <button 
                         onClick={() => setIsCommandPaletteOpen(true)}
-                        className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 border border-slate-700/50 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-700/50 transition-colors"
+                        className="hidden sm:flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1.5 bg-slate-800/50 border border-slate-700/50 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-700/50 transition-colors"
                     >
-                        <Search className="w-3.5 h-3.5" />
-                        <span>Search commands...</span>
-                        <span className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px]">⌘K</span>
+                        <Search className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        <span className="mobile-hidden">Search commands...</span>
+                        <span className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] mobile-hidden">⌘K</span>
                     </button>
 
-                    {/* Tools (Only in Editor) */}
+                    {/* Compact toolbar for mobile */}
                     {view === 'editor' && (
-                        <div className="toolbar-group animate-in fade-in slide-in-from-top-1">
-                             <button onClick={handleUndo} disabled={!sheetData || historyIndex <= 0} className="btn-icon" title="Undo">
-                                <Undo2 className="w-4 h-4" />
-                            </button>
-                            <button onClick={handleRedo} disabled={!sheetData || historyIndex >= history.length - 1} className="btn-icon" title="Redo">
-                                <Redo2 className="w-4 h-4" />
-                            </button>
+                      <div className={`compact-toolbar ${isMobile ? 'bg-slate-800/50 rounded-lg p-1 border border-slate-700/50' : 'toolbar-group animate-in fade-in slide-in-from-top-1'}`}>
+                        <button onClick={handleUndo} disabled={!sheetData || historyIndex <= 0} className="btn-icon" title="Undo">
+                          <Undo2 className="w-4 h-4" />
+                        </button>
+                        <button onClick={handleRedo} disabled={!sheetData || historyIndex >= history.length - 1} className="btn-icon" title="Redo">
+                          <Redo2 className="w-4 h-4" />
+                        </button>
+                        
+                        {!isMobile && (
+                          <>
                             <div className="w-px h-4 bg-slate-700 mx-1"></div>
                             <button 
-                                onClick={() => setIsFormattingModalOpen(true)} 
-                                disabled={!sheetData} 
-                                className="btn-icon" 
-                                title="Conditional Formatting"
+                              onClick={() => setIsFormattingModalOpen(true)} 
+                              disabled={!sheetData} 
+                              className="btn-icon" 
+                              title="Conditional Formatting"
                             >
-                                <PaintBucket className="w-4 h-4" />
-                            </button>
-                             <button 
-                                onClick={() => setDataToolsState({ isOpen: true, mode: 'duplicates' })} 
-                                disabled={!sheetData} 
-                                className="btn-icon" 
-                                title="Data Tools"
-                            >
-                                <DatabaseZap className="w-4 h-4" />
-                            </button>
-                             <button 
-                                onClick={() => setIsGoalSeekModalOpen(true)} 
-                                disabled={!sheetData} 
-                                className="btn-icon" 
-                                title="Goal Seek"
-                            >
-                                <Target className="w-4 h-4" />
+                              <PaintBucket className="w-4 h-4" />
                             </button>
                             <button 
-                                onClick={() => setIsWatchWindowOpen(!isWatchWindowOpen)} 
-                                disabled={!sheetData} 
-                                className={`btn-icon ${isWatchWindowOpen ? 'active' : ''}`}
-                                title="Watch Window"
+                              onClick={() => setDataToolsState({ isOpen: true, mode: 'duplicates' })} 
+                              disabled={!sheetData} 
+                              className="btn-icon" 
+                              title="Data Tools"
                             >
-                                <Eye className="w-4 h-4" />
+                              <DatabaseZap className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        
+                        <div className="w-px h-4 bg-slate-700 mx-1 mobile-hidden"></div>
+                        <button 
+                          onClick={() => setIsWatchWindowOpen(!isWatchWindowOpen)} 
+                          disabled={!sheetData} 
+                          className={`btn-icon ${isWatchWindowOpen ? 'active' : ''} mobile-hidden`}
+                          title="Watch Window"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => setIsSmartFillModalOpen(true)} 
+                          disabled={!sheetData} 
+                          className="btn-icon text-indigo-400 hover:text-indigo-300" 
+                          title="AI Smart Fill"
+                        >
+                          <Wand2 className="w-4 h-4" />
+                        </button>
+                        
+                        {!isMobile && (
+                          <>
+                            <button 
+                              onClick={() => setIsPivotModalOpen(true)} 
+                              disabled={!sheetData} 
+                              className="btn-icon" 
+                              title="Pivot Table"
+                            >
+                              <Table className="w-4 h-4" />
                             </button>
                             <button 
-                                onClick={() => setIsSmartFillModalOpen(true)} 
-                                disabled={!sheetData} 
-                                className="btn-icon text-indigo-400 hover:text-indigo-300" 
-                                title="AI Smart Fill"
+                              onClick={() => setIsChartWizardOpen(true)} 
+                              disabled={!sheetData} 
+                              className="btn-icon" 
+                              title="Create Chart"
                             >
-                                <Wand2 className="w-4 h-4" />
+                              <BarChart3 className="w-4 h-4" />
                             </button>
-                            <button 
-                                onClick={() => setIsPivotModalOpen(true)} 
-                                disabled={!sheetData} 
-                                className="btn-icon" 
-                                title="Pivot Table"
-                            >
-                                <Table className="w-4 h-4" />
-                            </button>
-                            <button 
-                                onClick={() => setIsChartWizardOpen(true)} 
-                                disabled={!sheetData} 
-                                className="btn-icon" 
-                                title="Create Chart"
-                            >
-                                <BarChart3 className="w-4 h-4" />
-                            </button>
-                            <button 
-                                onClick={() => setIsShareModalOpen(true)} 
-                                disabled={!sheetData} 
-                                className="btn-icon text-blue-400 hover:text-blue-300" 
-                                title="Share"
-                            >
-                                <Share2 className="w-4 h-4" />
-                            </button>
+                          </>
+                        )}
+                        
+                        <button 
+                          onClick={() => setIsShareModalOpen(true)} 
+                          disabled={!sheetData} 
+                          className="btn-icon text-blue-400 hover:text-blue-300 mobile-hidden" 
+                          title="Share"
+                        >
+                          <Share2 className="w-4 h-4" />
+                        </button>
+                        
+                        {!isMobile && (
+                          <>
                             <div className="w-px h-4 bg-slate-700 mx-1"></div>
-                             <button onClick={handleDownload} disabled={!sheetData} className="btn-icon" title="Export">
-                                <Download className="w-4 h-4" />
+                            <button onClick={handleDownload} disabled={!sheetData} className="btn-icon" title="Export">
+                              <Download className="w-4 h-4" />
                             </button>
-                        </div>
+                          </>
+                        )}
+                      </div>
                     )}
 
-                    <div className="h-6 w-px bg-slate-700/50"></div>
+                    <div className="h-6 w-px bg-slate-700/50 mobile-hidden"></div>
                     
                     {view === 'editor' && (
-                        <button 
-                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                            className={`btn-icon ${isSidebarOpen ? 'active' : ''}`}
-                            title="Toggle Agent"
-                        >
-                            {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                        </button>
+                      <button 
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                        className={`btn-icon ${isSidebarOpen ? 'active' : ''}`}
+                        title="Toggle Agent"
+                      >
+                        {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                      </button>
                     )}
                     
                     <button onClick={() => setIsUpgradeModalOpen(true)} className="flex items-center justify-center p-1.5 rounded-full bg-gradient-to-r from-amber-200 to-yellow-400 text-slate-900 shadow-lg shadow-amber-500/20 hover:scale-105 transition-transform" title="Upgrade to Pro">
-                        <Crown className="w-4 h-4" />
+                      <Crown className="w-4 h-4" />
                     </button>
 
                     <div className="relative">
-                        <button 
-                            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                            className="w-8 h-8 rounded-full bg-gradient-to-tr from-nexus-accent to-purple-600 flex items-center justify-center border border-white/10 text-white shadow-inner hover:ring-2 hover:ring-white/20 transition-all font-bold text-xs"
-                        >
-                            JD
-                        </button>
-                        <UserMenu 
-                            isOpen={isUserMenuOpen} 
-                            onClose={() => setIsUserMenuOpen(false)} 
-                            onOpenSettings={() => setIsSettingsOpen(true)}
-                            onOpenShortcuts={() => setIsShortcutsOpen(true)}
-                            onOpenUpgrade={() => setIsUpgradeModalOpen(true)}
-                            onLogout={() => { handleGoHome(); addToast('info', 'Signed Out'); }}
-                        />
+                      <button 
+                        onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                        className="w-8 h-8 rounded-full bg-gradient-to-tr from-nexus-accent to-purple-600 flex items-center justify-center border border-white/10 text-white shadow-inner hover:ring-2 hover:ring-white/20 transition-all font-bold text-xs"
+                      >
+                        JD
+                      </button>
+                      <UserMenu 
+                        isOpen={isUserMenuOpen} 
+                        onClose={() => setIsUserMenuOpen(false)} 
+                        onOpenSettings={() => setIsSettingsOpen(true)}
+                        onOpenShortcuts={() => setIsShortcutsOpen(true)}
+                        onOpenUpgrade={() => setIsUpgradeModalOpen(true)}
+                        onLogout={() => { handleGoHome(); addToast('info', 'Signed Out'); }}
+                      />
                     </div>
                 </div>
             </header>
@@ -829,28 +857,30 @@ const AppContent: React.FC = () => {
                     />
                 ) : (
                     <>
-                        <div className="flex-1 overflow-hidden p-6 relative z-0">
+                        <div className="flex-1 overflow-hidden p-4 sm:p-6 relative z-0">
                             {activeTab === 'grid' && sheetData ? (
                                 <div className="h-full w-full data-grid-container">
-                                    <Grid 
-                                        data={sheetData} 
-                                        selectedRange={selectedRange}
-                                        onRangeSelect={setSelectedRange}
-                                        onCellEdit={handleCellEdit}
-                                        onDeleteColumn={handleDeleteColumn}
-                                        onRenameColumn={handleRenameColumn}
-                                        onSmartFillTrigger={handleSmartFillTrigger}
-                                        onAnalyzeRange={handleAnalyzeRange}
-                                        onInsertRow={handleInsertRow}
-                                        onDeleteRow={handleDeleteRow}
-                                        onInsertColumn={handleInsertColumn}
-                                        onClearRange={handleClearRange}
-                                        onAddComment={handleAddComment}
-                                        onAddWatch={handleAddWatch}
-                                        onNotify={addToast}
-                                        onOpenDataTool={handleOpenDataTool}
-                                        onColumnResize={handleColumnResize}
-                                    />
+                                    <GridErrorBoundary>
+                                        <Grid 
+                                            data={sheetData} 
+                                            selectedRange={selectedRange}
+                                            onRangeSelect={setSelectedRange}
+                                            onCellEdit={handleCellEdit}
+                                            onDeleteColumn={handleDeleteColumn}
+                                            onRenameColumn={handleRenameColumn}
+                                            onSmartFillTrigger={handleSmartFillTrigger}
+                                            onAnalyzeRange={handleAnalyzeRange}
+                                            onInsertRow={handleInsertRow}
+                                            onDeleteRow={handleDeleteRow}
+                                            onInsertColumn={handleInsertColumn}
+                                            onClearRange={handleClearRange}
+                                            onAddComment={handleAddComment}
+                                            onAddWatch={handleAddWatch}
+                                            onNotify={addToast}
+                                            onOpenDataTool={handleOpenDataTool}
+                                            onColumnResize={handleColumnResize}
+                                        />
+                                    </GridErrorBoundary>
                                 </div>
                             ) : sheetData ? (
                                 <Dashboard items={dashboardItems} sheetData={sheetData} onRemoveItem={removeFromDashboard} />

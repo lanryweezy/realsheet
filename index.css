@@ -18,6 +18,31 @@
   .cell-selected {
     @apply ring-2 ring-blue-500;
   }
+  
+  /* Mobile Responsive Styles */
+  .mobile-hidden {
+    @apply hidden sm:block;
+  }
+  
+  .mobile-only {
+    @apply block sm:hidden;
+  }
+  
+  .grid-container {
+    @apply overflow-auto;
+  }
+  
+  .toolbar-group {
+    @apply flex items-center gap-1 sm:gap-4;
+  }
+  
+  .btn-icon {
+    @apply p-1.5 sm:p-2;
+  }
+  
+  .compact-toolbar {
+    @apply flex flex-wrap gap-1 sm:gap-2 items-center;
+  }
 }
 
 :root {
@@ -40,6 +65,50 @@ body {
   background-color: #000;
   color: var(--nexus-text-main);
   overflow: hidden;
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 640px) {
+  .saas-header {
+    padding: 0 12px;
+    height: 50px;
+  }
+  
+  .brand-logo span {
+    font-size: 14px;
+  }
+  
+  .toolbar-group {
+    padding: 2px;
+    border-radius: 6px;
+  }
+  
+  .btn-icon {
+    padding: 6px;
+  }
+  
+  .status-bar {
+    height: 28px;
+    padding: 0 12px;
+    font-size: 10px;
+  }
+  
+  .data-grid-container {
+    padding: 0;
+  }
+  
+  .saas-sidebar-panel {
+    width: 100%;
+    position: fixed;
+    bottom: 0;
+    height: 40vh;
+    z-index: 50;
+  }
+  
+  .hidden-panel {
+    height: 0;
+    width: 100%;
+  }
 }
 
 /* Scrollbar */

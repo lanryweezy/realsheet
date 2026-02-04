@@ -187,6 +187,14 @@ const Grid: React.FC<GridProps> = ({
   onOpenDataTool, 
   onColumnResize 
 }) => {
+  const isMobile = window.innerWidth < 768;
+  
+  // Optimize cell sizing for mobile
+  const getCellWidth = (col: string) => {
+    const defaultWidth = isMobile ? 100 : 120;
+    return data.columnWidths?.[col] || defaultWidth;
+  };
+
   const columnTypes = useMemo(() => inferColumnTypes(data), [data]);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const [activeMenuColumn, setActiveMenuColumn] = useState<string | null>(null);
@@ -566,240 +574,132 @@ const Grid: React.FC<GridProps> = ({
   }, []);
 
   return (
-    <div className="w-full h-full overflow-auto relative select-none">
-      <table ref={tableRef} className="data-grid-table">
+    <div className="w-full h-full overflow-auto relative select-none grid-container">
+      <table 
+        ref={tableRef}
+        className="data-grid-table w-full border-collapse"
+        style={{ minWidth: '100%', tableLayout: 'fixed' }}
+      >
         <thead>
           <tr>
-            <th className="w-10 text-center bg-slate-800/90 z-20 sticky top-0 left-0">#</th>
-            {data.columns.map((col, idx) => {
-              const width = data.columnWidths?.[col] || 120;
+            {/* Index Column */}
+            <th className="index-col sticky left-0 z-20" style={{ width: isMobile ? '40px' : '50px' }}>
+              <div className="flex items-center justify-center h-8">
+                <Hash className="w-4 h-4" />
+              </div>
+            </th>
+            
+            {/* Data Columns */}
+            {data.columns.map((col, colIdx) => {
+              const width = getCellWidth(col);
               return (
-              <th 
-                key={idx} 
-                className={`group relative transition-colors ${isColSelected(idx) ? 'bg-nexus-accent/20 border-b-nexus-accent' : ''}`}
-                style={{ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}
-                onContextMenu={(e) => handleHeaderContextMenu(e, col)}
-                onDoubleClick={() => { setEditingColumnName(col); setTempColName(col); }}
-              >
-                <div className="flex items-center justify-between px-3 py-2 gap-2">
-                    {editingColumnName === col ? (
-                         <input 
-                            autoFocus
-                            className="bg-slate-700 text-white text-xs p-1 rounded w-full outline-none border border-nexus-accent"
-                            value={tempColName}
-                            onChange={(e) => setTempColName(e.target.value)}
-                            onBlur={handleColumnRenameSubmit}
-                            onKeyDown={(e) => { if(e.key === 'Enter') handleColumnRenameSubmit(); }}
-                            onClick={(e) => e.stopPropagation()}
-                         />
-                    ) : (
-                        <div className="flex items-center gap-2 cursor-pointer flex-1 overflow-hidden" onClick={() => handleHeaderClick(col)}>
-                            {columnTypes[col] === 'number' ? <Hash className="w-3 h-3 text-nexus-accent shrink-0" /> : <TypeIcon className="w-3 h-3 text-slate-500 shrink-0" />}
-                            <span className="truncate text-xs font-semibold">{col}</span>
-                        </div>
-                    )}
-                    
-                    <div className="flex items-center gap-1 shrink-0">
-                         {sortConfig?.key === col && (
-                            sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-nexus-accent" /> : <ArrowDown className="w-3 h-3 text-nexus-accent" />
-                         )}
-                         <button 
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-700 rounded transition-opacity"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveMenuColumn(activeMenuColumn === col ? null : col);
-                            }}
+                <th 
+                  key={col} 
+                  className="cell-header sticky top-0 z-10 text-left"
+                  style={{ 
+                    width: `${width}px`, 
+                    maxWidth: `${width}px`, 
+                    minWidth: `${width}px`,
+                    fontSize: isMobile ? '11px' : '13px'
+                  }}
+                >
+                  {/* Column Header Content */}
+                  <div className="flex items-center justify-between h-8 px-2">
+                    <span className="truncate flex-1" title={col}>
+                      {col}
+                    </span>
+                    {/* Mobile-friendly column actions */}
+                    <div className="flex items-center gap-1">
+                      {!isMobile && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMenuColumn(col);
+                          }}
+                          className="p-1 hover:bg-slate-700 rounded"
                         >
-                            <MoreVertical className="w-3 h-3 text-slate-400" />
+                          <MoreVertical className="w-3 h-3" />
                         </button>
+                      )}
+                      {isMobile && (
+                        <button 
+                          onClick={() => onSmartFillTrigger(col)}
+                          className="p-1 text-indigo-400 hover:text-indigo-300"
+                          title="Smart Fill"
+                        >
+                          <Sparkles className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
-                </div>
-                {/* Resize Handle */}
-                <div 
-                    className="absolute top-0 bottom-0 right-0 w-1 cursor-col-resize hover:bg-nexus-accent z-10"
-                    onMouseDown={(e) => handleResizeStart(e, col)}
-                />
-
-                {/* Column Menu */}
-                {activeMenuColumn === col && (
-                    <div ref={menuRef} className="absolute top-full right-2 z-50 w-56 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden animate-in fade-in zoom-in duration-100 text-left">
-                        <div className="py-1">
-                            <button onClick={() => { onSmartFillTrigger(col); setActiveMenuColumn(null); }} className="w-full text-left px-4 py-2 text-xs text-indigo-300 hover:bg-slate-700 flex items-center gap-2">
-                                <Sparkles className="w-3.5 h-3.5" /> Smart Fill (Gen AI)...
-                            </button>
-                            <button onClick={() => { onOpenDataTool('clean', col); setActiveMenuColumn(null); }} className="w-full text-left px-4 py-2 text-xs text-emerald-400 hover:bg-slate-700 flex items-center gap-2">
-                                <Sparkles className="w-3.5 h-3.5" /> AI Magic Clean...
-                            </button>
-                            <div className="h-px bg-slate-700 my-1" />
-                            <button onClick={() => { onOpenDataTool('split', col); setActiveMenuColumn(null); }} className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2">
-                                <SplitSquareHorizontal className="w-3.5 h-3.5" /> Text to Columns...
-                            </button>
-                            <button onClick={() => { onOpenDataTool('duplicates', col); setActiveMenuColumn(null); }} className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2">
-                                <CopyMinus className="w-3.5 h-3.5" /> Remove Duplicates...
-                            </button>
-                            <div className="h-px bg-slate-700 my-1" />
-                             <button onClick={() => { onInsertColumn(idx); setActiveMenuColumn(null); }} className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2">
-                                <PlusSquare className="w-3.5 h-3.5" /> Insert Right
-                            </button>
-                            <button onClick={() => { setEditingColumnName(col); setTempColName(col); setActiveMenuColumn(null); }} className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2">
-                                <Edit2 className="w-3.5 h-3.5" /> Rename
-                            </button>
-                            <button onClick={() => { onDeleteColumn(col); setActiveMenuColumn(null); }} className="w-full text-left px-4 py-2 text-xs text-red-400 hover:bg-slate-700 flex items-center gap-2">
-                                <Trash2 className="w-3.5 h-3.5" /> Delete Column
-                            </button>
-                        </div>
-                    </div>
-                )}
-              </th>
-            );})}
+                  </div>
+                </th>
+              );
+            })}
           </tr>
         </thead>
+        
         <tbody>
-          {visibleRows.map(({ row, index: originalIndex }, visualIndex) => (
-            <tr key={originalIndex}>
-              <td className={`index-col sticky left-0 z-10 border-r border-slate-700/50 ${isRowSelected(originalIndex) ? 'bg-nexus-accent/20 text-nexus-accent' : ''}`}>{originalIndex + 1}</td>
+          {data.rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {/* Row Index */}
+              <td 
+                className={`index-col sticky left-0 z-10 ${isRowSelected(rowIndex) ? 'bg-nexus-accent/20 text-nexus-accent' : ''}`}
+                style={{ fontSize: isMobile ? '10px' : '12px' }}
+              >
+                {rowIndex + 1}
+              </td>
+              
+              {/* Data Cells */}
               {data.columns.map((col, colIdx) => {
-                  const rawVal = row[col];
-                  const displayVal = evaluateCellValue(rawVal, data.rows, data.columns);
-                  const { style, dataBarWidth, dataBarColor } = getFormattingStyle(col, displayVal);
-                  const isSelected = isCellSelected(originalIndex, colIdx);
-                  const isInRange = isCellInRange(originalIndex, colIdx);
-                  const isEditing = editingCell?.r === originalIndex && editingCell?.c === colIdx;
-                  
-                  const width = data.columnWidths?.[col] || 120;
-
-                  // Selection Borders
-                  let selectionBorders;
-                  if (isInRange && selectedRange) {
-                      const { start, end } = selectedRange;
-                      const minRow = Math.min(start.rowIndex, end.rowIndex);
-                      const maxRow = Math.max(start.rowIndex, end.rowIndex);
-                      const minCol = Math.min(start.colIndex, end.colIndex);
-                      const maxCol = Math.max(start.colIndex, end.colIndex);
-                      
-                      selectionBorders = {
-                          top: originalIndex === minRow,
-                          bottom: originalIndex === maxRow,
-                          left: colIdx === minCol,
-                          right: colIdx === maxCol
-                      };
-                  }
-                  
-                  const commentKey = `${originalIndex}-${colIdx}`;
-                  const comment = data.comments?.[commentKey];
-
-                  return (
-                    <td 
-                        key={`${originalIndex}-${colIdx}`} 
-                        className="p-0 border-b border-r border-slate-700/50 overflow-hidden"
-                        style={{ width: `${width}px`, maxWidth: `${width}px`, minWidth: `${width}px` }}
-                    >
-                        <Cell 
-                          rowIndex={originalIndex}
-                          colIndex={colIdx}
-                          col={col}
-                          value={rawVal}
-                          isSelected={isSelected}
-                          isHeader={false}
-                          columnType={columnTypes[col] || 'string'}
-                          onCellEdit={onCellEdit}
-                          onContextMenu={handleContextMenu}
-                          onDoubleClick={handleCellDoubleClick}
-                        />
-                    </td>
-                  );
+                const rawVal = row[col];
+                const displayVal = evaluateCellValue(rawVal, data.rows, data.columns);
+                const { style, dataBarWidth, dataBarColor } = getFormattingStyle(col, displayVal);
+                const isSelected = isCellSelected(rowIndex, colIdx);
+                const isInRange = isCellInRange(rowIndex, colIdx);
+                const selectionBorders = {
+                  top: false,
+                  bottom: false,
+                  left: false,
+                  right: false
+                };
+                
+                const width = getCellWidth(col);
+                
+                return (
+                  <td 
+                    key={`${rowIndex}-${colIdx}`} 
+                    className="p-0 border-b border-r border-slate-700/50 overflow-hidden relative"
+                    style={{ 
+                      width: `${width}px`, 
+                      maxWidth: `${width}px`, 
+                      minWidth: `${width}px`,
+                      fontSize: isMobile ? '11px' : '13px'
+                    }}
+                  >
+                    <Cell 
+                      rowIndex={rowIndex}
+                      colIndex={colIdx}
+                      col={col}
+                      value={rawVal}
+                      isSelected={isSelected}
+                      isHeader={false}
+                      columnType={columnTypes[col] || 'string'}
+                      onCellEdit={onCellEdit}
+                      onContextMenu={handleContextMenu}
+                      onDoubleClick={handleCellDoubleClick}
+                    />
+                    
+                    {/* Mobile touch targets */}
+                    {isMobile && isSelected && (
+                      <div className="absolute inset-0 bg-nexus-accent/10 pointer-events-none rounded-sm"></div>
+                    )}
+                  </td>
+                );
               })}
             </tr>
           ))}
         </tbody>
       </table>
-
-      {/* Context Menu */}
-      {contextMenu && (
-          <div 
-            className="context-menu fixed z-[100] w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100"
-            style={{ top: contextMenu.y, left: contextMenu.x }}
-          >
-              <div className="p-1">
-                  {contextMenu.type === 'cell' && selectedRange && (
-                      <>
-                        <div className="px-3 py-2 border-b border-slate-800 mb-1">
-                            <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
-                                Selection ({Math.abs(selectedRange.end.rowIndex - selectedRange.start.rowIndex) + 1}x{Math.abs(selectedRange.end.colIndex - selectedRange.start.colIndex) + 1})
-                            </span>
-                        </div>
-                        <button 
-                            onClick={() => { onAnalyzeRange(selectedRange); setContextMenu(null); }}
-                            className="w-full text-left px-3 py-2.5 text-sm text-nexus-accent hover:bg-slate-800 rounded-lg flex items-center gap-3 transition-colors"
-                        >
-                            <Sparkles className="w-4 h-4" /> Analyze with AI
-                        </button>
-                        <button 
-                            onClick={handleCopy}
-                            className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded-lg flex items-center gap-3 transition-colors"
-                        >
-                            <Copy className="w-4 h-4" /> Copy
-                        </button>
-                        <button 
-                            onClick={() => { onClearRange(selectedRange); setContextMenu(null); }}
-                            className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded-lg flex items-center gap-3 transition-colors"
-                        >
-                            <XCircle className="w-4 h-4" /> Clear Content
-                        </button>
-                        <div className="h-px bg-slate-700 my-1" />
-                        <button 
-                            onClick={() => { onInsertRow(selectedRange.start.rowIndex); setContextMenu(null); }}
-                            className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded-lg flex items-center gap-3 transition-colors"
-                        >
-                            <PlusSquare className="w-4 h-4" /> Insert Row Above
-                        </button>
-                        <button 
-                            onClick={() => { onDeleteRow(selectedRange.start.rowIndex); setContextMenu(null); }}
-                            className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-slate-800 rounded-lg flex items-center gap-3 transition-colors"
-                        >
-                            <MinusSquare className="w-4 h-4" /> Delete Row
-                        </button>
-                      </>
-                  )}
-
-                  {contextMenu.type === 'header' && (
-                      <>
-                        <div className="px-3 py-2 border-b border-slate-800 mb-1">
-                            <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
-                                {contextMenu.target}
-                            </span>
-                        </div>
-                        <button onClick={() => { setEditingColumnName(contextMenu.target); setTempColName(contextMenu.target); setContextMenu(null); }} className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded-lg flex items-center gap-3 transition-colors">
-                            <Edit2 className="w-4 h-4" /> Rename
-                        </button>
-                        <button onClick={() => { handleHeaderClick(contextMenu.target); setContextMenu(null); }} className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded-lg flex items-center gap-3 transition-colors">
-                            <ArrowUpDown className="w-4 h-4" /> Sort Asc/Desc
-                        </button>
-                        <div className="h-px bg-slate-700 my-1" />
-                        <button onClick={() => { onOpenDataTool('clean', contextMenu.target); setContextMenu(null); }} className="w-full text-left px-3 py-2 text-sm text-emerald-400 hover:bg-slate-800 rounded-lg flex items-center gap-3 transition-colors">
-                            <Sparkles className="w-4 h-4" /> Magic Clean
-                        </button>
-                        <button onClick={() => { onOpenDataTool('split', contextMenu.target); setContextMenu(null); }} className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded-lg flex items-center gap-3 transition-colors">
-                            <SplitSquareHorizontal className="w-4 h-4" /> Text to Columns
-                        </button>
-                        <button onClick={() => { onOpenDataTool('duplicates', contextMenu.target); setContextMenu(null); }} className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded-lg flex items-center gap-3 transition-colors">
-                            <CopyMinus className="w-4 h-4" /> Remove Duplicates
-                        </button>
-                        <div className="h-px bg-slate-700 my-1" />
-                        <button onClick={() => { onDeleteColumn(contextMenu.target); setContextMenu(null); }} className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-slate-800 rounded-lg flex items-center gap-3 transition-colors">
-                            <Trash2 className="w-4 h-4" /> Delete Column
-                        </button>
-                      </>
-                  )}
-              </div>
-          </div>
-      )}
-
-      {data.rows.length === 0 && (
-         <div className="flex flex-col items-center justify-center h-64 text-slate-500">
-           <p>No data available.</p>
-         </div>
-      )}
     </div>
   );
 };
