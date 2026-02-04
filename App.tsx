@@ -1,31 +1,25 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Upload, FileSpreadsheet, LayoutGrid, Activity, Menu, X, Download, Undo2, Redo2, Database, Layers, User, Plus, FileText, Calendar, DollarSign, List, Zap, Users, Shield, Grid3X3, Table, CheckCircle, BarChart3, Sigma, GitBranch, PieChart, Shapes, Image, PaintBucket, Type, ListOrdered, Lock, Cloud, MousePointerClick, Code, Search, Wand2, DatabaseZap, Waypoints, Target, SplitSquareHorizontal, FileMinus, Filter, Gauge, SearchCode, LayoutList, LineChart, Cpu, Table2, Eye, Group, ToggleLeft, ScanEye, ArrowDownToLine, FileUp, Webhook, ListFilter, Binary, FileDown, Calculator, Crown, Share2, Home } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createRoot } from 'react-dom/client';
+import { 
+  Download, Upload, Plus, Settings, MessageSquare, BarChart3, 
+  Table, Share2, Menu, Crown, X, Activity, FileSpreadsheet, 
+  LayoutGrid, Undo2, Redo2, PaintBucket, DatabaseZap, Eye, 
+  Wand2, Search, Hash, MoreVertical, Copy, MoveRight, MoveDown, 
+  SplitSquareHorizontal, CopyMinus, Calculator, Filter, MessageSquare as MessageSquareIcon
+} from 'lucide-react';
 import Grid from './components/Grid';
-import Agent from './components/Agent';
 import Dashboard from './components/Dashboard';
-import FormattingModal from './components/FormattingModal';
-import DataToolsModal from './components/DataToolsModal';
-import PivotModal from './components/PivotModal';
-import ChartWizardModal from './components/ChartWizardModal';
-import SmartFillModal from './components/SmartFillModal';
-import GoalSeekModal from './components/GoalSeekModal';
-import WatchWindow from './components/WatchWindow';
-import FormulaBar from './components/FormulaBar';
-import CommandPalette from './components/CommandPalette';
-import ToastContainer, { ToastMessage, ToastType } from './components/Toast';
-import UpgradeModal from './components/UpgradeModal';
+import Agent from './components/Agent';
 import ShareModal from './components/ShareModal';
-import HomeView from './components/HomeView';
-import UserMenu from './components/UserMenu';
 import SettingsModal from './components/SettingsModal';
 import ShortcutsModal from './components/ShortcutsModal';
 import ErrorBoundary, { GridErrorBoundary } from './components/ErrorBoundary';
-import { parseExcelFile, exportToCSV, createBlankSheet, getTemplateData } from './services/excelService';
+import { parseExcelFile, exportToCSV, createBlankSheet, getTemplateData, expandSheet } from './services/excelService';
 import { generateSmartColumnData } from './services/geminiService';
-import { SheetData, DashboardItem, ChartConfig, FormattingRule, SelectionRange } from './types';
+import { SheetData, DashboardItem, ChartConfig, FormattingRule, SelectionRange, Workbook } from './types';
 import { evaluateCellValue, indexToExcelCol, goalSeek, parseCellReference } from './services/formulaService';
-import { saveFile, loadFile } from './services/storageService';
-import './index.css';
+import { ToastType } from './components/Toast';
+import { generateId } from './utils/idGenerator';
 
 // Add mobile detection hook
 const useMobileDetection = () => {
@@ -226,12 +220,6 @@ const AppContent: React.FC = () => {
       loadData(getTemplateData(type));
   };
 
-  const handleGoHome = () => {
-      if (sheetData) saveFile(sheetData); // Ensure saved
-      setSheetData(null);
-      setView('home');
-  };
-
   const handleDownload = () => {
     if (!sheetData) return;
     const csvContent = exportToCSV(sheetData);
@@ -264,7 +252,7 @@ const AppContent: React.FC = () => {
       addToast('info', 'Chart Removed');
   };
 
-  const handleCellEdit = useCallback((rowIndex: number, colKey: string, value: string) => {
+  const handleCellEdit = (rowIndex: number, colKey: string, value: string) => {
     if (!sheetData) return;
     const newRows = [...sheetData.rows];
     let finalValue: string | number = value;
@@ -275,7 +263,7 @@ const AppContent: React.FC = () => {
     newRows[rowIndex] = { ...newRows[rowIndex], [colKey]: finalValue };
     const newData = { ...sheetData, rows: newRows };
     pushToHistory(newData);
-  }, [sheetData, pushToHistory]);
+  };
 
   const handleAddFormattingRule = (rule: FormattingRule) => {
       if (!sheetData) return;
@@ -637,6 +625,17 @@ const AppContent: React.FC = () => {
       setSheetData({ ...sheetData, columnWidths: newWidths });
   };
 
+  const handleSheetExpand = (targetRows: number, targetCols: number) => {
+    if (!sheetData) return;
+    
+    // Only expand if we're actually increasing size
+    if (targetRows > sheetData.rows.length || targetCols > sheetData.columns.length) {
+      const expandedSheet = expandSheet(sheetData, targetRows, targetCols);
+      pushToHistory(expandedSheet);
+      addToast('info', 'Sheet Expanded', `Expanded to ${targetRows} rows and ${expandedSheet.columns.length} columns`);
+    }
+  };
+
   // Command Palette Actions
   const commandActions = [
       { id: 'smart-fill', label: 'Smart Fill / AI Generate', icon: Wand2, action: () => setIsSmartFillModalOpen(true) },
@@ -879,6 +878,7 @@ const AppContent: React.FC = () => {
                                             onNotify={addToast}
                                             onOpenDataTool={handleOpenDataTool}
                                             onColumnResize={handleColumnResize}
+                                            onSheetExpand={handleSheetExpand}
                                         />
                                     </GridErrorBoundary>
                                 </div>
@@ -1011,10 +1011,466 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  // Multiple sheets state
+  const [workbook, setWorkbook] = useState<Workbook | null>(null);
+  const [isSheetTabsVisible, setIsSheetTabsVisible] = useState(true);
+
+  const handleGoHome = () => {
+      if (sheetData) saveFile(sheetData); // Ensure saved
+      setSheetData(null);
+      setView('home');
+  };
+
+  // Initialize with a single sheet
+  useEffect(() => {
+    if (!workbook) {
+      const initialSheet = createBlankSheet();
+      initialSheet.id = generateId();
+      const initialWorkbook: Workbook = {
+        id: generateId(),
+        name: 'Workbook',
+        sheets: [initialSheet],
+        activeSheetIndex: 0,
+        createdAt: new Date(),
+        lastModified: new Date()
+      };
+      setWorkbook(initialWorkbook);
+    }
+  }, []);
+
+  // Get current sheet data
+  const currentSheetData = workbook?.sheets[workbook.activeSheetIndex] || null;
+
+  // Sheet management functions
+  const handleAddSheet = () => {
+    if (!workbook) return;
+    
+    const newSheet = createBlankSheet();
+    newSheet.id = generateId();
+    newSheet.name = `Sheet${workbook.sheets.length + 1}`;
+    
+    const newWorkbook = {
+      ...workbook,
+      sheets: [...workbook.sheets, newSheet],
+      activeSheetIndex: workbook.sheets.length,
+      lastModified: new Date()
+    };
+    
+    setWorkbook(newWorkbook);
+    addToast('success', 'Sheet Added', `Added ${newSheet.name}`);
+  };
+
+  const handleRenameSheet = (index: number, newName: string) => {
+    if (!workbook) return;
+    
+    const updatedSheets = [...workbook.sheets];
+    updatedSheets[index] = { ...updatedSheets[index], name: newName };
+    
+    setWorkbook({
+      ...workbook,
+      sheets: updatedSheets,
+      lastModified: new Date()
+    });
+  };
+
+  const handleCloseSheet = (index: number) => {
+    if (!workbook || workbook.sheets.length <= 1) return;
+    
+    const updatedSheets = workbook.sheets.filter((_, i) => i !== index);
+    const newActiveIndex = index === workbook.activeSheetIndex 
+      ? Math.max(0, index - 1)
+      : workbook.activeSheetIndex > index
+        ? workbook.activeSheetIndex - 1
+        : workbook.activeSheetIndex;
+    
+    setWorkbook({
+      ...workbook,
+      sheets: updatedSheets,
+      activeSheetIndex: newActiveIndex,
+      lastModified: new Date()
+    });
+    
+    addToast('info', 'Sheet Removed', `Removed sheet at index ${index + 1}`);
+  };
+
+  const handleActiveSheetChange = (index: number) => {
+    if (!workbook || index >= workbook.sheets.length) return;
+    
+    setWorkbook({
+      ...workbook,
+      activeSheetIndex: index,
+      lastModified: new Date()
+    });
+  };
+
+  // Update existing functions to work with current sheet
+  const handleCellEdit = (rowIndex: number, colKey: string, value: string) => {
+    if (!workbook) return;
+    
+    const updatedSheets = [...workbook.sheets];
+    const currentSheet = updatedSheets[workbook.activeSheetIndex];
+    const updatedRows = [...currentSheet.rows];
+    updatedRows[rowIndex] = { ...updatedRows[rowIndex], [colKey]: value };
+    
+    updatedSheets[workbook.activeSheetIndex] = {
+      ...currentSheet,
+      rows: updatedRows
+    };
+    
+    setWorkbook({
+      ...workbook,
+      sheets: updatedSheets,
+      lastModified: new Date()
+    });
+  };
+
   return (
-    <ErrorBoundary>
-      <AppContent />
-    </ErrorBoundary>
+    <div className="app-container">
+      {/* Header */}
+      <header className="saas-header">
+        <div className="flex items-center gap-3 sm:gap-6">
+          <div className="brand-logo cursor-pointer" onClick={handleGoHome}>
+            <div className="icon-box">
+              <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <span className="text-white text-sm sm:text-base">NexSheet</span>
+          </div>
+          
+          {/* Navigation Pills - Hide on mobile */}
+          {currentSheetData && view === 'editor' && !isMobile && (
+            <div className="hidden md:flex bg-slate-800/50 rounded-lg p-1 border border-slate-700/50 animate-in fade-in zoom-in">
+              <button 
+                onClick={() => setActiveTab('grid')}
+                className={`tab-pill ${activeTab === 'grid' ? 'active' : ''}`}
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                <span className="mobile-hidden">Data</span>
+              </button>
+              <button 
+                onClick={() => setActiveTab('dashboard')}
+                className={`tab-pill ${activeTab === 'dashboard' ? 'active' : ''}`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+                <span className="mobile-hidden">Dashboard</span>
+                {dashboardItems.length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full bg-nexus-accent/20 text-nexus-accent text-[10px] border border-nexus-accent/30 mobile-hidden">
+                    {dashboardItems.length}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Search/Command Trigger - Compact on mobile */}
+          <button 
+            onClick={() => setIsCommandPaletteOpen(true)}
+            className="hidden sm:flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1.5 bg-slate-800/50 border border-slate-700/50 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-700/50 transition-colors"
+          >
+            <Search className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span className="mobile-hidden">Search commands...</span>
+            <span className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] mobile-hidden">⌘K</span>
+          </button>
+
+          {/* Compact toolbar for mobile */}
+          {view === 'editor' && (
+            <div className={`compact-toolbar ${isMobile ? 'bg-slate-800/50 rounded-lg p-1 border border-slate-700/50' : 'toolbar-group animate-in fade-in slide-in-from-top-1'}`}>
+              <button onClick={handleUndo} disabled={!currentSheetData || historyIndex <= 0} className="btn-icon" title="Undo">
+                <Undo2 className="w-4 h-4" />
+              </button>
+              <button onClick={handleRedo} disabled={!currentSheetData || historyIndex >= history.length - 1} className="btn-icon" title="Redo">
+                <Redo2 className="w-4 h-4" />
+              </button>
+              
+              {!isMobile && (
+                <>
+                  <div className="w-px h-4 bg-slate-700 mx-1"></div>
+                  <button 
+                    onClick={() => setIsFormattingModalOpen(true)} 
+                    disabled={!currentSheetData} 
+                    className="btn-icon" 
+                    title="Conditional Formatting"
+                  >
+                    <PaintBucket className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => setDataToolsState({ isOpen: true, mode: 'duplicates' })} 
+                    disabled={!currentSheetData} 
+                    className="btn-icon" 
+                    title="Data Tools"
+                  >
+                    <DatabaseZap className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+              
+              <div className="w-px h-4 bg-slate-700 mx-1 mobile-hidden"></div>
+              <button 
+                onClick={() => setIsWatchWindowOpen(!isWatchWindowOpen)} 
+                disabled={!currentSheetData} 
+                className={`btn-icon ${isWatchWindowOpen ? 'active' : ''} mobile-hidden`}
+                title="Watch Window"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => setIsSmartFillModalOpen(true)} 
+                disabled={!currentSheetData} 
+                className="btn-icon text-indigo-400 hover:text-indigo-300" 
+                title="AI Smart Fill"
+              >
+                <Wand2 className="w-4 h-4" />
+              </button>
+              
+              {!isMobile && (
+                <>
+                  <button 
+                    onClick={() => setIsPivotModalOpen(true)} 
+                    disabled={!currentSheetData} 
+                    className="btn-icon" 
+                    title="Pivot Table"
+                  >
+                    <Table className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => setIsChartWizardOpen(true)} 
+                    disabled={!currentSheetData} 
+                    className="btn-icon" 
+                    title="Create Chart"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+              
+              <button 
+                onClick={() => setIsShareModalOpen(true)} 
+                disabled={!currentSheetData} 
+                className="btn-icon text-blue-400 hover:text-blue-300 mobile-hidden" 
+                title="Share"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+              
+              {!isMobile && (
+                <>
+                  <div className="w-px h-4 bg-slate-700 mx-1"></div>
+                  <button onClick={handleDownload} disabled={!currentSheetData} className="btn-icon" title="Export">
+                    <Download className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          <div className="h-6 w-px bg-slate-700/50 mobile-hidden"></div>
+          
+          {view === 'editor' && (
+            <button 
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className={`btn-icon ${isSidebarOpen ? 'active' : ''}`}
+              title="Toggle Agent"
+            >
+              {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          )}
+          
+          <button onClick={() => setIsUpgradeModalOpen(true)} className="flex items-center justify-center p-1.5 rounded-full bg-gradient-to-r from-amber-200 to-yellow-400 text-slate-900 shadow-lg shadow-amber-500/20 hover:scale-105 transition-transform" title="Upgrade to Pro">
+            <Crown className="w-4 h-4" />
+          </button>
+
+          <div className="relative">
+            <button 
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              className="w-8 h-8 rounded-full bg-gradient-to-tr from-nexus-accent to-purple-600 flex items-center justify-center border border-white/10 text-white shadow-inner hover:ring-2 hover:ring-white/20 transition-all font-bold text-xs"
+            >
+              JD
+            </button>
+            <UserMenu 
+              isOpen={isUserMenuOpen} 
+              onClose={() => setIsUserMenuOpen(false)} 
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              onOpenShortcuts={() => setIsShortcutsOpen(true)}
+              onOpenUpgrade={() => setIsUpgradeModalOpen(true)}
+              onLogout={() => { handleGoHome(); addToast('info', 'Signed Out'); }}
+            />
+          </div>
+        </div>
+      </header>
+
+      {/* Sheet Tabs - Below the header */}
+      {workbook && isSheetTabsVisible && (
+        <SheetTabs
+          workbook={workbook}
+          onActiveSheetChange={handleActiveSheetChange}
+          onAddSheet={handleAddSheet}
+          onRenameSheet={handleRenameSheet}
+          onCloseSheet={handleCloseSheet}
+        />
+      )}
+      
+      {/* Main Content Area */}
+      <main className="saas-workspace">
+        {view === 'home' ? (
+          <HomeView 
+            onOpenFile={handleOpenFile} 
+            onNewFile={handleCreateBlank} 
+            onUpload={handleFile}
+            onTemplate={handleTemplate}
+          />
+        ) : (
+          <>
+            <div className="flex-1 overflow-hidden p-4 sm:p-6 relative z-0">
+              {activeTab === 'grid' && currentSheetData ? (
+                <div className="h-full w-full data-grid-container">
+                  <GridErrorBoundary>
+                    <Grid 
+                      data={currentSheetData} 
+                      selectedRange={selectedRange}
+                      onRangeSelect={setSelectedRange}
+                      onCellEdit={handleCellEdit}
+                      onDeleteColumn={handleDeleteColumn}
+                      onRenameColumn={handleRenameColumn}
+                      onSmartFillTrigger={handleSmartFillTrigger}
+                      onAnalyzeRange={handleAnalyzeRange}
+                      onInsertRow={handleInsertRow}
+                      onDeleteRow={handleDeleteRow}
+                      onInsertColumn={handleInsertColumn}
+                      onClearRange={handleClearRange}
+                      onAddComment={handleAddComment}
+                      onAddWatch={handleAddWatch}
+                      onNotify={addToast}
+                      onOpenDataTool={handleOpenDataTool}
+                      onColumnResize={handleColumnResize}
+                      onSheetExpand={handleSheetExpand}
+                    />
+                  </GridErrorBoundary>
+                </div>
+              ) : currentSheetData ? (
+                <Dashboard items={dashboardItems} sheetData={currentSheetData} onRemoveItem={removeFromDashboard} />
+              ) : null}
+            </div>
+            
+            {/* Watch Window */}
+            {currentSheetData && (
+              <WatchWindow 
+                isOpen={isWatchWindowOpen}
+                onClose={() => setIsWatchWindowOpen(false)}
+                data={currentSheetData}
+                onRemoveWatch={handleRemoveWatch}
+                onAddWatch={handleAddWatch}
+              />
+            )}
+
+            {/* Status Bar */}
+            <div className="status-bar flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="status-item">
+                  <Database className="w-3.5 h-3.5" />
+                  <span className="text-slate-300 font-medium">{currentSheetData?.name || 'Untitled'}</span>
+                </div>
+                <div className="separator" />
+                <div className="status-item">
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>{currentSheetData?.rows.length.toLocaleString()} Rows</span>
+                </div>
+              </div>
+
+              {rangeStats && (
+                <div className="flex items-center gap-4 animate-in fade-in slide-in-from-bottom-1">
+                  <div className="flex items-center gap-1.5 text-nexus-accent bg-nexus-accent/5 px-2 py-0.5 rounded">
+                    <span className="font-bold text-[10px] uppercase">Sum</span>
+                    <span className="font-mono">{rangeStats.sum}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-purple-400 bg-purple-500/5 px-2 py-0.5 rounded">
+                    <span className="font-bold text-[10px] uppercase">Avg</span>
+                    <span className="font-mono">{rangeStats.avg}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-slate-400">
+                    <span className="font-bold text-[10px] uppercase">Count</span>
+                    <span className="font-mono">{rangeStats.count}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="status-item">
+                <span className={historyIndex > 0 ? "text-amber-400" : "text-green-400"}>
+                  {historyIndex > 0 ? "● Saving..." : "● Saved"}
+                </span>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Right Panel: Agent (Only in Editor) */}
+        {view === 'editor' && (
+          <aside className={`saas-sidebar-panel ${!isSidebarOpen ? 'hidden-panel' : ''}`}>
+            <Agent 
+              sheetData={currentSheetData} 
+              onAddToDashboard={addToDashboard} 
+              onUpdateData={pushToHistory} 
+              promptOverride={agentPromptOverride}
+              onClearPromptOverride={() => setAgentPromptOverride(null)}
+            />
+          </aside>
+        )}
+
+        {/* Modals */}
+        <FormattingModal 
+          isOpen={isFormattingModalOpen}
+          onClose={() => setIsFormattingModalOpen(false)}
+          columns={currentSheetData?.columns || []}
+          onSave={handleAddFormattingRule}
+        />
+        
+        <DataToolsModal
+          isOpen={dataToolsState.isOpen}
+          onClose={() => setDataToolsState(prev => ({ ...prev, isOpen: false }))}
+          columns={currentSheetData?.columns || []}
+          onRemoveDuplicates={handleRemoveDuplicates}
+          onTextToColumns={handleTextToColumns}
+          onFindReplace={handleFindReplace}
+          onMagicClean={handleMagicClean}
+          initialMode={dataToolsState.mode}
+          initialColumn={dataToolsState.initialColumn}
+        />
+
+        <GoalSeekModal 
+          isOpen={isGoalSeekModalOpen}
+          onClose={() => setIsGoalSeekModalOpen(false)}
+          initialTargetCell={getSelectedCellAddress()}
+          onSolve={handleGoalSeek}
+        />
+
+        <PivotModal
+          isOpen={isPivotModalOpen}
+          onClose={() => setIsPivotModalOpen(false)}
+          columns={currentSheetData?.columns || []}
+          onCreatePivot={handleCreatePivot}
+        />
+
+        <ChartWizardModal
+          isOpen={isChartWizardOpen}
+          onClose={() => setIsChartWizardOpen(false)}
+          columns={currentSheetData?.columns || []}
+          onAddChart={addToDashboard}
+        />
+
+        <SmartFillModal
+          isOpen={isSmartFillModalOpen}
+          onClose={() => setIsSmartFillModalOpen(false)}
+          initialColumnName=""
+          onApply={handleSmartFill}
+        />
+
+        <CommandPalette 
+          isOpen={isCommandPaletteOpen}
+          onClose={() => setIsCommandPaletteOpen(false)}
+          actions={commandActions}
+        />
+      </main>
+    </div>
   );
 };
 

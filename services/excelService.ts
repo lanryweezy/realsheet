@@ -130,17 +130,26 @@ export const exportToCSV = (data: SheetData): string => {
 
 // --- New Template & Blank Sheet Logic ---
 
+// Generate columns up to AAA (26*26*26 = 17,576 columns)
 const generateColumns = (count: number): string[] => {
     const cols = [];
     for(let i = 0; i < count; i++) {
-        cols.push(String.fromCharCode(65 + i)); // A, B, C...
+        let colName = '';
+        let num = i;
+        do {
+            colName = String.fromCharCode(65 + (num % 26)) + colName;
+            num = Math.floor(num / 26) - 1;
+        } while (num >= 0);
+        cols.push(colName);
     }
     return cols;
 };
 
+// Create initial sheet with reasonable defaults
 export const createBlankSheet = (): SheetData => {
-    const columns = generateColumns(10); // A to J
-    const rows: Row[] = Array(20).fill(null).map(() => {
+    // Start with 100 rows and A-Z columns (26 columns)
+    const columns = generateColumns(26); // A to Z
+    const rows: Row[] = Array(100).fill(null).map(() => {
         const row: Row = {};
         columns.forEach(col => row[col] = "");
         return row;
@@ -151,6 +160,52 @@ export const createBlankSheet = (): SheetData => {
         rows,
         formattingRules: []
     };
+};
+
+// Function to expand sheet dynamically
+export const expandSheet = (sheetData: SheetData, targetRows: number, targetCols: number): SheetData => {
+    const currentRows = sheetData.rows.length;
+    const currentCols = sheetData.columns.length;
+    
+    let newColumns = [...sheetData.columns];
+    let newRows = [...sheetData.rows];
+    
+    // Expand columns if needed
+    if (targetCols > currentCols) {
+        const additionalCols = generateColumns(targetCols).slice(currentCols);
+        newColumns = [...sheetData.columns, ...additionalCols];
+        
+        // Add new columns to existing rows
+        newRows = newRows.map(row => {
+            const newRow = { ...row };
+            additionalCols.forEach(col => {
+                newRow[col] = "";
+            });
+            return newRow;
+        });
+    }
+    
+    // Expand rows if needed
+    if (targetRows > currentRows) {
+        const additionalRows: Row[] = Array(targetRows - currentRows).fill(null).map(() => {
+            const row: Row = {};
+            newColumns.forEach(col => row[col] = "");
+            return row;
+        });
+        newRows = [...newRows, ...additionalRows];
+    }
+    
+    return {
+        ...sheetData,
+        columns: newColumns,
+        rows: newRows
+    };
+};
+
+// Get maximum column index needed (AAA = 17576)
+export const getMaxColumnIndex = (): number => {
+    // AAA = 26^3 + 26^2 + 26^1 = 17576
+    return 17576;
 };
 
 export const getTemplateData = (type: 'budget' | 'invoice' | 'schedule'): SheetData => {

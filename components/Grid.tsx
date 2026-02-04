@@ -1,8 +1,15 @@
-import React, { useState, useEffect, memo, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, memo, useMemo, useRef, useCallback, useLayoutEffect } from 'react';
 import { SheetData, CellValue, SelectionRange, FormattingRule } from '../types';
 import { AlertCircle, Hash, Calendar, Type as TypeIcon, ArrowUpDown, ArrowUp, ArrowDown, MoreVertical, Trash2, Edit2, Sparkles, Copy, XCircle, Calculator, MoveRight, MoveDown, PlusSquare, MinusSquare, MessageSquare, Eye, SplitSquareHorizontal, CopyMinus } from 'lucide-react';
-import { evaluateCellValue, indexToExcelCol } from '../services/formulaService';
+import { evaluateCellValue, indexToExcelCol, excelColToIndex } from '../services/formulaService';
 import { ToastType } from './Toast';
+import { expandSheet } from '../services/excelService';
+
+// Virtual scrolling constants
+const ROW_HEIGHT = 32;
+const HEADER_HEIGHT = 32;
+const VISIBLE_ROWS_BUFFER = 10;
+const EXPANSION_THRESHOLD = 5; // Expand when within 5 rows/columns of edge
 
 interface GridProps {
   data: SheetData;
@@ -22,6 +29,7 @@ interface GridProps {
   onNotify: (type: ToastType, title: string, message?: string) => void;
   onOpenDataTool: (mode: 'duplicates' | 'split' | 'find' | 'clean', colKey?: string) => void;
   onColumnResize: (colKey: string, width: number) => void;
+  onSheetExpand: (rows: number, cols: number) => void;
 }
 
 type ColumnType = 'string' | 'number' | 'date';
@@ -185,15 +193,117 @@ const Grid: React.FC<GridProps> = ({
   onAddWatch, 
   onNotify, 
   onOpenDataTool, 
-  onColumnResize 
+  onColumnResize,
+  onSheetExpand // New prop for expansion
 }) => {
   const isMobile = window.innerWidth < 768;
+  const gridContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(600);
+  const [containerWidth, setContainerWidth] = useState(800);
   
   // Optimize cell sizing for mobile
   const getCellWidth = (col: string) => {
     const defaultWidth = isMobile ? 100 : 120;
     return data.columnWidths?.[col] || defaultWidth;
   };
+  
+  // Calculate visible range for virtual scrolling
+  const visibleRange = useMemo(() => {
+    const startRow = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - VISIBLE_ROWS_BUFFER);
+    const endRow = Math.min(
+      data.rows.length, 
+      startRow + Math.ceil(containerHeight / ROW_HEIGHT) + VISIBLE_ROWS_BUFFER * 2
+    );
+    
+    // Calculate visible columns
+    let startCol = 0;
+    let accumulatedWidth = 0;
+    const colWidths = data.columns.map(col => getCellWidth(col));
+    
+    // Find starting column
+    for (let i = 0; i < colWidths.length; i++) {
+      if (accumulatedWidth + colWidths[i] > scrollLeft) {
+        startCol = Math.max(0, i - 2); // Buffer of 2 columns
+        break;
+      }
+      accumulatedWidth += colWidths[i];
+    }
+    
+    // Find ending column
+    let endCol = colWidths.length;
+    accumulatedWidth = 0;
+    for (let i = 0; i < colWidths.length; i++) {
+      accumulatedWidth += colWidths[i];
+      if (accumulatedWidth > scrollLeft + containerWidth) {
+        endCol = Math.min(colWidths.length, i + 2); // Buffer of 2 columns
+        break;
+      }
+    }
+    
+    return { 
+      startRow, 
+      endRow,
+      startCol,
+      endCol,
+      colWidths
+    };
+  }, [scrollTop, scrollLeft, containerHeight, containerWidth, data.rows.length, data.columns, getCellWidth]);
+
+  // Check if we need to expand the sheet
+  useEffect(() => {
+    const { startRow, endRow, startCol, endCol } = visibleRange;
+    const totalRows = data.rows.length;
+    const totalCols = data.columns.length;
+    
+    let shouldExpand = false;
+    let targetRows = totalRows;
+    let targetCols = totalCols;
+    
+    // Check if we're near the bottom
+    if (totalRows - endRow <= EXPANSION_THRESHOLD) {
+      targetRows = Math.min(totalRows + 100, 10000); // Expand by 100, max 10000
+      shouldExpand = true;
+    }
+    
+    // Check if we're near the right edge
+    if (totalCols - endCol <= EXPANSION_THRESHOLD) {
+      targetCols = Math.min(totalCols + 26, 17576); // Expand by 26 columns, max AAA
+      shouldExpand = true;
+    }
+    
+    if (shouldExpand && onSheetExpand) {
+      onSheetExpand(targetRows, targetCols);
+    }
+  }, [visibleRange, data.rows.length, data.columns.length, onSheetExpand]);
+
+  // Handle scroll events
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+    setScrollLeft(e.currentTarget.scrollLeft);
+  }, []);
+
+  // Measure container dimensions
+  useLayoutEffect(() => {
+    if (gridContainerRef.current) {
+      setContainerHeight(gridContainerRef.current.clientHeight);
+      setContainerWidth(gridContainerRef.current.clientWidth);
+    }
+  }, []);
+
+  // Update container dimensions when window resizes
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (gridContainerRef.current) {
+        setContainerHeight(gridContainerRef.current.clientHeight);
+        setContainerWidth(gridContainerRef.current.clientWidth);
+      }
+    };
+    
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
 
   const columnTypes = useMemo(() => inferColumnTypes(data), [data]);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
@@ -504,22 +614,20 @@ const Grid: React.FC<GridProps> = ({
   };
 
   const isCellSelected = (rowIdx: number, colIdx: number) => {
-      return selectedRange?.start.rowIndex === rowIdx && selectedRange?.start.colIndex === colIdx;
-  };
-  
-  // Highlight Headers logic
-  const isColSelected = (colIdx: number) => {
       if (!selectedRange) return false;
-      const minCol = Math.min(selectedRange.start.colIndex, selectedRange.end.colIndex);
-      const maxCol = Math.max(selectedRange.start.colIndex, selectedRange.end.colIndex);
-      return colIdx >= minCol && colIdx <= maxCol;
+      if (selectedRange.start.rowIndex === selectedRange.end.rowIndex && 
+          selectedRange.start.colIndex === selectedRange.end.colIndex) {
+          // Single cell selection
+          return selectedRange.start.rowIndex === rowIdx && selectedRange.start.colIndex === colIdx;
+      }
+      return isCellInRange(rowIdx, colIdx);
   };
 
-   const isRowSelected = (rowIdx: number) => {
+  const isRowSelected = (rowIdx: number) => {
       if (!selectedRange) return false;
-      const minRow = Math.min(selectedRange.start.rowIndex, selectedRange.end.rowIndex);
-      const maxRow = Math.max(selectedRange.start.rowIndex, selectedRange.end.rowIndex);
-      return rowIdx >= minRow && rowIdx <= maxRow;
+      const { start, end } = selectedRange;
+      return rowIdx >= Math.min(start.rowIndex, end.rowIndex) && 
+             rowIdx <= Math.max(start.rowIndex, end.rowIndex);
   };
 
   const handleAddCommentAction = () => {
@@ -574,132 +682,156 @@ const Grid: React.FC<GridProps> = ({
   }, []);
 
   return (
-    <div className="w-full h-full overflow-auto relative select-none grid-container">
-      <table 
-        ref={tableRef}
-        className="data-grid-table w-full border-collapse"
-        style={{ minWidth: '100%', tableLayout: 'fixed' }}
+    <div 
+      ref={gridContainerRef}
+      className="w-full h-full overflow-auto relative select-none grid-container"
+      onScroll={handleScroll}
+    >
+      {/* Spacer div to maintain scroll dimensions */}
+      <div 
+        style={{ 
+          height: data.rows.length * ROW_HEIGHT + HEADER_HEIGHT,
+          width: data.columns.reduce((acc, col) => acc + getCellWidth(col), isMobile ? 40 : 50) + 2000 // Extra width for expansion
+        }} 
+        className="relative"
       >
-        <thead>
-          <tr>
-            {/* Index Column */}
-            <th className="index-col sticky left-0 z-20" style={{ width: isMobile ? '40px' : '50px' }}>
-              <div className="flex items-center justify-center h-8">
-                <Hash className="w-4 h-4" />
-              </div>
-            </th>
-            
-            {/* Data Columns */}
-            {data.columns.map((col, colIdx) => {
-              const width = getCellWidth(col);
-              return (
-                <th 
-                  key={col} 
-                  className="cell-header sticky top-0 z-10 text-left"
-                  style={{ 
-                    width: `${width}px`, 
-                    maxWidth: `${width}px`, 
-                    minWidth: `${width}px`,
-                    fontSize: isMobile ? '11px' : '13px'
-                  }}
-                >
-                  {/* Column Header Content */}
-                  <div className="flex items-center justify-between h-8 px-2">
-                    <span className="truncate flex-1" title={col}>
-                      {col}
-                    </span>
-                    {/* Mobile-friendly column actions */}
-                    <div className="flex items-center gap-1">
-                      {!isMobile && (
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveMenuColumn(col);
-                          }}
-                          className="p-1 hover:bg-slate-700 rounded"
-                        >
-                          <MoreVertical className="w-3 h-3" />
-                        </button>
-                      )}
-                      {isMobile && (
-                        <button 
-                          onClick={() => onSmartFillTrigger(col)}
-                          className="p-1 text-indigo-400 hover:text-indigo-300"
-                          title="Smart Fill"
-                        >
-                          <Sparkles className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
-        
-        <tbody>
-          {data.rows.map((row, rowIndex) => (
-            <tr key={rowIndex}>
-              {/* Row Index */}
-              <td 
-                className={`index-col sticky left-0 z-10 ${isRowSelected(rowIndex) ? 'bg-nexus-accent/20 text-nexus-accent' : ''}`}
-                style={{ fontSize: isMobile ? '10px' : '12px' }}
-              >
-                {rowIndex + 1}
-              </td>
+        {/* Render visible rows and columns only */}
+        <table 
+          className="data-grid-table absolute top-0 left-0 w-full border-collapse"
+          style={{ 
+            transform: `translate(${visibleRange.startCol > 0 ? data.columns.slice(0, visibleRange.startCol).reduce((acc, col) => acc + getCellWidth(col), 0) : 0}px, ${visibleRange.startRow * ROW_HEIGHT}px)`,
+            tableLayout: 'fixed'
+          }}
+        >
+          <thead>
+            <tr>
+              {/* Index Column */}
+              <th className="index-col sticky left-0 z-20" style={{ width: isMobile ? '40px' : '50px', height: HEADER_HEIGHT }}>
+                <div className="flex items-center justify-center h-full">
+                  <Hash className="w-4 h-4" />
+                </div>
+              </th>
               
-              {/* Data Cells */}
-              {data.columns.map((col, colIdx) => {
-                const rawVal = row[col];
-                const displayVal = evaluateCellValue(rawVal, data.rows, data.columns);
-                const { style, dataBarWidth, dataBarColor } = getFormattingStyle(col, displayVal);
-                const isSelected = isCellSelected(rowIndex, colIdx);
-                const isInRange = isCellInRange(rowIndex, colIdx);
-                const selectionBorders = {
-                  top: false,
-                  bottom: false,
-                  left: false,
-                  right: false
-                };
-                
+              {/* Visible Data Columns */}
+              {data.columns.slice(visibleRange.startCol, visibleRange.endCol).map((col, colIdxInSlice) => {
+                const colIdx = visibleRange.startCol + colIdxInSlice;
                 const width = getCellWidth(col);
-                
                 return (
-                  <td 
-                    key={`${rowIndex}-${colIdx}`} 
-                    className="p-0 border-b border-r border-slate-700/50 overflow-hidden relative"
+                  <th 
+                    key={col} 
+                    className="cell-header sticky top-0 z-10 text-left"
                     style={{ 
                       width: `${width}px`, 
                       maxWidth: `${width}px`, 
                       minWidth: `${width}px`,
-                      fontSize: isMobile ? '11px' : '13px'
+                      fontSize: isMobile ? '11px' : '13px',
+                      height: HEADER_HEIGHT
                     }}
                   >
-                    <Cell 
-                      rowIndex={rowIndex}
-                      colIndex={colIdx}
-                      col={col}
-                      value={rawVal}
-                      isSelected={isSelected}
-                      isHeader={false}
-                      columnType={columnTypes[col] || 'string'}
-                      onCellEdit={onCellEdit}
-                      onContextMenu={handleContextMenu}
-                      onDoubleClick={handleCellDoubleClick}
-                    />
-                    
-                    {/* Mobile touch targets */}
-                    {isMobile && isSelected && (
-                      <div className="absolute inset-0 bg-nexus-accent/10 pointer-events-none rounded-sm"></div>
-                    )}
-                  </td>
+                    {/* Column Header Content */}
+                    <div className="flex items-center justify-between h-full px-2">
+                      <span className="truncate flex-1" title={col}>
+                        {col}
+                      </span>
+                      {/* Mobile-friendly column actions */}
+                      <div className="flex items-center gap-1">
+                        {!isMobile && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuColumn(col);
+                            }}
+                            className="p-1 hover:bg-slate-700 rounded"
+                          >
+                            <MoreVertical className="w-3 h-3" />
+                          </button>
+                        )}
+                        {isMobile && (
+                          <button 
+                            onClick={() => onSmartFillTrigger(col)}
+                            className="p-1 text-indigo-400 hover:text-indigo-300"
+                            title="Smart Fill"
+                          >
+                            <Sparkles className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </th>
                 );
               })}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          
+          <tbody>
+            {data.rows.slice(visibleRange.startRow, visibleRange.endRow).map((row, rowIndexInSlice) => {
+              const rowIndex = visibleRange.startRow + rowIndexInSlice;
+              
+              return (
+                <tr key={rowIndex} style={{ height: ROW_HEIGHT }}>
+                  {/* Row Index */}
+                  <td 
+                    className={`index-col sticky left-0 z-10 ${isRowSelected(rowIndex) ? 'bg-nexus-accent/20 text-nexus-accent' : ''}`}
+                    style={{ fontSize: isMobile ? '10px' : '12px', height: ROW_HEIGHT }}
+                  >
+                    {rowIndex + 1}
+                  </td>
+                  
+                  {/* Visible Data Cells */}
+                  {data.columns.slice(visibleRange.startCol, visibleRange.endCol).map((col, colIdxInSlice) => {
+                    const colIdx = visibleRange.startCol + colIdxInSlice;
+                    const rawVal = row[col];
+                    const displayVal = evaluateCellValue(rawVal, data.rows, data.columns);
+                    const { style, dataBarWidth, dataBarColor } = getFormattingStyle(col, displayVal);
+                    const isSelected = isCellSelected(rowIndex, colIdx);
+                    const isInRange = isCellInRange(rowIndex, colIdx);
+                    const selectionBorders = {
+                      top: false,
+                      bottom: false,
+                      left: false,
+                      right: false
+                    };
+                    
+                    const width = getCellWidth(col);
+                    
+                    return (
+                      <td 
+                        key={`${rowIndex}-${colIdx}`} 
+                        className="p-0 border-b border-r border-slate-700/50 overflow-hidden relative"
+                        style={{ 
+                          width: `${width}px`, 
+                          maxWidth: `${width}px`, 
+                          minWidth: `${width}px`,
+                          fontSize: isMobile ? '11px' : '13px',
+                          height: ROW_HEIGHT
+                        }}
+                      >
+                        <Cell 
+                          rowIndex={rowIndex}
+                          colIndex={colIdx}
+                          col={col}
+                          value={rawVal}
+                          isSelected={isSelected}
+                          isHeader={false}
+                          columnType={columnTypes[col] || 'string'}
+                          onCellEdit={onCellEdit}
+                          onContextMenu={handleContextMenu}
+                          onDoubleClick={handleCellDoubleClick}
+                        />
+                        
+                        {/* Mobile touch targets */}
+                        {isMobile && isSelected && (
+                          <div className="absolute inset-0 bg-nexus-accent/10 pointer-events-none rounded-sm"></div>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

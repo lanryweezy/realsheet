@@ -40,6 +40,16 @@ export interface SheetData {
   columnWidths?: Record<string, number>; // Column widths in pixels
 }
 
+// New: Workbook structure
+export interface Workbook {
+  id: string;
+  name: string;
+  sheets: SheetData[];
+  activeSheetIndex: number;
+  createdAt: Date;
+  lastModified: Date;
+}
+
 export interface FileMetadata {
     id: string;
     name: string;
@@ -84,4 +94,22 @@ export interface DashboardItem {
 export interface SelectionRange {
     start: { rowIndex: number; colIndex: number };
     end: { rowIndex: number; colIndex: number };
+}
+
+// Data Validation
+export type ValidationType = 'list' | 'number' | 'date' | 'textLength' | 'custom';
+
+export interface DataValidation {
+  id: string;
+  range: string; // e.g., "A1:B10"
+  type: ValidationType;
+  criteria: {
+    operator?: string; // for number/date: ">", "<", "=", etc.
+    value1?: string | number;
+    value2?: string | number;
+    listValues?: string[]; // for list validation
+    formula?: string; // for custom validation
+  };
+  errorMessage?: string;
+  showErrorMessage: boolean;
 }
