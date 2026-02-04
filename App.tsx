@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { 
   Download, Upload, Plus, Settings, MessageSquare, BarChart3, 
   Table, Share2, Menu, Crown, X, Activity, FileSpreadsheet, 
   LayoutGrid, Undo2, Redo2, PaintBucket, DatabaseZap, Eye, 
   Wand2, Search, Hash, MoreVertical, Copy, MoveRight, MoveDown, 
-  SplitSquareHorizontal, CopyMinus, Calculator, Filter, MessageSquare as MessageSquareIcon
+  SplitSquareHorizontal, CopyMinus, Calculator, Filter, MessageSquare as MessageSquareIcon,
+  Target, FileDown, Zap, User, Code, Home
 } from 'lucide-react';
 import Grid from './components/Grid';
 import Dashboard from './components/Dashboard';
@@ -20,6 +21,7 @@ import { SheetData, DashboardItem, ChartConfig, FormattingRule, SelectionRange, 
 import { evaluateCellValue, indexToExcelCol, goalSeek, parseCellReference } from './services/formulaService';
 import { ToastType } from './components/Toast';
 import { generateId } from './utils/idGenerator';
+import { saveFile, loadFile } from './services/storageService';
 
 // Add mobile detection hook
 const useMobileDetection = () => {
