@@ -1,30 +1,75 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { FunctionSquare, Sparkles, Send } from 'lucide-react';
 import { generateFormulaFromDescription } from '../services/geminiService';
+import { getFormulaSuggestions } from '../utils/formulaFunctions';
 
 interface FormulaBarProps {
   selectedCell: { rowIndex: number; colKey: string } | null;
   value: string | number | null;
   columns: string[];
   onChange: (value: string) => void;
+  /** Excel-style address (e.g. A1) for Name Box; if not provided, uses colKey + row */
+  cellAddress?: string;
 }
 
-const FormulaBar: React.FC<FormulaBarProps> = ({ selectedCell, value, columns, onChange }) => {
+const FormulaBar: React.FC<FormulaBarProps> = ({ selectedCell, value, columns, onChange, cellAddress: propAddress }) => {
   const [localValue, setLocalValue] = useState('');
   const [aiMode, setAiMode] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [suggestionIndex, setSuggestionIndex] = useState(0);
+  const formulaInputRef = useRef<HTMLInputElement>(null);
 
   // Sync local state when the selected cell's value changes from the outside
   useEffect(() => {
     setLocalValue(value === null ? '' : String(value));
   }, [value, selectedCell]);
 
+  const showSuggestions = !aiMode && localValue.startsWith('=');
+  const wordBeingTyped = showSuggestions ? (localValue.match(/=[A-Za-z0-9_]*$/)?.[0]?.slice(1) ?? '') : '';
+  const suggestions = useMemo(
+    () => getFormulaSuggestions(wordBeingTyped),
+    [wordBeingTyped]
+  );
+  const hasSuggestions = showSuggestions && suggestions.length > 0;
+
+  useEffect(() => {
+    setSuggestionIndex(0);
+  }, [wordBeingTyped]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalValue(e.target.value);
   };
 
+  const insertSuggestion = (functionName: string) => {
+    const beforeWord = localValue.slice(0, localValue.length - wordBeingTyped.length);
+    const after = functionName + '(';
+    setLocalValue(beforeWord + after);
+    setSuggestionIndex(0);
+    formulaInputRef.current?.focus();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (hasSuggestions) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSuggestionIndex((i) => (i + 1) % suggestions.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSuggestionIndex((i) => (i - 1 + suggestions.length) % suggestions.length);
+        return;
+      }
+      if (e.key === 'Enter' && suggestions[suggestionIndex]) {
+        e.preventDefault();
+        insertSuggestion(suggestions[suggestionIndex].name);
+        return;
+      }
+      if (e.key === 'Escape') {
+        setSuggestionIndex(0);
+      }
+    }
     if (e.key === 'Enter') {
       onChange(localValue);
       e.currentTarget.blur();
@@ -50,14 +95,14 @@ const FormulaBar: React.FC<FormulaBarProps> = ({ selectedCell, value, columns, o
       }
   };
 
-  const cellAddress = selectedCell 
+  const cellAddress = propAddress ?? (selectedCell 
     ? `${selectedCell.colKey}${selectedCell.rowIndex + 1}` 
-    : '';
+    : '');
 
   return (
-    <div className="h-10 bg-slate-800/80 border-b border-slate-700/50 flex items-center px-2 gap-2 backdrop-blur-md z-20">
+    <div className="h-10 flex items-center px-2 gap-2 backdrop-blur-md z-20 border-b" style={{ background: 'var(--ribbon-bg)', borderColor: 'var(--ribbon-border)' }}>
       {/* Name Box */}
-      <div className="w-16 h-7 bg-slate-900/50 border border-slate-700 rounded flex items-center justify-center text-xs font-mono text-nexus-accent font-bold shadow-inner">
+      <div className="w-16 h-7 rounded flex items-center justify-center text-xs font-mono font-bold shadow-inner" style={{ background: 'var(--nexus-surface)', border: '1px solid var(--nexus-border)', color: 'var(--nexus-accent)' }}>
         {cellAddress}
       </div>
 
@@ -95,17 +140,45 @@ const FormulaBar: React.FC<FormulaBarProps> = ({ selectedCell, value, columns, o
                  </button>
             </div>
         ) : (
-            <input
-                type="text"
-                value={localValue}
-                onChange={handleChange}
-                onKeyDown={handleKeyDown}
-                onBlur={handleBlur}
-                disabled={!selectedCell}
-                placeholder={selectedCell ? "Enter value or formula..." : "Select a cell"}
-                className="w-full h-7 bg-transparent border-none outline-none text-sm text-white font-mono placeholder:text-slate-600 focus:bg-slate-700/30 rounded px-2 transition-colors"
-                spellCheck={false}
-            />
+            <div className="flex-1 relative">
+                <input
+                    ref={formulaInputRef}
+                    type="text"
+                    value={localValue}
+                    onChange={handleChange}
+                    onKeyDown={handleKeyDown}
+                    onBlur={handleBlur}
+                    disabled={!selectedCell}
+                    placeholder={selectedCell ? "Enter value or formula (e.g. =SUM(A1:A10))..." : "Select a cell"}
+                    className="w-full h-7 bg-transparent border-none outline-none text-sm font-mono rounded px-2 transition-colors"
+                    style={{ color: 'var(--nexus-text-main)' }}
+                    spellCheck={false}
+                />
+                {hasSuggestions && (
+                    <div
+                        className="absolute left-0 top-full mt-1 py-1 min-w-[220px] max-h-[240px] overflow-y-auto rounded-lg border shadow-xl z-50"
+                        style={{ background: 'var(--nexus-surface)', borderColor: 'var(--nexus-border)' }}
+                    >
+                        <div className="px-2 py-1 text-[10px] uppercase font-semibold" style={{ color: 'var(--nexus-text-muted)' }}>
+                            Functions
+                        </div>
+                        {suggestions.map((fn, idx) => (
+                            <button
+                                key={fn.name}
+                                type="button"
+                                onClick={() => insertSuggestion(fn.name)}
+                                className={`w-full text-left px-3 py-2 text-sm flex flex-col gap-0.5 ${
+                                    idx === suggestionIndex ? 'bg-nexus-accent/20' : ''
+                                }`}
+                                style={{ color: 'var(--nexus-text-main)' }}
+                            >
+                                <span className="font-mono font-medium">{fn.name}</span>
+                                <span className="text-xs truncate" style={{ color: 'var(--nexus-text-muted)' }}>{fn.description}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
         )}
       </div>
     </div>

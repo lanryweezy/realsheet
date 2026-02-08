@@ -5,7 +5,9 @@ export interface Row {
   [key: string]: CellValue; // Dynamic keys based on column headers
 }
 
-export type ConditionType = 'greaterThan' | 'lessThan' | 'equals' | 'containsText' | 'colorScale' | 'dataBar';
+export type ConditionType = 'greaterThan' | 'lessThan' | 'equals' | 'containsText' | 'colorScale' | 'dataBar' | 'iconSet';
+
+export type IconSetStyle = 'arrows' | 'arrows3' | 'traffic' | 'flags' | 'dots';
 
 export interface FormattingRule {
   id: string;
@@ -20,6 +22,8 @@ export interface FormattingRule {
   scaleColors?: [string, string]; 
   // For data bars
   barColor?: string;
+  // For icon sets
+  iconSetStyle?: IconSetStyle;
 }
 
 export interface FilterDefinition {
@@ -38,6 +42,8 @@ export interface SheetData {
   comments?: Record<string, string>; // Key: "rowIndex-colIndex", Value: Comment text
   watchedCells?: string[]; // Array of cell addresses e.g. ["A1", "C5"]
   columnWidths?: Record<string, number>; // Column widths in pixels
+  /** Print area: only this range is included when printing or exporting to PDF */
+  printArea?: { start: { row: number; col: number }; end: { row: number; col: number } };
 }
 
 // New: Workbook structure
@@ -58,8 +64,11 @@ export interface FileMetadata {
     id: string;
     name: string;
     lastModified: number;
+    lastOpened?: number;
     rowCount: number;
     preview: string[]; // First few column names
+    pinned?: boolean;
+    inTrash?: boolean;
 }
 
 export interface ChartConfig {

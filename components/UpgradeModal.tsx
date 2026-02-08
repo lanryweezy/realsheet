@@ -33,7 +33,8 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
                 <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-6 border border-white/10">
                     <Crown className="w-6 h-6 text-amber-400" />
                 </div>
-                <h2 className="text-3xl font-bold text-white mb-4">Unlock the full power of NexSheet</h2>
+                <h2 className="text-3xl font-bold text-white mb-4">Upgrade to RealSheet Pro</h2>
+                <p className="text-sm text-slate-400 mb-4">See what Pro adds vs free:</p>
                 <p className="text-indigo-200 leading-relaxed">
                     Take your data analysis to the next level with Pro features designed for power users and teams.
                 </p>

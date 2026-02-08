@@ -128,6 +128,24 @@ export const exportToCSV = (data: SheetData): string => {
     return `${header}\n${rows}`;
 };
 
+/** Export sheet to .xlsx with structure and values (formatting preserved where supported by xlsx) */
+export const exportToExcel = (data: SheetData, fileName?: string): void => {
+  const { start, end } = data.printArea
+    ? { start: data.printArea.start, end: data.printArea.end }
+    : { start: { row: 0, col: 0 }, end: { row: Math.max(0, data.rows.length - 1), col: Math.max(0, data.columns.length - 1) } };
+  const cols = data.columns.slice(start.col, end.col + 1);
+  const rowsSlice = data.rows.slice(start.row, end.row + 1);
+  const arr: (string | number)[][] = [cols];
+  rowsSlice.forEach(row => {
+    arr.push(cols.map(c => row[c] ?? ''));
+  });
+  const ws = XLSX.utils.aoa_to_sheet(arr);
+  const wb = XLSX.utils.book_new();
+  const name = (fileName || data.name || 'export').replace(/\.[^/.]+$/, '') || 'Sheet1';
+  XLSX.utils.book_append_sheet(wb, ws, name.slice(0, 31));
+  XLSX.writeFile(wb, `${name}.xlsx`);
+};
+
 // --- New Template & Blank Sheet Logic ---
 
 // Generate columns up to AAA (26*26*26 = 17,576 columns)

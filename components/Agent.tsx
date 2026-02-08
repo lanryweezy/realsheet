@@ -17,7 +17,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
     {
       id: 'welcome',
       role: 'model',
-      text: 'Hello, I am NexSheet Agent. I can analyze your data, create visualizations, apply formatting, filter rows, and flag outliers. I now show my reasoning process and task planning!',
+      text: 'Hello, I am RealSheet Agent. I can analyze your data, create visualizations, apply formatting, filter rows, and flag outliers. I show my reasoning and task planning.',
       timestamp: new Date()
     }
   ]);

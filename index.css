@@ -43,28 +43,59 @@
   .compact-toolbar {
     @apply flex flex-wrap gap-1 sm:gap-2 items-center;
   }
+
+  /* Page layout view: paper-style container */
+  .page-layout-view {
+    max-width: 210mm;
+    margin: 0 auto;
+    background: var(--nexus-surface);
+    box-shadow: 0 0 0 1px var(--nexus-border);
+  }
 }
 
-:root {
-  --nexus-bg: #0f172a; /* slate-900 */
-  --nexus-surface: #1e293b; /* slate-800 */
-  --nexus-border: #334155; /* slate-700 */
-  --nexus-accent: #06b6d4; /* cyan-500 */
+:root,
+[data-theme="dark"] {
+  --nexus-bg: #0f172a;
+  --nexus-surface: #1e293b;
+  --nexus-border: #334155;
+  --nexus-accent: #06b6d4;
   --nexus-accent-hover: #0891b2;
   --nexus-text-main: #f8fafc;
   --nexus-text-muted: #94a3b8;
-  
   --glass-bg: rgba(15, 23, 42, 0.7);
   --glass-border: rgba(51, 65, 85, 0.5);
   --glass-blur: 12px;
+  --ribbon-bg: #1e293b;
+  --ribbon-border: #334155;
+  --status-bg: rgba(15, 23, 42, 0.95);
+}
+
+[data-theme="light"] {
+  --nexus-bg: #f1f5f9;
+  --nexus-surface: #e2e8f0;
+  --nexus-border: #cbd5e1;
+  --nexus-accent: #0891b2;
+  --nexus-accent-hover: #0e7490;
+  --nexus-text-main: #0f172a;
+  --nexus-text-muted: #475569;
+  --glass-bg: rgba(241, 245, 249, 0.9);
+  --glass-border: rgba(203, 213, 225, 0.8);
+  --glass-blur: 12px;
+  --ribbon-bg: #f8fafc;
+  --ribbon-border: #e2e8f0;
+  --status-bg: rgba(248, 250, 252, 0.98);
 }
 
 body {
   margin: 0;
   font-family: 'Inter', sans-serif;
-  background-color: #000;
+  background-color: var(--nexus-bg);
   color: var(--nexus-text-main);
   overflow: hidden;
+}
+
+[data-theme="light"] body {
+  background-color: var(--nexus-bg);
 }
 
 /* Mobile-specific optimizations */

@@ -6,7 +6,7 @@ import {
   LayoutGrid, Undo2, Redo2, PaintBucket, DatabaseZap, Eye, 
   Wand2, Search, Hash, MoreVertical, Copy, MoveRight, MoveDown, 
   SplitSquareHorizontal, CopyMinus, Calculator, Filter, MessageSquare as MessageSquareIcon,
-  Target, FileDown, Zap, User, Code, Home
+  Target, FileDown, Zap, User, Code, Home, HelpCircle, Sun, Moon
 } from 'lucide-react';
 import Grid from './components/Grid';
 import Dashboard from './components/Dashboard';
@@ -14,13 +14,13 @@ import Agent from './components/Agent';
 import ShareModal from './components/ShareModal';
 import ErrorBoundary, { GridErrorBoundary } from './components/ErrorBoundary';
 import UserMenu from './components/UserMenu';
-import { parseExcelFile, exportToCSV, createBlankSheet, getTemplateData, expandSheet } from './services/excelService';
+import { parseExcelFile, exportToCSV, exportToExcel, createBlankSheet, getTemplateData, expandSheet } from './services/excelService';
 import { generateSmartColumnData } from './services/geminiService';
 import { SheetData, DashboardItem, ChartConfig, FormattingRule, SelectionRange, Workbook } from './types';
 import { evaluateCellValue, indexToExcelCol, goalSeek, parseCellReference } from './services/formulaService';
 import ToastContainer, { ToastType, ToastMessage } from './components/Toast';
 import { generateId } from './utils/idGenerator';
-import { saveFile, loadFile } from './services/storageService';
+import { saveFile, loadFile, updateLastOpened, getRecentFiles } from './services/storageService';
 import { SheetTabs } from './components/SheetTabs';
 import HomeView from './components/HomeView';
 import WatchWindow from './components/WatchWindow';
@@ -35,6 +35,10 @@ import PivotModal from './components/PivotModal';
 import ChartWizardModal from './components/ChartWizardModal';
 import SmartFillModal from './components/SmartFillModal';
 import CommandPalette from './components/CommandPalette';
+import Ribbon, { type RibbonTab } from './components/Ribbon';
+import QuickAccessToolbar from './components/QuickAccessToolbar';
+import FormulaBar from './components/FormulaBar';
+import { useTheme } from './contexts/ThemeContext';
 
 // Add mobile detection hook
 const useMobileDetection = () => {
@@ -221,6 +225,7 @@ const AppContent: React.FC = () => {
   const handleOpenFile = (id: string) => {
       const data = loadFile(id);
       if (data) {
+          updateLastOpened(id);
           loadData(data);
       } else {
           addToast('error', 'Load Failed', 'File not found.');
@@ -690,11 +695,14 @@ const AppContent: React.FC = () => {
             {/* Header */}
             <header className="saas-header">
                 <div className="flex items-center gap-3 sm:gap-6">
-                    <div className="brand-logo cursor-pointer" onClick={handleGoHome}>
-                        <div className="icon-box">
-                            <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <div className="brand-logo cursor-pointer flex flex-col items-start sm:flex-row sm:items-center gap-0 sm:gap-2" onClick={handleGoHome}>
+                        <div className="flex items-center gap-2">
+                            <div className="icon-box">
+                                <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
+                            </div>
+                            <span className="text-white text-sm sm:text-base font-semibold">RealSheet</span>
                         </div>
-                        <span className="text-white text-sm sm:text-base">NexSheet</span>
+                        <span className="text-slate-400 text-xs hidden sm:block ml-0 sm:ml-1">Fast, keyboard-first spreadsheets</span>
                     </div>
                     
                     {/* Navigation Pills - Hide on mobile */}
@@ -1028,6 +1036,7 @@ const AppContent: React.FC = () => {
 // Create a unified App component that includes workbook functionality
 const App: React.FC = () => {
   const isMobile = useMobileDetection();
+  const { theme, toggleTheme } = useTheme();
   const [view, setView] = useState<'home' | 'editor'>('home');
   
   // Multiple sheets state
@@ -1042,6 +1051,9 @@ const App: React.FC = () => {
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<'grid' | 'dashboard'>('grid');
+  const [ribbonTab, setRibbonTab] = useState<RibbonTab>('home');
+  const [pageLayoutView, setPageLayoutView] = useState(false);
+  const [zoom, setZoom] = useState(100);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dashboardItems, setDashboardItems] = useState<DashboardItem[]>([]);
@@ -1250,6 +1262,7 @@ const App: React.FC = () => {
   const handleOpenFile = (id: string) => {
       const data = loadFile(id);
       if (data) {
+          updateLastOpened(id);
           loadData(data);
       } else {
           addToast('error', 'Load Failed', 'File not found.');
@@ -1270,6 +1283,27 @@ const App: React.FC = () => {
       setView('home');
   };
 
+  const handleDownloadFile = (id: string) => {
+    const data = loadFile(id);
+    if (!data) {
+      addToast('error', 'Download Failed', 'File not found.');
+      return;
+    }
+    const csvContent = exportToCSV(data);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    const fileName = (data.name || 'export').replace(/\.[^/.]+$/, '') + '.csv';
+    link.setAttribute("download", fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    addToast('success', 'Download Complete', `${fileName} downloaded.`);
+  };
+
   const handleDownload = () => {
     if (!currentSheetData) return;
     const csvContent = exportToCSV(currentSheetData);
@@ -1285,6 +1319,67 @@ const App: React.FC = () => {
     document.body.removeChild(link);
     addToast('success', 'Export Complete', 'File downloaded successfully.');
   };
+
+  const handleSetPrintArea = () => {
+    if (!workbook || !currentSheetData || !selectedRange) {
+      addToast('info', 'Select a range', 'Select cells first, then choose Set print area.');
+      return;
+    }
+    const start = selectedRange.start;
+    const end = selectedRange.end;
+    const printArea = {
+      start: { row: start.rowIndex, col: start.colIndex },
+      end: { row: end.rowIndex, col: end.colIndex }
+    };
+    const updatedSheets = [...workbook.sheets];
+    const sheet = { ...currentSheetData, printArea };
+    updatedSheets[workbook.activeSheetIndex] = sheet;
+    setWorkbook({ ...workbook, sheets: updatedSheets });
+    addToast('success', 'Print area set', 'Only the selected range will be printed or exported.');
+  };
+
+  const handleClearPrintArea = () => {
+    if (!workbook || !currentSheetData) return;
+    const updatedSheets = [...workbook.sheets];
+    updatedSheets[workbook.activeSheetIndex] = { ...currentSheetData, printArea: undefined };
+    setWorkbook({ ...workbook, sheets: updatedSheets });
+    addToast('info', 'Print area cleared');
+  };
+
+  const handleExportExcel = () => {
+    if (!currentSheetData) return;
+    exportToExcel(currentSheetData);
+    addToast('success', 'Export Complete', 'Excel file downloaded.');
+  };
+
+  const handlePrint = () => {
+    if (!currentSheetData) return;
+    const pa = currentSheetData.printArea;
+    const startRow = pa ? pa.start.row : 0;
+    const endRow = pa ? pa.end.row : currentSheetData.rows.length - 1;
+    const startCol = pa ? pa.start.col : 0;
+    const endCol = pa ? pa.end.col : currentSheetData.columns.length - 1;
+    const cols = currentSheetData.columns.slice(startCol, endCol + 1);
+    const rows = currentSheetData.rows.slice(startRow, endRow + 1);
+    const headerRow = cols.map(c => `<th style="border:1px solid #333;padding:6px;text-align:left">${escapeHtml(String(c))}</th>`).join('');
+    const bodyRows = rows.map(row =>
+      '<tr>' + cols.map(c => `<td style="border:1px solid #333;padding:6px">${escapeHtml(String(row[c] ?? ''))}</td>`).join('') + '</tr>'
+    ).join('');
+    const title = currentSheetData.name || 'Sheet';
+    const html = `<!DOCTYPE html><html><head><title>${escapeHtml(title)}</title><style>table{border-collapse:collapse;width:100%} body{font-family:sans-serif;padding:12px}</style></head><body><h2>${escapeHtml(title)}</h2><table><thead><tr>${headerRow}</tr></thead><tbody>${bodyRows}</tbody></table></body></html>`;
+    const w = window.open('', '_blank');
+    if (!w) { addToast('error', 'Print blocked', 'Allow popups to print.'); return; }
+    w.document.write(html);
+    w.document.close();
+    w.onload = () => { w.focus(); w.print(); w.close(); };
+  };
+
+  function escapeHtml(s: string): string {
+    const div = { innerHTML: '' };
+    const el = document.createElement('div');
+    el.textContent = s;
+    return el.innerHTML;
+  }
 
   const addToDashboard = (config: ChartConfig) => {
     const newItem: DashboardItem = {
@@ -1705,6 +1800,19 @@ const App: React.FC = () => {
       pushToHistory(newSheetData);
   };
 
+  // Selected cell for formula bar (single-cell selection only)
+  const selectedCell = useMemo(() => {
+    if (!currentSheetData || !selectedRange) return null;
+    const { start, end } = selectedRange;
+    if (start.rowIndex !== end.rowIndex || start.colIndex !== end.colIndex) return null;
+    return { rowIndex: start.rowIndex, colKey: currentSheetData.columns[start.colIndex] };
+  }, [currentSheetData, selectedRange]);
+
+  const formulaBarValue = useMemo(() => {
+    if (!selectedCell || !currentSheetData) return null;
+    return currentSheetData.rows[selectedCell.rowIndex]?.[selectedCell.colKey] ?? null;
+  }, [currentSheetData, selectedCell]);
+
   // --- Statistics Calculation ---
   const rangeStats = useMemo(() => {
     if (!currentSheetData || !selectedRange) return null;
@@ -1892,11 +2000,14 @@ const App: React.FC = () => {
             {/* Header */}
             <header className="saas-header">
                 <div className="flex items-center gap-3 sm:gap-6">
-                    <div className="brand-logo cursor-pointer" onClick={handleGoHome}>
-                        <div className="icon-box">
-                            <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <div className="brand-logo cursor-pointer flex flex-col items-start sm:flex-row sm:items-center gap-0 sm:gap-2" onClick={handleGoHome}>
+                        <div className="flex items-center gap-2">
+                            <div className="icon-box">
+                                <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
+                            </div>
+                            <span className="text-white text-sm sm:text-base font-semibold">RealSheet</span>
                         </div>
-                        <span className="text-white text-sm sm:text-base">NexSheet</span>
+                        <span className="text-slate-400 text-xs hidden sm:block ml-0 sm:ml-1">Fast, keyboard-first spreadsheets</span>
                     </div>
                     
                     {/* Navigation Pills - Hide on mobile */}
@@ -2039,8 +2150,16 @@ const App: React.FC = () => {
                       </button>
                     )}
                     
-                    <button onClick={() => setIsUpgradeModalOpen(true)} className="flex items-center justify-center p-1.5 rounded-full bg-gradient-to-r from-amber-200 to-yellow-400 text-slate-900 shadow-lg shadow-amber-500/20 hover:scale-105 transition-transform" title="Upgrade to Pro">
+                    <button onClick={() => setIsUpgradeModalOpen(true)} className="flex items-center justify-center p-1.5 rounded-full bg-gradient-to-r from-amber-200 to-yellow-400 text-slate-900 shadow-lg shadow-amber-500/20 hover:scale-105 transition-transform" title="Upgrade to Pro – see what's included">
                       <Crown className="w-4 h-4" />
+                    </button>
+
+                    <button onClick={() => setIsShortcutsOpen(true)} className="btn-icon" title="Help & keyboard shortcuts">
+                      <HelpCircle className="w-4 h-4" />
+                    </button>
+
+                    <button onClick={toggleTheme} className="btn-icon" title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>
+                      {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                     </button>
 
                     <div className="relative">
@@ -2081,12 +2200,65 @@ const App: React.FC = () => {
                         onNewFile={handleCreateBlank} 
                         onUpload={handleFile}
                         onTemplate={handleTemplate}
+                        onOpenSettings={() => setIsSettingsOpen(true)}
+                        onDownloadFile={handleDownloadFile}
                     />
                 ) : (
                     <>
-                        <div className="flex-1 overflow-hidden p-4 sm:p-6 relative z-0">
+                        <div className="flex-1 overflow-hidden flex flex-col p-4 sm:p-6 relative z-0">
                             {activeTab === 'grid' && currentSheetData ? (
-                                <div className="h-full w-full data-grid-container">
+                                <>
+                                    {/* Quick Access Toolbar + Ribbon (desktop) */}
+                                    {!isMobile && (
+                                        <>
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <QuickAccessToolbar
+                                                    onUndo={handleUndo}
+                                                    onRedo={handleRedo}
+                                                    canUndo={!!currentSheetData && historyIndex > 0}
+                                                    canRedo={!!currentSheetData && historyIndex < history.length - 1}
+                                                    saved={historyIndex <= 0}
+                                                />
+                                            </div>
+                                            <Ribbon
+                                                activeTab={ribbonTab}
+                                                onTabChange={setRibbonTab}
+                                                sheetData={!!currentSheetData}
+                                                onUndo={handleUndo}
+                                                onRedo={handleRedo}
+                                                canUndo={historyIndex > 0}
+                                                canRedo={historyIndex < history.length - 1}
+                                                onFormatting={() => setIsFormattingModalOpen(true)}
+                                                onDataTools={() => setDataToolsState({ isOpen: true, mode: 'duplicates' })}
+                                                onChart={() => setIsChartWizardOpen(true)}
+                                                onPivot={() => setIsPivotModalOpen(true)}
+                                                onSmartFill={() => setIsSmartFillModalOpen(true)}
+                                                onWatchWindow={() => setIsWatchWindowOpen(!isWatchWindowOpen)}
+                                                isWatchOpen={isWatchWindowOpen}
+                                                onExport={handleDownload}
+                                                onShare={() => setIsShareModalOpen(true)}
+                                                onGoalSeek={() => setIsGoalSeekModalOpen(true)}
+                                                pageLayoutView={pageLayoutView}
+                                                onPageLayoutToggle={() => setPageLayoutView(v => !v)}
+                                                onSetPrintArea={handleSetPrintArea}
+                                                onClearPrintArea={handleClearPrintArea}
+                                                hasPrintArea={!!(currentSheetData?.printArea)}
+                                                onExportExcel={handleExportExcel}
+                                                onPrint={handlePrint}
+                                            />
+                                        </>
+                                    )}
+                                    {/* Formula Bar */}
+                                    <FormulaBar
+                                        selectedCell={selectedCell}
+                                        value={formulaBarValue}
+                                        columns={currentSheetData.columns}
+                                        cellAddress={selectedRange && selectedRange.start.rowIndex === selectedRange.end.rowIndex && selectedRange.start.colIndex === selectedRange.end.colIndex ? `${indexToExcelCol(selectedRange.start.colIndex)}${selectedRange.start.rowIndex + 1}` : undefined}
+                                        onChange={(value) => {
+                                            if (selectedCell) handleCellEdit(selectedCell.rowIndex, selectedCell.colKey, value);
+                                        }}
+                                    />
+                                    <div className={`flex-1 min-h-0 data-grid-container ${pageLayoutView ? 'page-layout-view' : ''}`}>
                                     <GridErrorBoundary>
                                         <Grid 
                                             data={currentSheetData} 
@@ -2109,7 +2281,8 @@ const App: React.FC = () => {
                                             onSheetExpand={handleSheetExpand}
                                         />
                                     </GridErrorBoundary>
-                                </div>
+                                    </div>
+                                </>
                             ) : currentSheetData ? (
                                 <Dashboard items={dashboardItems} sheetData={currentSheetData} onRemoveItem={removeFromDashboard} />
                             ) : null}
@@ -2127,11 +2300,15 @@ const App: React.FC = () => {
                         )}
 
                         {/* Status Bar */}
-                        <div className="status-bar flex items-center justify-between">
+                        <div className="status-bar flex items-center justify-between" style={{ background: 'var(--status-bg)' }}>
                             <div className="flex items-center gap-4">
                                 <div className="status-item">
+                                    <span className="text-[11px]" style={{ color: 'var(--nexus-text-muted)' }}>Ready</span>
+                                </div>
+                                <div className="separator" />
+                                <div className="status-item">
                                     <Database className="w-3.5 h-3.5" />
-                                    <span className="text-slate-300 font-medium">{currentSheetData?.name || 'Untitled'}</span>
+                                    <span className="font-medium" style={{ color: 'var(--nexus-text-main)' }}>{currentSheetData?.name || 'Untitled'}</span>
                                 </div>
                                 <div className="separator" />
                                 <div className="status-item">
@@ -2157,10 +2334,24 @@ const App: React.FC = () => {
                                     </div>
                             )}
 
-                            <div className="status-item">
-                                <span className={historyIndex > 0 ? "text-amber-400" : "text-green-400"}>
-                                    {historyIndex > 0 ? "● Saving..." : "● Saved"}
-                                </span>
+                            <div className="flex items-center gap-3">
+                                <div className="status-item">
+                                    <span className={historyIndex > 0 ? "text-amber-400" : "text-green-400"}>
+                                        {historyIndex > 0 ? "● Saving..." : "● Saved"}
+                                    </span>
+                                </div>
+                                <div className="separator" />
+                                <select
+                                    value={zoom}
+                                    onChange={(e) => setZoom(Number(e.target.value))}
+                                    className="text-[11px] rounded px-1.5 py-0.5 border bg-transparent"
+                                    style={{ color: 'var(--nexus-text-main)', borderColor: 'var(--nexus-border)' }}
+                                    title="Zoom"
+                                >
+                                    {[50, 75, 90, 100, 125, 150, 200].map((n) => (
+                                        <option key={n} value={n}>{n}%</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
                     </>
@@ -2231,6 +2422,12 @@ const App: React.FC = () => {
                     isOpen={isCommandPaletteOpen}
                     onClose={() => setIsCommandPaletteOpen(false)}
                     actions={commandActions}
+                    fileActions={getRecentFiles(10).map((f) => ({
+                      id: `file-${f.id}`,
+                      label: f.name,
+                      icon: FileSpreadsheet,
+                      action: () => handleOpenFile(f.id),
+                    }))}
                 />
             </main>
         </div>

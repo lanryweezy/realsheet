@@ -16,7 +16,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, fileName, onNo
   if (!isOpen) return null;
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(`https://nexsheet.ai/s/${Math.random().toString(36).substr(2, 9)}`);
+    navigator.clipboard.writeText(`https://realsheet.app/s/${Math.random().toString(36).substr(2, 9)}`);
     onNotify('success', 'Link Copied', 'Share link copied to clipboard.');
   };
 
@@ -95,7 +95,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, fileName, onNo
                             AI
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-white">NexSheet Agent</p>
+                            <p className="text-sm font-medium text-white">RealSheet Agent</p>
                             <p className="text-xs text-slate-500">System Bot</p>
                         </div>
                     </div>

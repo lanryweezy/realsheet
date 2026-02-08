@@ -1,5 +1,5 @@
 import React, { useState, useEffect, memo, useMemo, useRef, useCallback, useLayoutEffect } from 'react';
-import { SheetData, CellValue, SelectionRange, FormattingRule } from '../types';
+import { SheetData, CellValue, SelectionRange, FormattingRule, IconSetStyle } from '../types';
 import { AlertCircle, Hash, Calendar, Type as TypeIcon, ArrowUpDown, ArrowUp, ArrowDown, MoreVertical, Trash2, Edit2, Sparkles, Copy, XCircle, Calculator, MoveRight, MoveDown, PlusSquare, MinusSquare, MessageSquare, Eye, SplitSquareHorizontal, CopyMinus, PanelTopOpen, PanelLeftOpen } from 'lucide-react';
 import { evaluateCellValue, indexToExcelCol } from '../services/formulaService';
 import { ToastType } from './Toast';
@@ -550,6 +550,12 @@ const Grid: React.FC<GridProps> = ({
       return map;
   }, [data.formattingRules]);
 
+  const getIconForValue = (percentile: number, style: IconSetStyle): string => {
+    if (percentile >= 2/3) return style === 'traffic' ? '🟢' : style === 'flags' ? '🔴' : style === 'dots' ? '●' : '↑';
+    if (percentile >= 1/3) return style === 'traffic' ? '🟡' : style === 'flags' ? '🟡' : style === 'dots' ? '●' : '→';
+    return style === 'traffic' ? '🔴' : style === 'flags' ? '🟢' : style === 'dots' ? '○' : '↓';
+  };
+
   const getFormattingStyle = (col: string, value: CellValue) => {
      const rules = rulesByColumn[col];
      if (!rules || value === null || value === '') return {};
@@ -557,6 +563,7 @@ const Grid: React.FC<GridProps> = ({
      let computedStyle: React.CSSProperties = {};
       let barWidth: number | undefined = undefined;
       let barColor: string | undefined = undefined;
+      let iconSet: string | undefined = undefined;
 
       const numValue = Number(value);
       const strValue = String(value).toLowerCase();
@@ -575,9 +582,14 @@ const Grid: React.FC<GridProps> = ({
                    const { min, max } = stats;
                    const range = max - Math.min(0, min); 
                    if (range !== 0) {
-                        barWidth = ((numValue - Math.min(0, min)) / range) * 100;
+                        barWidth = Math.min(100, Math.max(0, ((numValue - Math.min(0, min)) / range) * 100));
                         barColor = rule.barColor || '#22d3ee';
                    }
+              } else if (rule.type === 'iconSet' && stats && !isNaN(numValue)) {
+                   const { min, max } = stats;
+                   const range = max - min;
+                   const percentile = range === 0 ? 1 : (numValue - min) / range;
+                   iconSet = getIconForValue(percentile, rule.iconSetStyle || 'arrows');
               } else if (rule.type === 'greaterThan' && !isNaN(numValue) && numValue > Number(rule.value1)) {
                   computedStyle = { ...computedStyle, backgroundColor: rule.style?.backgroundColor, color: rule.style?.textColor };
               } else if (rule.type === 'lessThan' && !isNaN(numValue) && numValue < Number(rule.value1)) {
@@ -589,7 +601,7 @@ const Grid: React.FC<GridProps> = ({
               }
           } catch (e) {}
       });
-      return { style: computedStyle, dataBarWidth: barWidth, dataBarColor: barColor };
+      return { style: computedStyle, dataBarWidth: barWidth, dataBarColor: barColor, iconSet };
   };
 
   const handleHeaderClick = (col: string) => {
@@ -787,16 +799,8 @@ const Grid: React.FC<GridProps> = ({
                     const colIdx = visibleRange.startCol + colIdxInSlice;
                     const rawVal = row[col];
                     const displayVal = evaluateCellValue(rawVal, data.rows, data.columns);
-                    const { style, dataBarWidth, dataBarColor } = getFormattingStyle(col, displayVal);
+                    const { style, dataBarWidth, dataBarColor, iconSet } = getFormattingStyle(col, displayVal);
                     const isSelected = isCellSelected(rowIndex, colIdx);
-                    const isInRange = isCellInRange(rowIndex, colIdx);
-                    const selectionBorders = {
-                      top: false,
-                      bottom: false,
-                      left: false,
-                      right: false
-                    };
-                    
                     const width = getCellWidth(col);
                     
                     return (
@@ -808,25 +812,32 @@ const Grid: React.FC<GridProps> = ({
                           maxWidth: `${width}px`, 
                           minWidth: `${width}px`,
                           fontSize: isMobile ? '11px' : '13px',
-                          height: ROW_HEIGHT
+                          height: ROW_HEIGHT,
+                          ...style
                         }}
                       >
-                        <Cell 
-                          rowIndex={rowIndex}
-                          colIndex={colIdx}
-                          col={col}
-                          value={rawVal}
-                          isSelected={isSelected}
-                          isHeader={false}
-                          columnType={columnTypes[col] || 'string'}
-                          onCellEdit={onCellEdit}
-                          onContextMenu={handleContextMenu}
-                          onDoubleClick={handleCellDoubleClick}
-                        />
-                        
-                        {/* Mobile touch targets */}
+                        {dataBarWidth != null && dataBarColor && (
+                          <div className="absolute inset-y-0 left-0 top-0 bottom-0 flex items-center px-1 z-0" style={{ width: '100%' }}>
+                            <div className="h-4 rounded-full overflow-hidden" style={{ width: `${dataBarWidth}%`, backgroundColor: dataBarColor, opacity: 0.35, minWidth: 2 }} />
+                          </div>
+                        )}
+                        <div className="relative z-10 flex items-center gap-1 min-h-full">
+                          {iconSet && <span className="text-sm shrink-0">{iconSet}</span>}
+                          <Cell 
+                            rowIndex={rowIndex}
+                            colIndex={colIdx}
+                            col={col}
+                            value={rawVal}
+                            isSelected={isSelected}
+                            isHeader={false}
+                            columnType={columnTypes[col] || 'string'}
+                            onCellEdit={onCellEdit}
+                            onContextMenu={handleContextMenu}
+                            onDoubleClick={handleCellDoubleClick}
+                          />
+                        </div>
                         {isMobile && isSelected && (
-                          <div className="absolute inset-0 bg-nexus-accent/10 pointer-events-none rounded-sm"></div>
+                          <div className="absolute inset-0 bg-nexus-accent/10 pointer-events-none rounded-sm" />
                         )}
                       </td>
                     );
