@@ -19,7 +19,7 @@ export interface FormattingRule {
     textColor?: string;
   };
   // For color scales (e.g., #ff0000 to #00ff00)
-  scaleColors?: [string, string]; 
+  scaleColors?: [string, string];
   // For data bars
   barColor?: string;
   // For icon sets
@@ -27,8 +27,8 @@ export interface FormattingRule {
 }
 
 export interface FilterDefinition {
-    description: string;
-    code: string; // JavaScript boolean expression string, e.g. "row['Age'] > 18"
+  description: string;
+  code: string; // JavaScript boolean expression string, e.g. "row['Age'] > 18"
 }
 
 export interface SheetData {
@@ -44,6 +44,8 @@ export interface SheetData {
   columnWidths?: Record<string, number>; // Column widths in pixels
   /** Print area: only this range is included when printing or exporting to PDF */
   printArea?: { start: { row: number; col: number }; end: { row: number; col: number } };
+  cellStyles?: Record<string, any>; // Key: "rowIndex-colKey", Value: CSS properties
+  tabColor?: string; // Hex color for the sheet tab indicator
 }
 
 // New: Workbook structure
@@ -61,23 +63,46 @@ export interface Workbook {
 }
 
 export interface FileMetadata {
-    id: string;
-    name: string;
-    lastModified: number;
-    lastOpened?: number;
-    rowCount: number;
-    preview: string[]; // First few column names
-    pinned?: boolean;
-    inTrash?: boolean;
+  id: string;
+  name: string;
+  lastModified: number;
+  lastOpened?: number;
+  rowCount: number;
+  preview: string[]; // First few column names
+  pinned?: boolean;
+  inTrash?: boolean;
 }
 
 export interface ChartConfig {
-  type: 'bar' | 'line' | 'area' | 'pie';
+  type: 'bar' | 'line' | 'area' | 'pie' | 'scatter' | 'bubble' | 'combo' | 'waterfall' | 'funnel' | 'gauge' | 'heatmap' | 'sparkline';
   dataKey: string;
   xAxisKey: string;
   title: string;
   description: string;
   colors?: string[];
+  // Additional config for new chart types
+  secondDataKey?: string; // For combo charts
+  targetValue?: number; // For gauge charts
+  segments?: Array<{ label: string; value: number }>; // For funnel/waterfall
+  showGrid?: boolean;
+  showLegend?: boolean;
+  showTooltip?: boolean;
+  gradient?: boolean; // For area charts
+  curveType?: 'monotone' | 'linear' | 'step' | 'natural';
+}
+
+export interface PivotField {
+  field: string;
+  operation: 'sum' | 'avg' | 'count' | 'min' | 'max' | 'first' | 'last';
+}
+
+export interface PivotConfig {
+  rowFields: string[];
+  columnFields: string[];
+  valueFields: PivotField[];
+  filterFields?: Record<string, any[]>;
+  dateField?: string;
+  dateRange?: { start: string; end: string };
 }
 
 export interface ChatMessage {
@@ -113,8 +138,8 @@ export interface DashboardItem {
 }
 
 export interface SelectionRange {
-    start: { rowIndex: number; colIndex: number };
-    end: { rowIndex: number; colIndex: number };
+  start: { rowIndex: number; colIndex: number };
+  end: { rowIndex: number; colIndex: number };
 }
 
 // Data Validation

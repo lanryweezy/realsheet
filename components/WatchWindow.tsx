@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Eye, Trash2, Hash, FunctionSquare, Plus } from 'lucide-react';
 import { SheetData } from '../types';
 import { evaluateCellValue, parseCellReference } from '../services/formulaService';
+import { evaluateWithHF } from '../services/hyperformulaService';
 
 interface WatchWindowProps {
   isOpen: boolean;
@@ -65,7 +66,7 @@ const WatchWindow: React.FC<WatchWindowProps> = ({ isOpen, onClose, data, onRemo
                 if (parsed && parsed.rowIndex < data.rows.length && parsed.colIndex < data.columns.length) {
                     const colKey = data.columns[parsed.colIndex];
                     rawValue = data.rows[parsed.rowIndex][colKey];
-                    displayValue = evaluateCellValue(rawValue, data.rows, data.columns);
+                    displayValue = evaluateWithHF(rawValue, parsed.rowIndex, colKey, data);
                 }
 
                 return (

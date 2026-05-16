@@ -1,4 +1,5 @@
 import { SheetData, AnalysisResult, ChartConfig, FormattingRule } from '../types';
+import { analyzeData as analyzeDataViaAPI } from './apiClient';
 
 // Define the enhanced analysis result with chain of thought
 export interface EnhancedAnalysisResult extends AnalysisResult {
@@ -8,50 +9,34 @@ export interface EnhancedAnalysisResult extends AnalysisResult {
   executionSteps?: string[]; // Detailed steps for execution
 }
 
-// Enhanced analysis function with chain of thought
+// Enhanced analysis function with chain of thought - Now uses serverless API
 export const analyzeDataWithGemini = async (
   prompt: string,
   sheetData: SheetData | null,
   history: any[] = [],
   apiKey?: string
 ): Promise<EnhancedAnalysisResult> => {
-  // If no API key, return mock response with enhanced structure
-  if (!apiKey) {
-    return generateOfflineFallback(prompt, sheetData);
-  }
-
+  // Use serverless API endpoint (secure - API key on server)
   try {
-    // Prepare context for the AI
-    const context = prepareContext(prompt, sheetData, history);
-    
-    // Create enhanced prompt with chain of thought instructions
-    const enhancedPrompt = `
-You are an advanced data analysis assistant. When responding to user requests, please follow this structured approach:
+    const apiResponse = await analyzeDataViaAPI({
+      prompt,
+      data: sheetData || undefined,
+      history,
+    });
 
-1. CHAIN OF THOUGHT: First, think through the request step by step. Explain your reasoning process.
-2. TASK PLANNING: Outline the specific steps you'll take to fulfill the request.
-3. EXECUTION: Perform the requested analysis or transformation.
-4. RESPONSE: Provide the final response with explanations.
+    if (apiResponse.success && apiResponse.data) {
+      return {
+        textResponse: apiResponse.data.textResponse,
+        chartConfig: apiResponse.data.chartConfig,
+        transformationCode: apiResponse.data.transformationCode,
+        confidence: apiResponse.data.confidence,
+      };
+    }
 
-CONTEXT:
-${context}
-
-USER REQUEST: ${prompt}
-
-Please provide your response in the following format:
-CHAIN OF THOUGHT: [Your reasoning process here]
-TASK PLAN: [Step-by-step plan here]
-EXECUTION STEPS: [Detailed execution steps here]
-RESPONSE: [Your final response here]
-`;
-
-    // In a real implementation, this would call the Gemini API
-    // For now, we'll simulate the enhanced response
-    const mockResponse = generateMockEnhancedResponse(prompt, sheetData);
-    
-    return mockResponse;
+    // Fallback if API fails
+    return generateOfflineFallback(prompt, sheetData);
   } catch (error) {
-    console.error('Gemini API Error:', error);
+    console.error('AI API Error:', error);
     return generateOfflineFallback(prompt, sheetData);
   }
 };
@@ -284,4 +269,57 @@ export const generateSmartColumnData = async (
   }
 
   return mockData;
+};
+
+/**
+ * Generate Excel formula from natural language description using serverless API (SECURE - API key on server)
+ * @param description - Natural language description of what the formula should do
+ * @param sheetData - Optional sheet data for context
+ * @returns Suggested Excel formula
+ */
+export const generateFormulaFromDescription = async (
+  description: string,
+  sheetData: SheetData | null = null
+): Promise<string> => {
+  // Use serverless API endpoint (secure - API key on server)
+  try {
+    const { suggestFormula } = await import('./apiClient');
+    const apiResponse = await suggestFormula({
+      description,
+      data: sheetData || undefined,
+    });
+
+    if (apiResponse.success && apiResponse.formula) {
+      return apiResponse.formula;
+    }
+
+    // Fallback if API fails
+    return suggestFormulaOffline(description);
+  } catch (error) {
+    console.error('Formula generation API Error:', error);
+    return suggestFormulaOffline(description);
+  }
+};
+
+/**
+ * Offline formula suggestion based on keywords
+ */
+const suggestFormulaOffline = (description: string): string => {
+  const desc = description.toLowerCase();
+  
+  if (desc.includes('sum')) return '=SUM(A:A)';
+  if (desc.includes('average') || desc.includes('mean')) return '=AVERAGE(A:A)';
+  if (desc.includes('count')) return '=COUNT(A:A)';
+  if (desc.includes('min')) return '=MIN(A:A)';
+  if (desc.includes('max')) return '=MAX(A:A)';
+  if (desc.includes('if')) return '=IF(A1>10,"Yes","No")';
+  if (desc.includes('lookup') || desc.includes('vlookup')) return '=VLOOKUP(value, table, col_index, FALSE)';
+  if (desc.includes('xlookup')) return '=XLOOKUP(lookup, lookup_array, return_array)';
+  if (desc.includes('index')) return '=INDEX(array, row_num, [col_num])';
+  if (desc.includes('match')) return '=MATCH(lookup_value, lookup_array, 0)';
+  if (desc.includes('concatenate') || desc.includes('join')) return '=TEXTJOIN(", ", TRUE, A1:A10)';
+  if (desc.includes('date')) return '=TODAY()';
+  if (desc.includes('payment') || desc.includes('pmt')) return '=PMT(rate, nper, pv)';
+  
+  return '=FORMULA_HERE';
 };

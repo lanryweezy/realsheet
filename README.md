@@ -2,21 +2,137 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# NexSheet AI - Intelligent Spreadsheet Application
+# RealSheet - AI-Powered Spreadsheet
 
 A powerful, AI-powered spreadsheet application built with React, TypeScript, and Vite. Features include data analysis, visualization, pivot tables, goal seek, and an intelligent AI assistant powered by Google Gemini.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1jpc_3xo_Chp0wxIwVtkamu-f39-Q2yFG
+**Fast, keyboard-first, AI-enhanced spreadsheets for modern data work.**
 
 ## Features
 
-- 📊 **Advanced Data Grid** - Full-featured spreadsheet with formulas, formatting, and data manipulation
-- 🤖 **AI Assistant** - Powered by Google Gemini for intelligent data analysis and insights
-- 📈 **Visualizations** - Create charts and dashboards with Recharts
-- 🔍 **Data Tools** - Remove duplicates, split columns, find & replace, and more
-- 📑 **Multiple Sheets** - Workbook support with multiple tabs
-- 💾 **Local Storage** - Automatic saving to browser storage
-- 🎨 **Modern UI** - Beautiful, responsive design with Tailwind CSS
+### 🤖 AI-Powered Functions (13 Functions)
+- **=AI()** - General purpose AI queries for any task
+- **=SENTIMENT()** - Analyze sentiment (Positive/Negative/Neutral)
+- **=CLASSIFY()** - Categorize text into predefined categories
+- **=EXTRACT()** - Extract emails, phone numbers, dates, etc.
+- **=TRANSLATE()** - Translate text to any language
+- **=SUMMARIZE()** - Summarize long text automatically
+- **=GENERATE()** - Generate content from prompts
+- **=FORECAST()** - Predict future values from historical data
+- **=EXPLAIN()** - Explain any formula in plain English
+- **=SUGGEST_FORMULA()** - Get formula suggestions from descriptions
+- **=FIX_FORMULA()** - Automatically fix broken formulas
+- **=ANALYZE()** - Perform statistical analysis on data
+- **=INFER()** - Make predictions based on patterns
+
+### 📊 100+ Spreadsheet Functions
+- **Logical**: IF, IFS, AND, OR, NOT, XOR, SWITCH
+- **Text**: CONCATENATE, TEXTJOIN, LEFT, RIGHT, MID, TRIM, UPPER, LOWER, PROPER, LEN, FIND, SUBSTITUTE
+- **Date/Time**: TODAY, NOW, DATE, YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, DATEDIF, WEEKDAY
+- **Math**: ROUND, ROUNDUP, ROUNDDOWN, ABS, SQRT, POWER, MOD, CEILING, FLOOR
+- **Statistical**: SUM, AVG, MIN, MAX, COUNT, STDEV, VAR, CORREL, PERCENTILE
+- **Array**: FILTER, SORT, UNIQUE
+- **Financial**: PMT, FV, NPV
+- **Lookup**: VLOOKUP, HLOOKUP, INDEX, MATCH, SUMIF
+
+### 🌐 API Integration & Data Sources
+- **=FETCH()** - Call any REST API directly from cells
+- **=IMPORTJSON()** - Import JSON data from URLs
+- **=IMPORTXML()** - Scrape data from websites
+- **Pre-built Connectors**: Stripe, HubSpot, Airtable, Notion, Slack, Google Sheets
+- **Webhook Support** - Real-time data updates
+- **OAuth & API Key Authentication**
+
+### 🐍 Python & SQL Integration
+- **Python Code Cells** - Run Python directly in the spreadsheet
+- **Pandas & NumPy** - Full data science library support
+- **SQL Queries** - Query your data with SQL
+- **Machine Learning** - 5 built-in ML models
+- **Data Visualization** - Matplotlib & Seaborn charts
+
+### 📈 Advanced Visualizations (15+ Chart Types)
+- **Basic**: Bar, Line, Area, Pie, Donut
+- **Scientific**: Scatter, Bubble, Radar, Polar
+- **Business**: Waterfall, Funnel, Gauge
+- **Statistical**: Heatmap, Boxplot, Histogram
+- **Advanced**: Treemap, Sankey, Candlestick, Combo
+- **Sparklines** - Inline mini-charts in cells
+- **Export** - Save charts as PNG, SVG, or PDF
+
+### 🔬 Data Science & Machine Learning
+- **Linear Regression** - Trend analysis and predictions
+- **K-Means Clustering** - Segment your data
+- **Time Series Forecasting** - Moving average, exponential smoothing
+- **Anomaly Detection** - Find outliers automatically
+- **Correlation Analysis** - Discover relationships in data
+- **Statistical Tools** - Mean, median, mode, std dev, percentiles
+
+### 💼 Enterprise Features
+- 📑 **Multiple Sheets** - Workbook support with tabs
+- 🔍 **Data Tools** - Remove duplicates, split columns, find & replace
+- 🎨 **Conditional Formatting** - Color scales, data bars, icon sets
+- 📊 **Pivot Tables** - Summarize and analyze data
+- 🎯 **Goal Seek** - What-if analysis
+- 👁️ **Watch Window** - Monitor specific cells
+- 💾 **Auto-save** - Never lose your work
+- 📤 **Import/Export** - Excel, CSV support
+- ⌨️ **Keyboard Shortcuts** - Fast, keyboard-first workflow
+
+### 🎨 Modern UI/UX
+- Beautiful, responsive design with Tailwind CSS
+- Command palette (Ctrl/Cmd + K)
+- Formula bar with autocomplete
+- Quick access toolbar
+- Ribbon interface
+- Dark mode support
+- Mobile-friendly
+
+## Quick Examples
+
+### AI Functions
+```excel
+=AI("What is the average sales growth?", A1:A12)
+=SENTIMENT("I love this product!")
+=CLASSIFY(B2, "Positive, Negative, Neutral")
+=TRANSLATE(C2, "Spanish")
+=FORECAST(D1:D12, 3)
+=EXPLAIN("=VLOOKUP(A1,B:C,2,FALSE)")
+```
+
+### Advanced Formulas
+```excel
+=IF(A1>100, "High", "Low")
+=IFS(A1>100, "High", A1>50, "Medium", TRUE, "Low")
+=TEXTJOIN(", ", TRUE, A1:A5)
+=FILTER(A1:C10, B1:B10>50)
+=DATEDIF(A1, B1, "D")
+```
+
+### API Integration
+```excel
+=FETCH("https://api.example.com/data")
+=IMPORTJSON("https://api.github.com/users/octocat", "name")
+```
+
+### Python Code
+```python
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# df is automatically available with your sheet data
+df['growth'] = df['sales'].pct_change()
+df.plot(x='month', y='growth', kind='line')
+plt.show()
+```
+
+### SQL Queries
+```sql
+SELECT category, AVG(sales) as avg_sales
+FROM sheet_data
+WHERE sales > 1000
+GROUP BY category
+ORDER BY avg_sales DESC;
+```
 
 ## Run Locally
 
@@ -160,6 +276,40 @@ realsheet/
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build locally
+
+## Technologies Used
+
+- **React 18** - UI framework
+- **TypeScript** - Type safety
+- **Vite** - Build tool and dev server
+- **Tailwind CSS** - Styling
+- **Recharts** - Data visualization
+- **XLSX** - Excel file parsing
+- **Google Gemini AI** - AI assistant and functions
+- **Pyodide** - Python in the browser
+- **AlaSQL** - In-memory SQL queries
+
+## Documentation
+
+- **[Setup Guide](SETUP_GUIDE.md)** - Installation and configuration
+- **[Quick Reference](QUICK_REFERENCE.md)** - Formula and function reference
+- **[Ultimate AI Spreadsheet](ULTIMATE_AI_SPREADSHEET.md)** - Complete feature documentation
+- **[Feature Roadmap](FEATURE_ROADMAP.md)** - Development roadmap
+- **[Implementation Summary](IMPLEMENTATION_SUMMARY.md)** - Technical details
+
+## Key Features Comparison
+
+| Feature | NexSheet AI | Google Sheets | Excel | Julius AI | Numerous.ai | Quadratic |
+|---------|-------------|---------------|-------|-----------|-------------|-----------|
+| Formulas | 100+ | 400+ | 500+ | Limited | Limited | Limited |
+| AI Functions | 13 | 0 | 0 | Built-in | 8 | 0 |
+| Charts | 15+ | 10+ | 20+ | 10+ | 5 | 8 |
+| Python | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| SQL | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| API Connector | ✅ | Limited | ❌ | ❌ | ❌ | Limited |
+| ML Models | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Offline | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Price | Free | Free/Paid | Paid | Paid | Paid | Free/Paid |
 
 ## Technologies Used
 

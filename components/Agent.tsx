@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Sparkles, StopCircle, Mic, Plus, Check, Zap, Calculator, PaintBucket, Filter, MessageSquare, Lightbulb, ListTodo } from 'lucide-react';
 import { ChatMessage, SheetData, ChartConfig, EnhancedAnalysisResult } from '../types';
 import { analyzeDataWithGemini } from '../services/geminiService';
+import { transformData } from '../services/apiClient';
+import { safeEvaluate } from '../utils/safeFormulaParser';
 import Visualization from './Visualization';
 
 interface AgentProps {
@@ -183,29 +185,36 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
           setMessages(prev => [...prev, taskPlanMsg]);
         }
 
-        // 3. Handle Transformations
+        // 3. Handle Transformations (SECURE - uses serverless API)
         if (result.transformationCode && sheetData) {
             try {
-                // eslint-disable-next-line no-new-func
-                const transformFn = new Function('rows', result.transformationCode);
-                const currentRows = JSON.parse(JSON.stringify(sheetData.rows));
-                const transformedRows = transformFn(currentRows);
+                // Use serverless API for safe execution (API key on server, sandboxed environment)
+                const transformResponse = await transformData({
+                    code: result.transformationCode,
+                    data: JSON.parse(JSON.stringify(sheetData.rows)),
+                });
 
-                if (!Array.isArray(transformedRows)) {
-                    throw new Error("Transformation code did not return an array.");
+                if (transformResponse.success && transformResponse.data) {
+                    const transformedRows = transformResponse.data;
+
+                    if (!Array.isArray(transformedRows)) {
+                        throw new Error("Transformation code did not return an array.");
+                    }
+
+                    const allKeys = new Set<string>();
+                    transformedRows.forEach((r: any) => Object.keys(r).forEach(k => allKeys.add(k)));
+                    const newColumns = Array.from(allKeys);
+
+                    finalSheetData = {
+                        ...finalSheetData,
+                        columns: newColumns,
+                        rows: transformedRows
+                    };
+                    hasChanges = true;
+                    actionMessage += "\n\n⚡ Function executed & data updated.";
+                } else {
+                    throw new Error(transformResponse.error || 'Transformation failed');
                 }
-
-                const allKeys = new Set<string>();
-                transformedRows.forEach((r: any) => Object.keys(r).forEach(k => allKeys.add(k)));
-                const newColumns = Array.from(allKeys);
-
-                finalSheetData = {
-                    ...finalSheetData,
-                    columns: newColumns,
-                    rows: transformedRows
-                };
-                hasChanges = true;
-                actionMessage += "\n\n⚡ Function executed & data updated.";
             } catch (err) {
                 console.error("Transformation Error", err);
                 actionMessage += "\n\n⚠️ Failed to execute data transformation function.";
