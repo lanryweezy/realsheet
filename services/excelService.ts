@@ -254,13 +254,15 @@ export const getTemplateData = (type: 'budget' | 'invoice' | 'schedule' | 'finan
         case 'hr':
             return {
                 name: "Compensation_Audit.xlsx",
-                columns: ["Employee_ID", "Department", "Position", "Salary_USD", "Performance_Rating", "Tenure_Years"],
+                columns: ["Employee_ID", "Department", "Position", "Salary_USD", "Performance_Rating", "Tenure_Years", "Bonus_Ratio", "Total_Comp"],
                 rows: [
-                    { Employee_ID: "E1001", Department: "Engineering", Position: "Senior Dev", Salary_USD: 145000, Performance_Rating: 4.5, Tenure_Years: 3 },
-                    { Employee_ID: "E1002", Department: "Sales", Position: "Account Manager", Salary_USD: 95000, Performance_Rating: 3.8, Tenure_Years: 1.5 },
-                    { Employee_ID: "E1003", Department: "Engineering", Position: "Junior Dev", Salary_USD: 85000, Performance_Rating: 4.2, Tenure_Years: 0.5 }
+                    { Employee_ID: "E1001", Department: "Engineering", Position: "Senior Dev", Salary_USD: 145000, Performance_Rating: 4.5, Tenure_Years: 3, Bonus_Ratio: 0.15, Total_Comp: "=D2*(1+G2)" },
+                    { Employee_ID: "E1002", Department: "Sales", Position: "Account Manager", Salary_USD: 95000, Performance_Rating: 3.8, Tenure_Years: 1.5, Bonus_Ratio: 0.25, Total_Comp: "=D3*(1+G3)" },
+                    { Employee_ID: "E1003", Department: "Engineering", Position: "Junior Dev", Salary_USD: 85000, Performance_Rating: 4.2, Tenure_Years: 0.5, Bonus_Ratio: 0.10, Total_Comp: "=D4*(1+G4)" }
                 ],
-                formattingRules: []
+                formattingRules: [
+                    { id: 'high-perf', type: 'greaterThan', column: 'Performance_Rating', value1: 4.0, style: { backgroundColor: '#dcfce7', textColor: '#166534' } }
+                ]
             };
         case 'budget':
             return {

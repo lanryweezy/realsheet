@@ -27,6 +27,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [thinkingStep, setThinkingStep] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -168,6 +169,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                 .filter(m => m.id !== 'welcome' && m.id !== 'system-start')
                 .map(m => ({ role: m.role, parts: [{ text: m.text }] }));
 
+            setThinkingStep(`Reasoning turn ${turnCount}...`);
             const result: EnhancedAnalysisResult = await analyzeDataWithGemini(
                 turnCount === 1 ? userMsg.text : "Please continue based on the tool results.",
                 finalSheetData,
@@ -257,14 +259,20 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                     switch (tool) {
                         case 'fill_formula': {
                             const { range, formula } = parameters;
+                            setThinkingStep(`Filling formula ${formula} in ${range}...`);
                             const rangeRef = parseRange(range);
                             if (rangeRef[0] && rangeRef[1]) {
                                 const newRows = [...finalSheetData.rows];
-                                for (let r = rangeRef[0].rowIndex; r <= rangeRef[1].rowIndex; r++) {
-                                    for (let c = rangeRef[0].colIndex; c <= rangeRef[1].colIndex; c++) {
+                                const startR = rangeRef[0].rowIndex;
+                                const startC = rangeRef[0].colIndex;
+
+                                for (let r = startR; r <= rangeRef[1].rowIndex; r++) {
+                                    for (let c = startC; c <= rangeRef[1].colIndex; c++) {
                                         if (r < newRows.length) {
                                             const colKey = finalSheetData.columns[c];
-                                            newRows[r] = { ...newRows[r], [colKey]: formula };
+                                            // Adjust formula references relative to the top-left cell of the range
+                                            const adjustedFormula = adjustFormulaReferences(formula, r - startR, c - startC);
+                                            newRows[r] = { ...newRows[r], [colKey]: adjustedFormula };
                                         }
                                     }
                                 }
@@ -277,6 +285,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                         }
                         case 'clear_range': {
                             const { range } = parameters;
+                            setThinkingStep(`Clearing range ${range}...`);
                             const rangeRef = parseRange(range);
                             if (rangeRef[0] && rangeRef[1]) {
                                 const newRows = [...finalSheetData.rows];
@@ -297,6 +306,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                         }
                         case 'delete_rows': {
                             const { startIndex, count } = parameters;
+                            setThinkingStep(`Deleting ${count} rows from index ${startIndex}...`);
                             const newRows = [...finalSheetData.rows];
                             newRows.splice(startIndex, count);
                             finalSheetData = { ...finalSheetData, rows: newRows };
@@ -307,6 +317,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                         }
                         case 'delete_columns': {
                             const { columns: colsToDelete } = parameters;
+                            setThinkingStep(`Deleting columns: ${colsToDelete.join(', ')}...`);
                             const newColumns = finalSheetData.columns.filter(c => !colsToDelete.includes(c));
                             const newRows = finalSheetData.rows.map(row => {
                                 const newRow = { ...row };
@@ -321,6 +332,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                         }
                         case 'inspect_range': {
                             const { range } = parameters;
+                            setThinkingStep(`Inspecting range ${range}...`);
                             const rangeRef = parseRange(range);
                             if (rangeRef[0] && rangeRef[1]) {
                                 const inspected: any[][] = [];
@@ -341,6 +353,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                         }
                         case 'find_cells': {
                             const { query } = parameters;
+                            setThinkingStep(`Searching for "${query}"...`);
                             const matches: string[] = [];
                             finalSheetData.rows.forEach((row, rIdx) => {
                                 finalSheetData.columns.forEach((col, cIdx) => {
@@ -356,6 +369,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                         }
                         case 'recalculate_and_read': {
                             const { range } = parameters;
+                            setThinkingStep(`Recalculating and reading ${range}...`);
                             syncWorkbook(finalSheetData);
                             const rangeRef = parseRange(range);
                             if (rangeRef[0] && rangeRef[1]) {
@@ -377,6 +391,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                         }
                         case 'code_interpreter': {
                             const { code } = parameters;
+                            setThinkingStep(`Executing custom code...`);
                             try {
                                 const response = await transformData({
                                     code,
@@ -459,6 +474,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
         }]);
     } finally {
         setIsLoading(false);
+        setThinkingStep(null);
     }
   };
 
@@ -549,7 +565,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
         {isLoading && (
             <div className="flex items-center gap-2 text-slate-500 text-xs p-2">
                 <Sparkles className="w-3 h-3 animate-spin text-nexus-accent" />
-                <span>Thinking through your request...</span>
+                 <span>{thinkingStep || 'Thinking through your request...'}</span>
             </div>
         )}
         <div ref={messagesEndRef} />

@@ -315,8 +315,8 @@ const HomeView: React.FC<HomeViewProps> = ({
     return renderFileCard(fileList[0], { showPin: true });
   };
 
-  const skeleton = () => (
-    <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden animate-pulse">
+  const skeleton = (key: number) => (
+    <div key={key} className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden animate-pulse">
       <div className="h-32 bg-slate-800/30" />
       <div className="p-5 space-y-3">
         <div className="h-4 bg-slate-800/50 rounded-lg w-3/4" />
@@ -529,7 +529,7 @@ const HomeView: React.FC<HomeViewProps> = ({
                 <div className="min-h-[400px]">
                   {loading ? (
                     <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-3 gap-6' : 'space-y-4'}>
-                      {[...Array(6)].map((_, i) => skeleton())}
+                      {[...Array(6)].map((_, i) => skeleton(i))}
                     </div>
                   ) : filteredRecentGrouped.length === 0 && filteredPinned.length === 0 ? (
                     emptyState()
