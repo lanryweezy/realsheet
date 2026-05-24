@@ -253,6 +253,25 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
 
             // 4. Handle Spreadsheet-Native Tool Calls (Spreadsheet-RL style)
             if (result.toolCalls && result.toolCalls.length > 0) {
+                const readOnlyTools = ['inspect_range', 'find_cells', 'recalculate_and_read'];
+                const writeTools = ['fill_formula', 'clear_range', 'delete_rows', 'delete_columns', 'code_interpreter'];
+
+                // Validate mix (Harness Rule: must not mix read-only and write-related)
+                const hasReadOnly = result.toolCalls.some(c => readOnlyTools.includes(c.tool));
+                const hasWrite = result.toolCalls.some(c => writeTools.includes(c.tool));
+
+                if (hasReadOnly && hasWrite) {
+                    console.warn("Agent mixed read-only and write-related calls. Rule violation.");
+                    toolResults.push("Error: Cannot mix read-only and write-related tool calls in a single turn.");
+                    break;
+                }
+
+                if (hasWrite && result.toolCalls.length > 1) {
+                    console.warn("Agent issued multiple write calls. Rule violation.");
+                    toolResults.push("Error: Write-related calls must be issued one at a time.");
+                    break;
+                }
+
                 for (const call of result.toolCalls) {
                     const { tool, parameters } = call;
 
@@ -335,19 +354,28 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                             setThinkingStep(`Inspecting range ${range}...`);
                             const rangeRef = parseRange(range);
                             if (rangeRef[0] && rangeRef[1]) {
-                                const inspected: any[][] = [];
+                                const inspected: any[] = [];
                                 for (let r = rangeRef[0].rowIndex; r <= rangeRef[1].rowIndex; r++) {
-                                    const rowValues: any[] = [];
+                                    const rowData: any = {};
                                     for (let c = rangeRef[0].colIndex; c <= rangeRef[1].colIndex; c++) {
                                         if (r < finalSheetData.rows.length) {
                                             const colKey = finalSheetData.columns[c];
-                                            rowValues.push(finalSheetData.rows[r][colKey]);
+                                            const cellValue = finalSheetData.rows[r][colKey];
+                                            const cellStyle = finalSheetData.cellStyles?.[`${r}-${colKey}`];
+                                            const hasComment = finalSheetData.comments?.[`${r}-${colKey}`];
+
+                                            rowData[colKey] = {
+                                                value: cellValue,
+                                                isFormula: typeof cellValue === 'string' && cellValue.startsWith('='),
+                                                style: cellStyle,
+                                                hasComment: !!hasComment
+                                            };
                                         }
                                     }
-                                    inspected.push(rowValues);
+                                    inspected.push(rowData);
                                 }
-                                toolResults.push(`Inspect results for ${range}: ${JSON.stringify(inspected)}`);
-                                actionMessage += `\n\n🔍 Inspected range ${range}.`;
+                                toolResults.push(`Inspect results for ${range} (with metadata): ${JSON.stringify(inspected)}`);
+                                actionMessage += `\n\n🔍 Inspected range ${range} with metadata.`;
                             }
                             break;
                         }
@@ -370,22 +398,24 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                         case 'recalculate_and_read': {
                             const { range } = parameters;
                             setThinkingStep(`Recalculating and reading ${range}...`);
+                            // Force a fresh sync for accurate recalculation
                             syncWorkbook(finalSheetData);
                             const rangeRef = parseRange(range);
                             if (rangeRef[0] && rangeRef[1]) {
-                                const calculated: any[][] = [];
+                                const calculated: any[] = [];
                                 for (let r = rangeRef[0].rowIndex; r <= rangeRef[1].rowIndex; r++) {
-                                    const rowValues: any[] = [];
+                                    const rowValues: any = {};
                                     for (let c = rangeRef[0].colIndex; c <= rangeRef[1].colIndex; c++) {
                                         if (r < finalSheetData.rows.length) {
                                             const colKey = finalSheetData.columns[c];
-                                            rowValues.push(evaluateWithHF(finalSheetData.rows[r][colKey], r, colKey, finalSheetData));
+                                            const evaluated = evaluateWithHF(finalSheetData.rows[r][colKey], r, colKey, finalSheetData);
+                                            rowValues[colKey] = evaluated;
                                         }
                                     }
                                     calculated.push(rowValues);
                                 }
-                                toolResults.push(`Recalculated values for ${range}: ${JSON.stringify(calculated)}`);
-                                actionMessage += `\n\n🔄 Recalculated and verified range ${range}.`;
+                                toolResults.push(`Recalculated evaluated values for ${range}: ${JSON.stringify(calculated)}`);
+                                actionMessage += `\n\n🔄 Recalculated and verified values in ${range}.`;
                             }
                             break;
                         }
@@ -505,6 +535,18 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
           >
             <div className={`chat-bubble ${msg.role}`}>
              <div className="whitespace-pre-wrap">{msg.text}</div>
+             {msg.text.includes("mixed read-only and write-related") && (
+                 <div className="mt-3 flex items-center gap-2 text-xs text-red-300 bg-red-900/30 p-2 rounded border border-red-500/20">
+                     <AlertCircle className="w-3 h-3" />
+                     <span>Harness Rule Violation: Mixed Calls</span>
+                 </div>
+             )}
+             {msg.text.includes("must be issued one at a time") && (
+                 <div className="mt-3 flex items-center gap-2 text-xs text-amber-300 bg-amber-900/30 p-2 rounded border border-amber-500/20">
+                     <AlertCircle className="w-3 h-3" />
+                     <span>Harness Rule: Serialized Write</span>
+                 </div>
+             )}
              {msg.text.includes("Function executed") && (
                  <div className="mt-3 flex items-center gap-2 text-xs text-emerald-300 bg-emerald-900/30 p-2 rounded border border-emerald-500/20">
                      <Calculator className="w-3 h-3" /> 
@@ -529,17 +571,47 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                      <span>Comments added</span>
                  </div>
              )}
-             {msg.text.includes("Chain of Thought") && (
-                 <div className="mt-2 flex items-center gap-2 text-xs text-amber-300 bg-amber-900/30 p-2 rounded border border-amber-500/20">
-                     <Lightbulb className="w-3 h-3" /> 
-                     <span>Reasoning Process</span>
-                 </div>
-             )}
-             {msg.text.includes("Task Plan") && (
-                 <div className="mt-2 flex items-center gap-2 text-xs text-blue-300 bg-blue-900/30 p-2 rounded border border-blue-500/20">
-                     <ListTodo className="w-3 h-3" /> 
-                     <span>Action Plan</span>
-                 </div>
+             {msg.isThinking ? (
+                <details className="mt-2 group/thinking">
+                    <summary className="flex items-center gap-2 text-[10px] text-slate-500 cursor-pointer hover:text-slate-400 transition-colors uppercase tracking-widest list-none">
+                        <div className="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center">
+                            <Sparkles className="w-2.5 h-2.5" />
+                        </div>
+                        {msg.text.includes("Chain of Thought") ? "View Reasoning" : "View Action Plan"}
+                        <ChevronRight className="w-3 h-3 group-open/thinking:rotate-90 transition-transform" />
+                    </summary>
+                    <div className="mt-2 text-xs text-slate-400 bg-slate-800/30 p-3 rounded-lg border border-slate-700/30 animate-in slide-in-from-top-1">
+                        {msg.text.replace(/💡 \*\*Chain of Thought:\*\* |📋 \*\*Task Plan:\*\*\n/, '')}
+                    </div>
+                </details>
+             ) : (
+                <>
+                    <div className="whitespace-pre-wrap">{msg.text}</div>
+                    {msg.text.includes("Function executed") && (
+                        <div className="mt-3 flex items-center gap-2 text-xs text-emerald-300 bg-emerald-900/30 p-2 rounded border border-emerald-500/20">
+                            <Calculator className="w-3 h-3" />
+                            <span>Calculation applied</span>
+                        </div>
+                    )}
+                    {msg.text.includes("Applied") && msg.text.includes("rules") && (
+                        <div className="mt-2 flex items-center gap-2 text-xs text-indigo-300 bg-indigo-900/30 p-2 rounded border border-indigo-500/20">
+                            <PaintBucket className="w-3 h-3" />
+                            <span>Formatting rules applied</span>
+                        </div>
+                    )}
+                    {msg.text.includes("Filter applied") && (
+                        <div className="mt-2 flex items-center gap-2 text-xs text-cyan-300 bg-cyan-900/30 p-2 rounded border border-cyan-500/20">
+                            <Filter className="w-3 h-3" />
+                            <span>Filter Active</span>
+                        </div>
+                    )}
+                    {msg.text.includes("Added") && msg.text.includes("comments") && (
+                        <div className="mt-2 flex items-center gap-2 text-xs text-orange-300 bg-orange-900/30 p-2 rounded border border-orange-500/20">
+                            <MessageSquare className="w-3 h-3" />
+                            <span>Comments added</span>
+                        </div>
+                    )}
+                </>
              )}
             </div>
             

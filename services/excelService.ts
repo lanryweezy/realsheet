@@ -226,7 +226,7 @@ export const getMaxColumnIndex = (): number => {
     return 17576;
 };
 
-export const getTemplateData = (type: 'budget' | 'invoice' | 'schedule' | 'finance' | 'supply_chain' | 'hr'): SheetData => {
+export const getTemplateData = (type: 'budget' | 'invoice' | 'schedule' | 'finance' | 'supply_chain' | 'hr' | 'sales' | 'real_estate'): SheetData => {
     switch(type) {
         case 'finance':
             return {
@@ -262,6 +262,33 @@ export const getTemplateData = (type: 'budget' | 'invoice' | 'schedule' | 'finan
                 ],
                 formattingRules: [
                     { id: 'high-perf', type: 'greaterThan', column: 'Performance_Rating', value1: 4.0, style: { backgroundColor: '#dcfce7', textColor: '#166534' } }
+                ]
+            };
+        case 'sales':
+            return {
+                name: "Sales_Performance_Tracker.xlsx",
+                columns: ["Region", "Sales_Rep", "Q1_Actual", "Q1_Target", "Gap", "Achievement_%", "Status"],
+                rows: [
+                    { Region: "North", Sales_Rep: "Sarah J.", Q1_Actual: 450000, Q1_Target: 400000, Gap: "=C2-D2", "Achievement_%": "=C2/D2", Status: "=IF(F2>=1,\"Quota Met\",\"Under\")" },
+                    { Region: "South", Sales_Rep: "Mike R.", Q1_Actual: 320000, Q1_Target: 350000, Gap: "=C3-D3", "Achievement_%": "=C3/D3", Status: "=IF(F3>=1,\"Quota Met\",\"Under\")" },
+                    { Region: "West", Sales_Rep: "Chris L.", Q1_Actual: 510000, Q1_Target: 480000, Gap: "=C4-D4", "Achievement_%": "=C4/D4", Status: "=IF(F4>=1,\"Quota Met\",\"Under\")" }
+                ],
+                formattingRules: [
+                    { id: 'quota-met', type: 'containsText', column: 'Status', value1: 'Quota Met', style: { backgroundColor: '#dcfce7', textColor: '#166534' } },
+                    { id: 'quota-under', type: 'containsText', column: 'Status', value1: 'Under', style: { backgroundColor: '#fee2e2', textColor: '#991b1b' } }
+                ]
+            };
+        case 'real_estate':
+            return {
+                name: "Property_Valuation_Model.xlsx",
+                columns: ["Property_Name", "Units", "Avg_Rent", "Gross_Income", "Op_Expenses", "NOI", "Cap_Rate", "Valuation"],
+                rows: [
+                    { Property_Name: "Sunset Apartments", Units: 24, Avg_Rent: 1200, Gross_Income: "=B2*C2*12", Op_Expenses: "=D2*0.35", NOI: "=D2-E2", Cap_Rate: 0.055, Valuation: "=F2/G2" },
+                    { Property_Name: "Oak Ridge Lofts", Units: 12, Avg_Rent: 1850, Gross_Income: "=B3*C3*12", Op_Expenses: "=D3*0.40", NOI: "=D3-E3", Cap_Rate: 0.060, Valuation: "=F3/G3" },
+                    { Property_Name: "Pine View Suites", Units: 48, Avg_Rent: 950, Gross_Income: "=B4*C4*12", Op_Expenses: "=D4*0.30", NOI: "=D4-E4", Cap_Rate: 0.052, Valuation: "=F4/G4" }
+                ],
+                formattingRules: [
+                    { id: 'high-val', type: 'greaterThan', column: 'Valuation', value1: 5000000, style: { backgroundColor: '#f0f9ff', textColor: '#075985' } }
                 ]
             };
         case 'budget':
