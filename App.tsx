@@ -1830,6 +1830,7 @@ const App: React.FC = () => {
                     workbook={workbook}
                     onAddToDashboard={addToDashboard}
                     onUpdateData={pushToHistory}
+                    onUpdateWorkbook={(wb) => setWorkbook(wb)}
                     onSwitchSheet={handleActiveSheetChange}
                     promptOverride={agentPromptOverride}
                     onClearPromptOverride={() => setAgentPromptOverride(null)}

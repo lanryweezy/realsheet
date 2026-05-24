@@ -1,13 +1,7 @@
 import { HyperFormula } from 'hyperformula';
 import { SheetData, Row } from '../types';
-import { excelColToIndex, indexToExcelCol } from './formulaService';
-import { isAIFormula, evaluateAIFormula } from './aiFormulas';
-
-/**
- * RealSheet HyperFormula Bridge
- * This service replaces the legacy regex-based formula parser with
- * a high-performance, dependency-aware calculation engine.
- */
+import { excelColToIndex } from './formulaService';
+import { isAIFormula } from './aiFormulas';
 
 const options = {
   licenseKey: 'gpl-v3',
@@ -16,39 +10,47 @@ const options = {
   useColumnIndex: true,
 };
 
-// Initialize HyperFormula
 export const hf = HyperFormula.buildEmpty(options);
 
-/**
- * Maps RealSheet's Row[] structure to a 2D array for HyperFormula
- */
 const rowsTo2DArray = (rows: Row[], columns: string[]): any[][] => {
   return rows.map(row => columns.map(col => {
     const val = row[col];
-    // If it's a formula, ensure it starts with '='
     if (typeof val === 'string' && val.startsWith('=')) return val;
     return val === null || val === undefined ? '' : val;
   }));
 };
 
-/**
- * Synchronizes a RealSheet workbook with HyperFormula
- */
-export const syncWorkbook = (sheetData: SheetData) => {
+const getSheetIdSafe = (name: string | undefined): number => {
+  const sheetName = name || 'Sheet1';
+  const id = hf.getSheetId(sheetName);
+  if (typeof id === 'number') return id;
+
+  const names = hf.getSheetNames();
+  if (names.length > 0) {
+      const firstId = hf.getSheetId(names[0]);
+      if (typeof firstId === 'number') return firstId;
+  }
+
+  return hf.addSheet(sheetName);
+};
+
+export const syncWorkbook = (sheetData: SheetData): number => {
+  if (!sheetData) return 0;
   const sheetName = sheetData.name || 'Sheet1';
   let sheetId = hf.getSheetId(sheetName);
 
-  if (sheetId === undefined) {
+  if (typeof sheetId !== 'number') {
     sheetId = hf.addSheet(sheetName);
   }
 
-  const data = rowsTo2DArray(sheetData.rows, sheetData.columns);
-  hf.setSheetContent(sheetId, data);
+  if (typeof sheetId === 'number') {
+    const data = rowsTo2DArray(sheetData.rows, sheetData.columns);
+    hf.setSheetContent(sheetId, data);
+    return sheetId;
+  }
+  return 0;
 };
 
-/**
- * Evaluates a single cell value using HyperFormula context
- */
 export const evaluateWithHF = (
   value: string | number | null,
   rowIndex: number,
@@ -56,63 +58,55 @@ export const evaluateWithHF = (
   sheetData: SheetData
 ): any => {
   if (value === null || value === undefined) return null;
-  const strVal = String(value);
+  if (!sheetData) return value;
 
-  // Fallback for AI formulas (HyperFormula doesn't support async yet, 
-  // so we handle AI formulas externally or as static results)
-  if (isAIFormula(strVal)) {
-    return "AI-PROCESSING..."; // Placeholder, App.tsx handles the actual async call
-  }
+  const strVal = String(value);
+  if (isAIFormula(strVal)) return "AI-PROCESSING...";
 
   if (!strVal.startsWith('=')) {
     const num = Number(strVal);
     return isNaN(num) || strVal.trim() === '' ? strVal : num;
   }
 
-  const sheetName = sheetData.name || 'Sheet1';
-  const sheetId = hf.getSheetId(sheetName);
-  if (sheetId === undefined) syncWorkbook(sheetData);
-
+  const sheetId = getSheetIdSafe(sheetData.name);
   const colIndex = excelColToIndex(colKey);
   
-  // Get the calculated value from HF
-  const calculatedValue = hf.getCellValue({ 
-    sheet: hf.getSheetId(sheetName)!, 
-    col: colIndex, 
-    row: rowIndex 
-  });
-
-  // Handle HF error types
-  if (calculatedValue && typeof calculatedValue === 'object' && 'type' in calculatedValue) {
-    return '#VALUE!';
-  }
-
-  return calculatedValue;
-};
-
-/**
- * Traces all dependencies for a given cell.
- * Useful for the "Neural Lines" visual feature from Nexus.
- */
-export const getDependencies = (rowIndex: number, colKey: string, sheetName: string = 'Sheet1') => {
-  const sheetId = hf.getSheetId(sheetName);
-  if (sheetId === undefined) return [];
-
-  const col = excelColToIndex(colKey);
-  return hf.getCellPrecedents({ sheet: sheetId, col, row: rowIndex });
-};
-
-/**
- * Batch update: Use this for high-performance updates
- */
-export const batchUpdate = (changes: {row: number, col: string, value: any}[], sheetName: string = 'Sheet1') => {
-  const sheetId = hf.getSheetId(sheetName);
-  if (sheetId === undefined) return;
-
-  hf.batch(() => {
-    changes.forEach(change => {
-      const colIdx = excelColToIndex(change.col);
-      hf.setCellContents({ sheet: sheetId, col: colIdx, row: change.row }, change.value);
+  try {
+    const calculatedValue = hf.getCellValue({
+      sheet: sheetId,
+      col: colIndex,
+      row: rowIndex
     });
-  });
+
+    if (calculatedValue && typeof calculatedValue === 'object' && 'type' in (calculatedValue as any)) {
+      return '#VALUE!';
+    }
+
+    return calculatedValue;
+  } catch (e) {
+    return '#ERROR!';
+  }
+};
+
+export const getDependencies = (rowIndex: number, colKey: string, sheetName: string | undefined) => {
+  try {
+    const sheetId = getSheetIdSafe(sheetName);
+    const col = excelColToIndex(colKey);
+    const precedents = hf.getCellPrecedents({ sheet: sheetId, col, row: rowIndex });
+    return precedents || [];
+  } catch (e) {
+    return [];
+  }
+};
+
+export const batchUpdate = (changes: {row: number, col: string, value: any}[], sheetName: string | undefined) => {
+  try {
+    const sheetId = getSheetIdSafe(sheetName);
+    hf.batch(() => {
+      changes.forEach(change => {
+        const colIdx = excelColToIndex(change.col);
+        hf.setCellContents({ sheet: sheetId, col: colIdx, row: change.row }, change.value);
+      });
+    });
+  } catch (e) {}
 };

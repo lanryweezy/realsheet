@@ -447,7 +447,7 @@ const HomeView: React.FC<HomeViewProps> = ({
                 {[
                   { type: 'budget', label: 'Smart Budget', icon: DollarSign, color: 'emerald', desc: 'Financial intelligence' },
                   { type: 'finance', label: 'Risk Analysis', icon: Activity, color: 'cyan', desc: 'Portfolio insights' },
-                  { type: 'sales', label: 'Sales Tracker', icon: TrendingUp, color: 'amber', desc: 'Quota performance' },
+
                   { type: 'real_estate', label: 'Valuation', icon: Home, color: 'indigo', desc: 'Property modeling' },
                 ].map((tpl) => (
                   <button key={tpl.type} onClick={() => onTemplate(tpl.type as any)} className="group flex flex-col items-start text-left">
