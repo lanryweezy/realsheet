@@ -30,6 +30,7 @@ export const analyzeDataWithGemini = async (
         chartConfig: apiResponse.data.chartConfig,
         transformationCode: apiResponse.data.transformationCode,
         confidence: apiResponse.data.confidence,
+        toolCalls: apiResponse.data.toolCalls,
       };
     }
 
@@ -164,6 +165,7 @@ const generateMockEnhancedResponse = (prompt: string, sheetData: SheetData | nul
     taskPlan,
     executionSteps,
     confidence: 0.85, // Mock confidence score
+    toolCalls: [],
   };
 };
 
@@ -322,4 +324,24 @@ const suggestFormulaOffline = (description: string): string => {
   if (desc.includes('payment') || desc.includes('pmt')) return '=PMT(rate, nper, pv)';
   
   return '=FORMULA_HERE';
+};
+
+/**
+ * Basic chat function for general prompts (used by FormService)
+ */
+export const chatWithCore = async (prompt: string, systemContext?: string): Promise<string> => {
+  try {
+    const apiResponse = await analyzeDataViaAPI({
+      prompt: systemContext ? `${systemContext}\n\nUser Request: ${prompt}` : prompt,
+    });
+
+    if (apiResponse.success && apiResponse.data) {
+      return apiResponse.data.textResponse;
+    }
+
+    return "I'm sorry, I couldn't process that request.";
+  } catch (error) {
+    console.error('AI Chat Error:', error);
+    return "Error connecting to AI service.";
+  }
 };

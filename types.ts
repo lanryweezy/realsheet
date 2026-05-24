@@ -114,6 +114,11 @@ export interface ChatMessage {
   isThinking?: boolean;
 }
 
+export interface AgentToolCall {
+  tool: 'fill_formula' | 'clear_range' | 'delete_rows' | 'delete_columns' | 'inspect_range' | 'find_cells' | 'recalculate_and_read' | 'code_interpreter';
+  parameters: any;
+}
+
 export interface AnalysisResult {
   textResponse: string;
   chartConfig?: ChartConfig;
@@ -121,6 +126,7 @@ export interface AnalysisResult {
   formattingRules?: FormattingRule[];
   filterCode?: string; // JavaScript boolean expression for filtering
   generatedComments?: { rowIndex: number; colIndex: number; text: string }[];
+  toolCalls?: AgentToolCall[]; // Spreadsheet-native tool calls
 }
 
 // Enhanced analysis result with chain of thought and task planning

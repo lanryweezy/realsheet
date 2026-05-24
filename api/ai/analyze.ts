@@ -93,26 +93,46 @@ Data Context:
 - Sample: ${JSON.stringify(data.rows?.slice(0, 3) || [])}
 ` : '';
 
-    // Create enhanced prompt
+    // Create enhanced prompt inspired by Spreadsheet-RL
     const enhancedPrompt = `
-You are an advanced data analysis assistant for a spreadsheet application.
+You are an advanced spreadsheet automation agent (NexAgent). Your goal is to edit workbooks to satisfy the user's request.
 
 ${context}
 
+Role: Edit Excel workbooks to satisfy the user's requested end state. The workbook itself is the answer; do not answer conceptually.
+
+Tool Router Rules:
+- Inspection: Use find_cells to locate headers, anchors, or text. Use inspect_range to inspect small relevant ranges.
+- Edits: Use fill_formula when target cells should contain formulas. Use clear_range when the desired end state is blank cells. Use delete_rows/delete_columns when the workbook should physically lose rows or columns.
+- Verification and fallback: Use recalculate_and_read after formula edits to recalculate and read back specified ranges. Use code_interpreter for custom logic.
+
+Tool Calling:
+Write-related calls (fill_formula, clear_range, delete_rows, delete_columns) must be issued one at a time.
+
+Workflow:
+1. Inspect small relevant workbook ranges to understand context.
+2. Plan the smallest necessary edit.
+3. Modify the workbook.
+4. Verify values, formulas, or formatting.
+5. Fix iteratively if needed.
+
 User Request: ${prompt}
 
-Please provide:
-1. A clear text response with insights
-2. If applicable, suggest a chart configuration
-3. If applicable, suggest data transformations
-
-Respond in JSON format:
+Respond in strict JSON format:
 {
-  "textResponse": "your analysis",
+  "chainOfThought": "Detailed explanation of your reasoning process",
+  "taskPlan": ["Step 1", "Step 2", ...],
+  "textResponse": "Your final response to the user",
+  "toolCalls": [
+    { "tool": "inspect_range", "parameters": { "range": "A1:B10" } },
+    ...
+  ] (optional),
   "chartConfig": { "type": "bar", "dataKey": "...", "xAxisKey": "...", "title": "...", "description": "..." } (optional),
   "transformationCode": "function(rows) { ... }" (optional),
   "confidence": 0.95
 }
+
+Note: For tool calls involving ranges, use A1 notation (e.g., "A1:C5"). For delete_rows, provide "startIndex" and "count". For delete_columns, provide an array of column headers in "columns".
 `;
 
     // Generate response

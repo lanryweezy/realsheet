@@ -226,8 +226,42 @@ export const getMaxColumnIndex = (): number => {
     return 17576;
 };
 
-export const getTemplateData = (type: 'budget' | 'invoice' | 'schedule'): SheetData => {
+export const getTemplateData = (type: 'budget' | 'invoice' | 'schedule' | 'finance' | 'supply_chain' | 'hr'): SheetData => {
     switch(type) {
+        case 'finance':
+            return {
+                name: "Portfolio_Risk_Analysis.xlsx",
+                columns: ["Asset_ID", "Ticker", "Value_USD", "Volatility", "Beta", "Expected_Return"],
+                rows: [
+                    { Asset_ID: "A001", Ticker: "SPY", Value_USD: 50000, Volatility: 0.15, Beta: 1.0, Expected_Return: 0.08 },
+                    { Asset_ID: "A002", Ticker: "QQQ", Value_USD: 35000, Volatility: 0.22, Beta: 1.2, Expected_Return: 0.12 },
+                    { Asset_ID: "A003", Ticker: "VTI", Value_USD: 75000, Volatility: 0.14, Beta: 0.95, Expected_Return: 0.07 },
+                    { Asset_ID: "A004", Ticker: "BND", Value_USD: 40000, Volatility: 0.05, Beta: 0.05, Expected_Return: 0.03 }
+                ],
+                formattingRules: []
+            };
+        case 'supply_chain':
+            return {
+                name: "Inventory_Optimization.xlsx",
+                columns: ["SKU", "Warehouse", "Stock_Level", "Safety_Stock", "Lead_Time_Days", "Demand_Forecast"],
+                rows: [
+                    { SKU: "SKU-992", Warehouse: "East-01", Stock_Level: 450, Safety_Stock: 100, Lead_Time_Days: 5, Demand_Forecast: 500 },
+                    { SKU: "SKU-104", Warehouse: "West-02", Stock_Level: 80, Safety_Stock: 150, Lead_Time_Days: 12, Demand_Forecast: 200 },
+                    { SKU: "SKU-441", Warehouse: "East-01", Stock_Level: 1200, Safety_Stock: 500, Lead_Time_Days: 7, Demand_Forecast: 1500 }
+                ],
+                formattingRules: []
+            };
+        case 'hr':
+            return {
+                name: "Compensation_Audit.xlsx",
+                columns: ["Employee_ID", "Department", "Position", "Salary_USD", "Performance_Rating", "Tenure_Years"],
+                rows: [
+                    { Employee_ID: "E1001", Department: "Engineering", Position: "Senior Dev", Salary_USD: 145000, Performance_Rating: 4.5, Tenure_Years: 3 },
+                    { Employee_ID: "E1002", Department: "Sales", Position: "Account Manager", Salary_USD: 95000, Performance_Rating: 3.8, Tenure_Years: 1.5 },
+                    { Employee_ID: "E1003", Department: "Engineering", Position: "Junior Dev", Salary_USD: 85000, Performance_Rating: 4.2, Tenure_Years: 0.5 }
+                ],
+                formattingRules: []
+            };
         case 'budget':
             return {
                 name: "Budget.xlsx",

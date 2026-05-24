@@ -4,6 +4,8 @@ import { ChatMessage, SheetData, ChartConfig, EnhancedAnalysisResult } from '../
 import { analyzeDataWithGemini } from '../services/geminiService';
 import { transformData } from '../services/apiClient';
 import { safeEvaluate } from '../utils/safeFormulaParser';
+import { parseRange, excelColToIndex } from '../services/formulaService';
+import { evaluateWithHF, syncWorkbook } from '../services/hyperformulaService';
 import Visualization from './Visualization';
 
 interface AgentProps {
@@ -152,130 +154,301 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
     setIsLoading(true);
 
     try {
-        const history = messages
-            .filter(m => m.id !== 'welcome' && m.id !== 'system-start')
-            .map(m => ({ role: m.role, parts: [{ text: m.text }] }));
-            
-        // Updated to use the enhanced analysis result
-        const result: EnhancedAnalysisResult = await analyzeDataWithGemini(userMsg.text, sheetData, history);
-
-        let actionMessage = "";
+        let currentMessages = [...messages, userMsg];
+        let turnCount = 0;
+        const MAX_TURNS = 5;
         let finalSheetData = { ...sheetData } as SheetData;
         let hasChanges = false;
+        let lastResult: EnhancedAnalysisResult | null = null;
 
-        // 1. Show Chain of Thought if available
-        if (result.chainOfThought) {
-          const chainOfThoughtMsg: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            role: 'model',
-            text: `💡 **Chain of Thought:** ${result.chainOfThought}`,
-            timestamp: new Date()
-          };
-          setMessages(prev => [...prev, chainOfThoughtMsg]);
-        }
+        while (turnCount < MAX_TURNS) {
+            turnCount++;
 
-        // 2. Show Task Plan if available
-        if (result.taskPlan && result.taskPlan.length > 0) {
-          const taskPlanMsg: ChatMessage = {
-            id: (Date.now() + 2).toString(),
-            role: 'model',
-            text: `📋 **Task Plan:**\n${result.taskPlan.map((step, i) => `${i + 1}. ${step}`).join('\n')}`,
-            timestamp: new Date()
-          };
-          setMessages(prev => [...prev, taskPlanMsg]);
-        }
+            const history = currentMessages
+                .filter(m => m.id !== 'welcome' && m.id !== 'system-start')
+                .map(m => ({ role: m.role, parts: [{ text: m.text }] }));
 
-        // 3. Handle Transformations (SECURE - uses serverless API)
-        if (result.transformationCode && sheetData) {
-            try {
-                // Use serverless API for safe execution (API key on server, sandboxed environment)
-                const transformResponse = await transformData({
-                    code: result.transformationCode,
-                    data: JSON.parse(JSON.stringify(sheetData.rows)),
+            const result: EnhancedAnalysisResult = await analyzeDataWithGemini(
+                turnCount === 1 ? userMsg.text : "Please continue based on the tool results.",
+                finalSheetData,
+                history
+            );
+
+            lastResult = result;
+            let actionMessage = "";
+            let toolResults: string[] = [];
+
+            // 1. Log Chain of Thought internally to currentMessages for model context
+            if (result.chainOfThought) {
+                currentMessages.push({
+                    id: `cot-${Date.now()}-${turnCount}`,
+                    role: 'model',
+                    text: `💡 **Chain of Thought:** ${result.chainOfThought}`,
+                    timestamp: new Date(),
+                    isThinking: true
                 });
-
-                if (transformResponse.success && transformResponse.data) {
-                    const transformedRows = transformResponse.data;
-
-                    if (!Array.isArray(transformedRows)) {
-                        throw new Error("Transformation code did not return an array.");
-                    }
-
-                    const allKeys = new Set<string>();
-                    transformedRows.forEach((r: any) => Object.keys(r).forEach(k => allKeys.add(k)));
-                    const newColumns = Array.from(allKeys);
-
-                    finalSheetData = {
-                        ...finalSheetData,
-                        columns: newColumns,
-                        rows: transformedRows
-                    };
-                    hasChanges = true;
-                    actionMessage += "\n\n⚡ Function executed & data updated.";
-                } else {
-                    throw new Error(transformResponse.error || 'Transformation failed');
-                }
-            } catch (err) {
-                console.error("Transformation Error", err);
-                actionMessage += "\n\n⚠️ Failed to execute data transformation function.";
             }
-        }
 
-        // 4. Handle Formatting Rules
-        if (result.formattingRules && result.formattingRules.length > 0 && sheetData) {
-            try {
-                // Merge new rules with existing
-                const mergedRules = [...(sheetData.formattingRules || []), ...result.formattingRules];
-                finalSheetData = {
-                    ...finalSheetData,
-                    formattingRules: mergedRules
-                };
-                hasChanges = true;
-                actionMessage += `\n\n🎨 Applied ${result.formattingRules.length} conditional formatting rules.`;
-            } catch (err) {
-                console.error("Formatting Error", err);
-            }
-        }
-
-        // 5. Handle Filter Code
-        if (result.filterCode && sheetData) {
-             finalSheetData = {
-                 ...finalSheetData,
-                 filter: {
-                     description: `Filter: "${userMsg.text}"`,
-                     code: result.filterCode
-                 }
-             };
-             hasChanges = true;
-             actionMessage += `\n\n🔍 Filter applied based on request.`;
-        }
-
-        // 6. Handle Comments
-        if (result.generatedComments && result.generatedComments.length > 0 && sheetData) {
-            const newComments = { ...(finalSheetData.comments || {}) };
-            result.generatedComments.forEach(c => {
-                newComments[`${c.rowIndex}-${c.colIndex}`] = c.text;
-            });
-            finalSheetData = {
-                ...finalSheetData,
-                comments: newComments
+            // Verification Check - inspired by Spreadsheet-RL's outcome-based rewards
+            const verifyOutcome = () => {
+                if (!hasChanges) return "No changes made yet.";
+                // Simple verification: ensure all formula cells evaluate correctly
+                syncWorkbook(finalSheetData);
+                const errors: string[] = [];
+                finalSheetData.rows.forEach((row, rIdx) => {
+                    finalSheetData.columns.forEach((col) => {
+                        const val = row[col];
+                        if (typeof val === 'string' && val.startsWith('=')) {
+                            const result = evaluateWithHF(val, rIdx, col, finalSheetData);
+                            if (result === '#VALUE!' || result === '#ERROR!') {
+                                errors.push(`Error in cell ${col}${rIdx + 1}: ${result}`);
+                            }
+                        }
+                    });
+                });
+                return errors.length === 0 ? "Verification passed: All cells consistent." : `Verification warning: ${errors.join(', ')}`;
             };
-            hasChanges = true;
-            actionMessage += `\n\n💬 Added ${result.generatedComments.length} comments.`;
+
+            // 2. Log Task Plan internally
+            if (result.taskPlan && result.taskPlan.length > 0 && turnCount === 1) {
+                currentMessages.push({
+                    id: `plan-${Date.now()}-${turnCount}`,
+                    role: 'model',
+                    text: `📋 **Task Plan:**\n${result.taskPlan.map((step, i) => `${i + 1}. ${step}`).join('\n')}`,
+                    timestamp: new Date(),
+                    isThinking: true
+                });
+            }
+
+            // 3. Handle Transformations
+            if (result.transformationCode && finalSheetData) {
+                try {
+                    const transformResponse = await transformData({
+                        code: result.transformationCode,
+                        data: JSON.parse(JSON.stringify(finalSheetData.rows)),
+                    });
+
+                    if (transformResponse.success && transformResponse.data) {
+                        const transformedRows = transformResponse.data;
+                        const allKeys = new Set<string>();
+                        transformedRows.forEach((r: any) => Object.keys(r).forEach(k => allKeys.add(k)));
+                        const newColumns = Array.from(allKeys);
+
+                        finalSheetData = {
+                            ...finalSheetData,
+                            columns: newColumns,
+                            rows: transformedRows
+                        };
+                        hasChanges = true;
+                        actionMessage += "\n\n⚡ Function executed & data updated.";
+                        toolResults.push("Data transformation successful.");
+                    }
+                } catch (err) {
+                    console.error("Transformation Error", err);
+                    toolResults.push(`Transformation error: ${err}`);
+                }
+            }
+
+            // 4. Handle Spreadsheet-Native Tool Calls (Spreadsheet-RL style)
+            if (result.toolCalls && result.toolCalls.length > 0) {
+                for (const call of result.toolCalls) {
+                    const { tool, parameters } = call;
+
+                    switch (tool) {
+                        case 'fill_formula': {
+                            const { range, formula } = parameters;
+                            const rangeRef = parseRange(range);
+                            if (rangeRef[0] && rangeRef[1]) {
+                                const newRows = [...finalSheetData.rows];
+                                for (let r = rangeRef[0].rowIndex; r <= rangeRef[1].rowIndex; r++) {
+                                    for (let c = rangeRef[0].colIndex; c <= rangeRef[1].colIndex; c++) {
+                                        if (r < newRows.length) {
+                                            const colKey = finalSheetData.columns[c];
+                                            newRows[r] = { ...newRows[r], [colKey]: formula };
+                                        }
+                                    }
+                                }
+                                finalSheetData = { ...finalSheetData, rows: newRows };
+                                hasChanges = true;
+                                actionMessage += `\n\n📝 Filled formula ${formula} in range ${range}.`;
+                                toolResults.push(`Successfully filled formula ${formula} in range ${range}.`);
+                            }
+                            break;
+                        }
+                        case 'clear_range': {
+                            const { range } = parameters;
+                            const rangeRef = parseRange(range);
+                            if (rangeRef[0] && rangeRef[1]) {
+                                const newRows = [...finalSheetData.rows];
+                                for (let r = rangeRef[0].rowIndex; r <= rangeRef[1].rowIndex; r++) {
+                                    for (let c = rangeRef[0].colIndex; c <= rangeRef[1].colIndex; c++) {
+                                        if (r < newRows.length) {
+                                            const colKey = finalSheetData.columns[c];
+                                            newRows[r] = { ...newRows[r], [colKey]: "" };
+                                        }
+                                    }
+                                }
+                                finalSheetData = { ...finalSheetData, rows: newRows };
+                                hasChanges = true;
+                                actionMessage += `\n\n🧹 Cleared range ${range}.`;
+                                toolResults.push(`Successfully cleared range ${range}.`);
+                            }
+                            break;
+                        }
+                        case 'delete_rows': {
+                            const { startIndex, count } = parameters;
+                            const newRows = [...finalSheetData.rows];
+                            newRows.splice(startIndex, count);
+                            finalSheetData = { ...finalSheetData, rows: newRows };
+                            hasChanges = true;
+                            actionMessage += `\n\n🗑️ Deleted ${count} rows starting from index ${startIndex}.`;
+                            toolResults.push(`Successfully deleted ${count} rows starting from index ${startIndex}.`);
+                            break;
+                        }
+                        case 'delete_columns': {
+                            const { columns: colsToDelete } = parameters;
+                            const newColumns = finalSheetData.columns.filter(c => !colsToDelete.includes(c));
+                            const newRows = finalSheetData.rows.map(row => {
+                                const newRow = { ...row };
+                                colsToDelete.forEach((c: string) => delete newRow[c]);
+                                return newRow;
+                            });
+                            finalSheetData = { ...finalSheetData, columns: newColumns, rows: newRows };
+                            hasChanges = true;
+                            actionMessage += `\n\n🗑️ Deleted columns: ${colsToDelete.join(', ')}.`;
+                            toolResults.push(`Successfully deleted columns: ${colsToDelete.join(', ')}.`);
+                            break;
+                        }
+                        case 'inspect_range': {
+                            const { range } = parameters;
+                            const rangeRef = parseRange(range);
+                            if (rangeRef[0] && rangeRef[1]) {
+                                const inspected: any[][] = [];
+                                for (let r = rangeRef[0].rowIndex; r <= rangeRef[1].rowIndex; r++) {
+                                    const rowValues: any[] = [];
+                                    for (let c = rangeRef[0].colIndex; c <= rangeRef[1].colIndex; c++) {
+                                        if (r < finalSheetData.rows.length) {
+                                            const colKey = finalSheetData.columns[c];
+                                            rowValues.push(finalSheetData.rows[r][colKey]);
+                                        }
+                                    }
+                                    inspected.push(rowValues);
+                                }
+                                toolResults.push(`Inspect results for ${range}: ${JSON.stringify(inspected)}`);
+                                actionMessage += `\n\n🔍 Inspected range ${range}.`;
+                            }
+                            break;
+                        }
+                        case 'find_cells': {
+                            const { query } = parameters;
+                            const matches: string[] = [];
+                            finalSheetData.rows.forEach((row, rIdx) => {
+                                finalSheetData.columns.forEach((col, cIdx) => {
+                                    if (String(row[col]).toLowerCase().includes(String(query).toLowerCase())) {
+                                        matches.push(`${col}${rIdx + 1}`);
+                                    }
+                                });
+                            });
+                            const resultStr = matches.length > 0 ? `Found matches in: ${matches.slice(0, 10).join(', ')}${matches.length > 10 ? '...' : ''}` : "No matches found.";
+                            toolResults.push(`Search results for "${query}": ${resultStr}`);
+                            actionMessage += `\n\n🔎 Searched for "${query}".`;
+                            break;
+                        }
+                        case 'recalculate_and_read': {
+                            const { range } = parameters;
+                            syncWorkbook(finalSheetData);
+                            const rangeRef = parseRange(range);
+                            if (rangeRef[0] && rangeRef[1]) {
+                                const calculated: any[][] = [];
+                                for (let r = rangeRef[0].rowIndex; r <= rangeRef[1].rowIndex; r++) {
+                                    const rowValues: any[] = [];
+                                    for (let c = rangeRef[0].colIndex; c <= rangeRef[1].colIndex; c++) {
+                                        if (r < finalSheetData.rows.length) {
+                                            const colKey = finalSheetData.columns[c];
+                                            rowValues.push(evaluateWithHF(finalSheetData.rows[r][colKey], r, colKey, finalSheetData));
+                                        }
+                                    }
+                                    calculated.push(rowValues);
+                                }
+                                toolResults.push(`Recalculated values for ${range}: ${JSON.stringify(calculated)}`);
+                                actionMessage += `\n\n🔄 Recalculated and verified range ${range}.`;
+                            }
+                            break;
+                        }
+                        case 'code_interpreter': {
+                            const { code } = parameters;
+                            try {
+                                const response = await transformData({
+                                    code,
+                                    data: JSON.parse(JSON.stringify(finalSheetData.rows)),
+                                });
+                                if (response.success && response.data) {
+                                    finalSheetData = { ...finalSheetData, rows: response.data };
+                                    hasChanges = true;
+                                    toolResults.push("Code execution successful.");
+                                    actionMessage += `\n\n💻 Executed custom code.`;
+                                }
+                            } catch (err) {
+                                toolResults.push(`Code execution error: ${err}`);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Handle other result fields (Formatting, Filter, Comments) if this is the final turn or they are present
+            if (result.formattingRules && result.formattingRules.length > 0) {
+                 const mergedRules = [...(finalSheetData.formattingRules || []), ...result.formattingRules];
+                 finalSheetData = { ...finalSheetData, formattingRules: mergedRules };
+                 hasChanges = true;
+            }
+            if (result.filterCode) {
+                 finalSheetData = { ...finalSheetData, filter: { description: `Filter: "${userMsg.text}"`, code: result.filterCode } };
+                 hasChanges = true;
+            }
+            if (result.generatedComments && result.generatedComments.length > 0) {
+                 const newComments = { ...(finalSheetData.comments || {}) };
+                 result.generatedComments.forEach(c => { newComments[`${c.rowIndex}-${c.colIndex}`] = c.text; });
+                 finalSheetData = { ...finalSheetData, comments: newComments };
+                 hasChanges = true;
+            }
+
+            const aiMsg: ChatMessage = {
+                id: `res-${Date.now()}-${turnCount}`,
+                role: 'model',
+                text: result.textResponse + actionMessage,
+                chartConfig: result.chartConfig,
+                timestamp: new Date()
+            };
+
+            // Only show the result to the user if it's the final turn or has a meaningful textResponse
+            if (turnCount === MAX_TURNS || (!result.toolCalls?.length && result.textResponse)) {
+                setMessages(prev => [...prev, aiMsg]);
+            }
+            currentMessages.push(aiMsg);
+
+            // If we have tool results, we need to feed them back to the model in the next turn
+            if (toolResults.length > 0 && turnCount < MAX_TURNS) {
+                const verificationResult = verifyOutcome();
+                const systemFeedback: ChatMessage = {
+                    id: `sys-${Date.now()}-${turnCount}`,
+                    role: 'user',
+                    text: `Tool execution results:\n${toolResults.join('\n')}\n\nVerification: ${verificationResult}\n\nBased on these results, what is your next step? If you are finished, please provide a final summary.`,
+                    timestamp: new Date()
+                };
+                currentMessages.push(systemFeedback);
+                // We don't show the raw tool results to the user to keep the chat clean
+                // But we continue the loop
+            } else {
+                // No tool results or max turns reached, exit loop
+                break;
+            }
         }
 
         if (hasChanges) {
             onUpdateData(finalSheetData);
         }
-
-        const aiMsg: ChatMessage = {
-            id: (Date.now() + 3).toString(),
-            role: 'model',
-            text: result.textResponse + actionMessage,
-            chartConfig: result.chartConfig,
-            timestamp: new Date()
-        };
-        setMessages(prev => [...prev, aiMsg]);
     } catch (error) {
         console.error(error);
         setMessages(prev => [...prev, {
