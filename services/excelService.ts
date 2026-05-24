@@ -231,25 +231,29 @@ export const getTemplateData = (type: 'budget' | 'invoice' | 'schedule' | 'finan
         case 'finance':
             return {
                 name: "Portfolio_Risk_Analysis.xlsx",
-                columns: ["Asset_ID", "Ticker", "Value_USD", "Volatility", "Beta", "Expected_Return"],
+                columns: ["Asset_ID", "Ticker", "Value_USD", "Volatility", "Beta", "Expected_Return", "Weight_%", "Contrib_to_Risk"],
                 rows: [
-                    { Asset_ID: "A001", Ticker: "SPY", Value_USD: 50000, Volatility: 0.15, Beta: 1.0, Expected_Return: 0.08 },
-                    { Asset_ID: "A002", Ticker: "QQQ", Value_USD: 35000, Volatility: 0.22, Beta: 1.2, Expected_Return: 0.12 },
-                    { Asset_ID: "A003", Ticker: "VTI", Value_USD: 75000, Volatility: 0.14, Beta: 0.95, Expected_Return: 0.07 },
-                    { Asset_ID: "A004", Ticker: "BND", Value_USD: 40000, Volatility: 0.05, Beta: 0.05, Expected_Return: 0.03 }
+                    { Asset_ID: "A001", Ticker: "SPY", Value_USD: 50000, Volatility: 0.15, Beta: 1.0, Expected_Return: 0.08, "Weight_%": "=C2/SUM($C$2:$C$5)", "Contrib_to_Risk": "=G2*D2" },
+                    { Asset_ID: "A002", Ticker: "QQQ", Value_USD: 35000, Volatility: 0.22, Beta: 1.2, Expected_Return: 0.12, "Weight_%": "=C3/SUM($C$2:$C$5)", "Contrib_to_Risk": "=G3*D3" },
+                    { Asset_ID: "A003", Ticker: "VTI", Value_USD: 75000, Volatility: 0.14, Beta: 0.95, Expected_Return: 0.07, "Weight_%": "=C4/SUM($C$2:$C$5)", "Contrib_to_Risk": "=G4*D4" },
+                    { Asset_ID: "A004", Ticker: "BND", Value_USD: 40000, Volatility: 0.05, Beta: 0.05, Expected_Return: 0.03, "Weight_%": "=C5/SUM($C$2:$C$5)", "Contrib_to_Risk": "=G5*D5" }
                 ],
-                formattingRules: []
+                formattingRules: [
+                    { id: 'risk-high', type: 'greaterThan', column: 'Contrib_to_Risk', value1: 0.03, style: { backgroundColor: '#fee2e2', textColor: '#991b1b' } }
+                ]
             };
         case 'supply_chain':
             return {
                 name: "Inventory_Optimization.xlsx",
-                columns: ["SKU", "Warehouse", "Stock_Level", "Safety_Stock", "Lead_Time_Days", "Demand_Forecast"],
+                columns: ["SKU", "Warehouse", "Stock_Level", "Safety_Stock", "Status", "Demand_Forecast", "Restock_Qty"],
                 rows: [
-                    { SKU: "SKU-992", Warehouse: "East-01", Stock_Level: 450, Safety_Stock: 100, Lead_Time_Days: 5, Demand_Forecast: 500 },
-                    { SKU: "SKU-104", Warehouse: "West-02", Stock_Level: 80, Safety_Stock: 150, Lead_Time_Days: 12, Demand_Forecast: 200 },
-                    { SKU: "SKU-441", Warehouse: "East-01", Stock_Level: 1200, Safety_Stock: 500, Lead_Time_Days: 7, Demand_Forecast: 1500 }
+                    { SKU: "SKU-992", Warehouse: "East-01", Stock_Level: 450, Safety_Stock: 100, Status: "=IF(C2<D2,\"Low\",\"OK\")", Demand_Forecast: 500, Restock_Qty: "=MAX(0, F2-C2)" },
+                    { SKU: "SKU-104", Warehouse: "West-02", Stock_Level: 80, Safety_Stock: 150, Status: "=IF(C3<D3,\"Low\",\"OK\")", Demand_Forecast: 200, Restock_Qty: "=MAX(0, F3-C3)" },
+                    { SKU: "SKU-441", Warehouse: "East-01", Stock_Level: 1200, Safety_Stock: 500, Status: "=IF(C4<D4,\"Low\",\"OK\")", Demand_Forecast: 1500, Restock_Qty: "=MAX(0, F4-C4)" }
                 ],
-                formattingRules: []
+                formattingRules: [
+                    { id: 'low-stock', type: 'containsText', column: 'Status', value1: 'Low', style: { backgroundColor: '#fef3c7', textColor: '#92400e' } }
+                ]
             };
         case 'hr':
             return {

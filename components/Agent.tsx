@@ -28,6 +28,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [thinkingStep, setThinkingStep] = useState<string | null>(null);
+   const [currentTurn, setCurrentTurn] = useState(0);
   const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -164,6 +165,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
 
         while (turnCount < MAX_TURNS) {
             turnCount++;
+             setCurrentTurn(turnCount);
 
             const history = currentMessages
                 .filter(m => m.id !== 'welcome' && m.id !== 'system-start')
@@ -353,6 +355,8 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                             const { range } = parameters;
                             setThinkingStep(`Inspecting range ${range}...`);
                             const rangeRef = parseRange(range);
+                            const sheetSummary = `Sheet name: ${finalSheetData.name}, Dimension: ${finalSheetData.rows.length + 1}x${finalSheetData.columns.length}`;
+
                             if (rangeRef[0] && rangeRef[1]) {
                                 const inspected: any[] = [];
                                 for (let r = rangeRef[0].rowIndex; r <= rangeRef[1].rowIndex; r++) {
@@ -374,7 +378,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                                     }
                                     inspected.push(rowData);
                                 }
-                                toolResults.push(`Inspect results for ${range} (with metadata): ${JSON.stringify(inspected)}`);
+                                toolResults.push(`INSPECT [${range}]:\nSummary: ${sheetSummary}\nData: ${JSON.stringify(inspected)}`);
                                 actionMessage += `\n\n🔍 Inspected range ${range} with metadata.`;
                             }
                             break;
@@ -382,16 +386,31 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                         case 'find_cells': {
                             const { query } = parameters;
                             setThinkingStep(`Searching for "${query}"...`);
-                            const matches: string[] = [];
+                            const matches: Array<{address: string, value: any}> = [];
+                            const lowerQuery = String(query).toLowerCase();
+
+                            // Check headers first (highest importance)
+                            finalSheetData.columns.forEach((col) => {
+                                if (col.toLowerCase().includes(lowerQuery)) {
+                                    matches.push({ address: `${col}1 (Header)`, value: col });
+                                }
+                            });
+
+                            // Check data cells
                             finalSheetData.rows.forEach((row, rIdx) => {
-                                finalSheetData.columns.forEach((col, cIdx) => {
-                                    if (String(row[col]).toLowerCase().includes(String(query).toLowerCase())) {
-                                        matches.push(`${col}${rIdx + 1}`);
+                                finalSheetData.columns.forEach((col) => {
+                                    const val = String(row[col]);
+                                    if (val.toLowerCase().includes(lowerQuery)) {
+                                        matches.push({ address: `${col}${rIdx + 2}`, value: val }); // +2 because 1-based and row 1 is headers
                                     }
                                 });
                             });
-                            const resultStr = matches.length > 0 ? `Found matches in: ${matches.slice(0, 10).join(', ')}${matches.length > 10 ? '...' : ''}` : "No matches found.";
-                            toolResults.push(`Search results for "${query}": ${resultStr}`);
+
+                            const resultStr = matches.length > 0
+                                ? `Found ${matches.length} matches. Top results:\n${matches.slice(0, 15).map(m => `- ${m.address}: "${m.value}"`).join('\n')}`
+                                : "No matches found.";
+
+                            toolResults.push(`Search results for "${query}":\n${resultStr}`);
                             actionMessage += `\n\n🔎 Searched for "${query}".`;
                             break;
                         }
@@ -476,10 +495,12 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
             // If we have tool results, we need to feed them back to the model in the next turn
             if (toolResults.length > 0 && turnCount < MAX_TURNS) {
                 const verificationResult = verifyOutcome();
+                const workbookSummary = `Workbook state: ${finalSheetData.rows.length} rows, ${finalSheetData.columns.length} columns. Columns: ${finalSheetData.columns.join(', ')}.`;
+
                 const systemFeedback: ChatMessage = {
                     id: `sys-${Date.now()}-${turnCount}`,
                     role: 'user',
-                    text: `Tool execution results:\n${toolResults.join('\n')}\n\nVerification: ${verificationResult}\n\nBased on these results, what is your next step? If you are finished, please provide a final summary.`,
+                    text: `TOOL RESULTS:\n${toolResults.join('\n')}\n\nVERIFICATION:\n${verificationResult}\n\nCONTEXT:\n${workbookSummary}\n\nINSTRUCTION:\nEvaluate if your plan is working. If verification failed or results are unexpected, state an "Alternative plan" and backtrack. If results are correct, proceed to the next step or finalize with a summary.`,
                     timestamp: new Date()
                 };
                 currentMessages.push(systemFeedback);
@@ -505,6 +526,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
     } finally {
         setIsLoading(false);
         setThinkingStep(null);
+         setCurrentTurn(0);
     }
   };
 
@@ -635,9 +657,23 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
           </div>
         ))}
         {isLoading && (
-            <div className="flex items-center gap-2 text-slate-500 text-xs p-2">
-                <Sparkles className="w-3 h-3 animate-spin text-nexus-accent" />
-                 <span>{thinkingStep || 'Thinking through your request...'}</span>
+             <div className="p-2 space-y-2">
+                 <div className="flex items-center gap-2 text-slate-500 text-xs">
+                    <Sparkles className="w-3 h-3 animate-spin text-nexus-accent" />
+                    <span className="font-medium">{thinkingStep || 'Thinking through your request...'}</span>
+                 </div>
+                 <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map(step => (
+                        <div
+                            key={step}
+                            className={`h-1 flex-1 rounded-full transition-all duration-500 ${
+                                step < currentTurn ? 'bg-emerald-500' :
+                                step === currentTurn ? 'bg-nexus-accent animate-pulse' :
+                                'bg-slate-800'
+                            }`}
+                        />
+                    ))}
+                 </div>
             </div>
         )}
         <div ref={messagesEndRef} />
