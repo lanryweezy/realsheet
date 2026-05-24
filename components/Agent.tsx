@@ -8,15 +8,19 @@ import { parseRange, excelColToIndex } from '../services/formulaService';
 import { evaluateWithHF, syncWorkbook } from '../services/hyperformulaService';
 import Visualization from './Visualization';
 
+import { Workbook } from '../types';
+
 interface AgentProps {
   sheetData: SheetData | null;
+  workbook?: Workbook | null;
   onAddToDashboard: (config: ChartConfig) => void;
   onUpdateData: (newData: SheetData) => void;
+  onSwitchSheet?: (index: number) => void;
   promptOverride: string | null;
   onClearPromptOverride: () => void;
 }
 
-const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData, promptOverride, onClearPromptOverride }) => {
+const Agent: React.FC<AgentProps> = ({ sheetData, workbook, onAddToDashboard, onUpdateData, onSwitchSheet, promptOverride, onClearPromptOverride }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -255,8 +259,8 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
 
             // 4. Handle Spreadsheet-Native Tool Calls (Spreadsheet-RL style)
             if (result.toolCalls && result.toolCalls.length > 0) {
-                const readOnlyTools = ['inspect_range', 'find_cells', 'recalculate_and_read'];
-                const writeTools = ['fill_formula', 'clear_range', 'delete_rows', 'delete_columns', 'code_interpreter'];
+                const readOnlyTools = ['inspect_range', 'find_cells', 'recalculate_and_read', 'get_sheet_list'];
+                const writeTools = ['fill_formula', 'clear_range', 'delete_rows', 'delete_columns', 'code_interpreter', 'switch_active_sheet'];
 
                 // Validate mix (Harness Rule: must not mix read-only and write-related)
                 const hasReadOnly = result.toolCalls.some(c => readOnlyTools.includes(c.tool));
@@ -457,6 +461,31 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                             }
                             break;
                         }
+                        case 'get_sheet_list': {
+                            setThinkingStep(`Retrieving sheet list...`);
+                            if (workbook) {
+                                const sheets = workbook.sheets.map((s, idx) => `${idx}: ${s.name}${idx === workbook.activeSheetIndex ? ' (Active)' : ''}`);
+                                toolResults.push(`Sheets in workbook:\n${sheets.join('\n')}`);
+                                actionMessage += `\n\n📋 Retrieved sheet list.`;
+                            } else {
+                                toolResults.push("Error: No workbook context available.");
+                            }
+                            break;
+                        }
+                        case 'switch_active_sheet': {
+                            const { index } = parameters;
+                            setThinkingStep(`Switching to sheet ${index}...`);
+                            if (workbook && onSwitchSheet && index >= 0 && index < workbook.sheets.length) {
+                                onSwitchSheet(index);
+                                toolResults.push(`Successfully switched to sheet: ${workbook.sheets[index].name}`);
+                                actionMessage += `\n\n🔌 Switched active sheet to "${workbook.sheets[index].name}".`;
+                                // Update local state for next turns in the loop
+                                finalSheetData = workbook.sheets[index];
+                            } else {
+                                toolResults.push(`Error: Invalid sheet index ${index}.`);
+                            }
+                            break;
+                        }
                     }
                 }
             }
@@ -483,7 +512,9 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                 role: 'model',
                 text: result.textResponse + actionMessage,
                 chartConfig: result.chartConfig,
-                timestamp: new Date()
+                timestamp: new Date(),
+                toolCalls: result.toolCalls,
+                turnResult: toolResults.join('\n')
             };
 
             // Only show the result to the user if it's the final turn or has a meaningful textResponse
@@ -593,20 +624,46 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                      <span>Comments added</span>
                  </div>
              )}
-             {msg.isThinking ? (
+             {(msg.isThinking || msg.toolCalls) && (
                 <details className="mt-2 group/thinking">
                     <summary className="flex items-center gap-2 text-[10px] text-slate-500 cursor-pointer hover:text-slate-400 transition-colors uppercase tracking-widest list-none">
                         <div className="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center">
                             <Sparkles className="w-2.5 h-2.5" />
                         </div>
-                        {msg.text.includes("Chain of Thought") ? "View Reasoning" : "View Action Plan"}
+                        {msg.isThinking ? (msg.text.includes("Chain of Thought") ? "View Reasoning" : "View Action Plan") : "View Agent Audit Log"}
                         <ChevronRight className="w-3 h-3 group-open/thinking:rotate-90 transition-transform" />
                     </summary>
-                    <div className="mt-2 text-xs text-slate-400 bg-slate-800/30 p-3 rounded-lg border border-slate-700/30 animate-in slide-in-from-top-1">
-                        {msg.text.replace(/💡 \*\*Chain of Thought:\*\* |📋 \*\*Task Plan:\*\*\n/, '')}
+                    <div className="mt-2 text-[11px] text-slate-400 bg-slate-800/30 p-3 rounded-lg border border-slate-700/30 animate-in slide-in-from-top-1">
+                        {msg.isThinking ? (
+                            msg.text.replace(/💡 \*\*Chain of Thought:\*\* |📋 \*\*Task Plan:\*\*\n/, '')
+                        ) : (
+                            <div className="space-y-3">
+                                <div>
+                                    <div className="text-[10px] text-slate-500 uppercase tracking-tighter mb-1 font-bold">Tool Sequence</div>
+                                    <div className="space-y-1">
+                                        {msg.toolCalls?.map((call, i) => (
+                                            <div key={i} className="flex items-center gap-2 bg-slate-900/50 p-1.5 rounded border border-white/5">
+                                                <Code className="w-3 h-3 text-nexus-accent" />
+                                                <span className="font-mono text-[10px] text-nexus-accent">{call.tool}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                {msg.turnResult && (
+                                    <div>
+                                        <div className="text-[10px] text-slate-500 uppercase tracking-tighter mb-1 font-bold">Execution Feedback</div>
+                                        <pre className="p-2 bg-black/30 rounded text-[9px] font-mono whitespace-pre-wrap border border-white/5 overflow-x-auto max-h-32">
+                                            {msg.turnResult}
+                                        </pre>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </details>
-             ) : (
+             )}
+
+             {!msg.isThinking && (
                 <>
                     <div className="whitespace-pre-wrap">{msg.text}</div>
                     {msg.text.includes("Function executed") && (

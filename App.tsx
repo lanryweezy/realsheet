@@ -1827,8 +1827,10 @@ const App: React.FC = () => {
                 <aside className={`saas-sidebar-panel ${!isSidebarOpen ? 'hidden-panel' : ''}`}>
                   <Agent
                     sheetData={currentSheetData}
+                    workbook={workbook}
                     onAddToDashboard={addToDashboard}
                     onUpdateData={pushToHistory}
+                    onSwitchSheet={handleActiveSheetChange}
                     promptOverride={agentPromptOverride}
                     onClearPromptOverride={() => setAgentPromptOverride(null)}
                   />

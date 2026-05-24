@@ -112,10 +112,12 @@ export interface ChatMessage {
   timestamp: Date;
   chartConfig?: ChartConfig; // Optional chart to render with the message
   isThinking?: boolean;
+  toolCalls?: AgentToolCall[]; // Added for audit log
+  turnResult?: string; // Added for audit log
 }
 
 export interface AgentToolCall {
-  tool: 'fill_formula' | 'clear_range' | 'delete_rows' | 'delete_columns' | 'inspect_range' | 'find_cells' | 'recalculate_and_read' | 'code_interpreter';
+  tool: 'fill_formula' | 'clear_range' | 'delete_rows' | 'delete_columns' | 'inspect_range' | 'find_cells' | 'recalculate_and_read' | 'code_interpreter' | 'switch_active_sheet' | 'get_sheet_list';
   parameters: any;
 }
 
