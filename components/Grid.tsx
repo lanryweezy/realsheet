@@ -193,7 +193,12 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
             <tr style={{ height: HEADER_HEIGHT }}>
               <th className="bg-slate-900 border-b border-r border-slate-700 text-center"><Hash className="w-3 h-3 mx-auto text-slate-500" /></th>
               {data.columns.map((col: any, i: number) => (
-                <th key={col} className="bg-slate-900 border-b border-r border-slate-700 text-left px-2 text-xs font-bold text-slate-400 overflow-hidden truncate">{col}</th>
+                <th key={col} className="bg-slate-900 border-b border-r border-slate-700 text-left px-2 text-xs font-bold text-slate-400 overflow-hidden truncate hover:bg-slate-800 transition-colors cursor-pointer group/col">
+                  <div className="flex items-center justify-between">
+                    <span>{col}</span>
+                    <ArrowDown className="w-2 h-2 opacity-0 group-hover/col:opacity-40 transition-opacity" />
+                  </div>
+                </th>
               ))}
             </tr>
           </thead>
@@ -203,13 +208,13 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
               const rowIndex = visibleRange.startRow + ri;
               return (
                 <tr key={rowIndex} style={{ height: ROW_HEIGHT }}>
-                  <td className="bg-slate-900 border-b border-r border-slate-700 text-center text-[10px] font-bold text-slate-500 sticky left-0 z-10">{rowIndex + 1}</td>
+                  <td className="bg-slate-900 border-b border-r border-slate-700 text-center text-[10px] font-bold text-slate-500 sticky left-0 z-10 group/row hover:bg-slate-800 transition-colors cursor-pointer">{rowIndex + 1}</td>
                   {data.columns.map((col: any, ci: number) => {
                     const isSelected = selectedRange && rowIndex >= Math.min(selectedRange.start.rowIndex, selectedRange.end.rowIndex) && rowIndex <= Math.max(selectedRange.start.rowIndex, selectedRange.end.rowIndex) && ci >= Math.min(selectedRange.start.colIndex, selectedRange.end.colIndex) && ci <= Math.max(selectedRange.start.colIndex, selectedRange.end.colIndex);
                     const isPrecedent = precedents.has(`${rowIndex}-${ci}`);
                     const cellStyle = data.cellStyles?.[`${rowIndex}-${col}`] || {};
                     return (
-                      <td key={col} data-row={rowIndex} data-col={ci} className="p-0 border-b border-r border-slate-800 relative" onMouseDown={() => handleMouseDown(rowIndex, ci)} onMouseEnter={() => handleMouseEnter(rowIndex, ci)} style={{ border: isPrecedent ? '1px solid var(--nexus-accent)' : undefined }}>
+                      <td key={col} data-row={rowIndex} data-col={ci} className={`p-0 border-b border-r border-slate-800/80 relative ${isSelected ? 'ring-inset ring-2 ring-cyan-400 z-10' : ''}`} onMouseDown={() => handleMouseDown(rowIndex, ci)} onMouseEnter={() => handleMouseEnter(rowIndex, ci)} style={{ border: isPrecedent ? '1px solid var(--nexus-accent)' : undefined }}>
                         <EnhancedCell rowIndex={rowIndex} colIndex={ci} col={col} value={row[col]} displayValue={evaluateWithHF(row[col], rowIndex, col, data)} isSelected={isSelected} onCellEdit={onCellEdit} isInHoverRange={hoverCell?.rowIndex === rowIndex || hoverCell?.colIndex === ci} onFillStart={(e: any) => { e.preventDefault(); setIsFilling(true); setFillRange(selectedRange); }} style={cellStyle} />
                       </td>
                     );
