@@ -56,12 +56,22 @@ const interpolateColor = (color1: string, color2: string, factor: number) => {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-const EnhancedCell = memo(({ rowIndex, colIndex, col, value, displayValue, isSelected, columnType, onCellEdit, onContextMenu, isInHoverRange, highlightedCells = new Set(), onFillStart, }: any) => {
+const EnhancedCell = memo(({ rowIndex, colIndex, col, value, displayValue, isSelected, columnType, onCellEdit, onContextMenu, isInHoverRange, highlightedCells = new Set(), onFillStart, style = {} }: any) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const [isHovered, setIsHovered] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const combinedStyle = useMemo(() => ({
+    ...style,
+    fontWeight: style.fontWeight || 'inherit',
+    fontStyle: style.fontStyle || 'inherit',
+    textDecoration: style.textDecoration || 'inherit',
+    color: style.color || 'inherit',
+    backgroundColor: style.backgroundColor || 'transparent',
+    textAlign: style.textAlign || 'inherit'
+  }), [style]);
 
   const searchTerm = editValue.startsWith('=') ? editValue.replace('=', '').toUpperCase() : '';
   const filteredSuggestions = useMemo(() => searchTerm ? COMMON_FUNCTIONS.filter(f => f.name.startsWith(searchTerm)).slice(0, 5) : [], [searchTerm]);
@@ -93,12 +103,21 @@ const EnhancedCell = memo(({ rowIndex, colIndex, col, value, displayValue, isSel
 
   const isFormula = typeof value === 'string' && value.startsWith('=');
   return (
-    <div className={`w-full h-full flex flex-col justify-center px-1 text-xs relative ${isSelected ? 'ring-2 ring-cyan-400 bg-cyan-400/10' : ''} ${isHovered || isInHoverRange ? 'bg-white/5' : ''} ${isFormula ? 'formula-glow' : ''}`} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} onDoubleClick={handleDoubleClick} onContextMenu={onContextMenu}>
+    <div
+      className={`w-full h-full flex flex-col justify-center px-1 text-xs relative ${isSelected ? 'ring-2 ring-cyan-400 bg-cyan-400/10' : ''} ${isHovered || isInHoverRange ? 'bg-white/5' : ''} ${isFormula ? 'formula-glow' : ''}`}
+      style={combinedStyle}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onDoubleClick={handleDoubleClick}
+      onContextMenu={onContextMenu}
+    >
       <div className={`truncate ${isFormula ? 'text-cyan-400 font-medium' : ''}`}>{displayValue}</div>
       {isSelected && <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-cyan-400 border border-slate-900 rounded-sm cursor-crosshair z-30" onMouseDown={onFillStart} />}
     </div>
   );
 });
+
+EnhancedCell.displayName = 'EnhancedCell';
 
 const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, onSheetExpand, onFillRange, onSortColumn, onFilterChange, activeFilters, highlightedCells, isFormatPainterActive, onFormatPainterApply }: any) => {
   const [scrollTop, setScrollTop] = useState(0), [scrollLeft, setScrollLeft] = useState(0);
@@ -165,7 +184,7 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
   const totalWidth = useMemo(() => data.columns.reduce((a: any, c: any) => a + getCellWidth(c), 0) + 50, [data.columns, getCellWidth]);
 
   return (
-    <div ref={gridContainerRef} className="w-full h-full overflow-auto relative grid-container bg-slate-950" onScroll={(e) => { setScrollTop(e.currentTarget.scrollTop); setScrollLeft(e.currentTarget.scrollLeft); }} onMouseUp={handleMouseUp}>
+    <div ref={gridContainerRef} className={`w-full h-full overflow-auto relative grid-container bg-slate-950 ${isFormatPainterActive ? 'cursor-cell' : ''}`} onScroll={(e) => { setScrollTop(e.currentTarget.scrollTop); setScrollLeft(e.currentTarget.scrollLeft); }} onMouseUp={handleMouseUp}>
       <div style={{ height: data.rows.length * ROW_HEIGHT + HEADER_HEIGHT, width: totalWidth, position: 'relative' }}>
         <NeuralLines source={neuralPoints.source} targets={neuralPoints.targets} />
         <table className="data-grid-table border-collapse" style={{ tableLayout: 'fixed', width: totalWidth, position: 'sticky', top: 0 }}>
@@ -188,9 +207,10 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
                   {data.columns.map((col: any, ci: number) => {
                     const isSelected = selectedRange && rowIndex >= Math.min(selectedRange.start.rowIndex, selectedRange.end.rowIndex) && rowIndex <= Math.max(selectedRange.start.rowIndex, selectedRange.end.rowIndex) && ci >= Math.min(selectedRange.start.colIndex, selectedRange.end.colIndex) && ci <= Math.max(selectedRange.start.colIndex, selectedRange.end.colIndex);
                     const isPrecedent = precedents.has(`${rowIndex}-${ci}`);
+                    const cellStyle = data.cellStyles?.[`${rowIndex}-${col}`] || {};
                     return (
                       <td key={col} data-row={rowIndex} data-col={ci} className="p-0 border-b border-r border-slate-800 relative" onMouseDown={() => handleMouseDown(rowIndex, ci)} onMouseEnter={() => handleMouseEnter(rowIndex, ci)} style={{ border: isPrecedent ? '1px solid var(--nexus-accent)' : undefined }}>
-                        <EnhancedCell rowIndex={rowIndex} colIndex={ci} col={col} value={row[col]} displayValue={evaluateWithHF(row[col], rowIndex, col, data)} isSelected={isSelected} onCellEdit={onCellEdit} isInHoverRange={hoverCell?.rowIndex === rowIndex || hoverCell?.colIndex === ci} onFillStart={(e: any) => { e.preventDefault(); setIsFilling(true); setFillRange(selectedRange); }} />
+                        <EnhancedCell rowIndex={rowIndex} colIndex={ci} col={col} value={row[col]} displayValue={evaluateWithHF(row[col], rowIndex, col, data)} isSelected={isSelected} onCellEdit={onCellEdit} isInHoverRange={hoverCell?.rowIndex === rowIndex || hoverCell?.colIndex === ci} onFillStart={(e: any) => { e.preventDefault(); setIsFilling(true); setFillRange(selectedRange); }} style={cellStyle} />
                       </td>
                     );
                   })}

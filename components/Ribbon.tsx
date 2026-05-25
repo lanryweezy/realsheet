@@ -141,6 +141,15 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
                 <div className="flex gap-0.5">
                   {iconBtn(<Bold className="w-3.5 h-3.5" />, 'Cut (Ctrl+X)', () => { }, !p.sheetData)}
                   {iconBtn(<Copy className="w-3.5 h-3.5" />, 'Copy (Ctrl+C)', () => { }, !p.sheetData)}
+                  <button
+                    type="button"
+                    onClick={p.onFormatPainter}
+                    disabled={!p.sheetData}
+                    className={`p-2 rounded-xl transition-all duration-200 disabled:opacity-20 ${p.isFormatPainterActive ? 'bg-cyan-500 text-slate-900 shadow-[0_0_15px_rgba(6,182,212,0.5)]' : 'hover:bg-cyan-500/10 hover:text-cyan-400 text-slate-400'}`}
+                    title="Format Painter"
+                  >
+                    <PaintBucket className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
               {groupLabel('Clipboard')}
@@ -179,14 +188,14 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
             {/* Number Group */}
             <div className="flex items-center gap-1 pr-4 border-r border-white/5 relative group mr-3 py-1">
               <div className="flex flex-col gap-1.5 min-w-[100px]">
-                <div className="flex items-center justify-between bg-slate-950/40 rounded-lg px-2 py-1 border border-white/5 cursor-pointer hover:border-cyan-500/30 transition-colors">
-                  <span className="text-[11px] text-slate-300 font-medium">Currency</span>
+                <div className="flex items-center justify-between bg-slate-950/40 rounded-lg px-2 py-1 border border-white/5 cursor-pointer hover:border-cyan-500/30 transition-colors" onClick={p.onCellStyles}>
+                  <span className="text-[11px] text-slate-300 font-medium">Format</span>
                   <Hash className="w-2.5 h-2.5 text-cyan-500" />
                 </div>
                 <div className="flex items-center justify-center gap-0.5">
-                  {iconBtn(<DollarSign className="w-3.5 h-3.5" />, 'Currency', () => { })}
-                  {iconBtn(<Percent className="w-3.5 h-3.5" />, 'Percent', () => { })}
-                  {iconBtn(<Binary className="w-3.5 h-3.5" />, 'Comma', () => { })}
+                  {iconBtn(<DollarSign className="w-3.5 h-3.5" />, 'Currency', () => p.onCellFormat?.({ color: '#10b981', fontWeight: '500', format: 'currency' }), !p.sheetData)}
+                  {iconBtn(<Percent className="w-3.5 h-3.5" />, 'Percent', () => p.onCellFormat?.({ color: '#3b82f6', fontWeight: '500', format: 'percentage' }), !p.sheetData)}
+                  {iconBtn(<Binary className="w-3.5 h-3.5" />, 'Comma', () => p.onCellFormat?.({ format: 'comma' }), !p.sheetData)}
                 </div>
               </div>
               {groupLabel('Number')}

@@ -108,5 +108,7 @@ export const batchUpdate = (changes: {row: number, col: string, value: any}[], s
         hf.setCellContents({ sheet: sheetId, col: colIdx, row: change.row }, change.value);
       });
     });
-  } catch (e) {}
+  } catch (e) {
+    console.error('Batch update failed:', e);
+  }
 };

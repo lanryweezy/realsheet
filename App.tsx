@@ -84,8 +84,6 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
   const [view, setView] = useState<'home' | 'editor'>('home');
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [highlightedCells, setHighlightedCells] = useState<Set<string>>(new Set());
-  const [loadSummary, setLoadSummary] = useState<{ title: string; hint: string } | null>(null);
 
   // Multiple sheets state
   const [workbook, setWorkbook] = useState<Workbook | null>(null);
@@ -97,6 +95,20 @@ const App: React.FC = () => {
   const [activeFilters, setActiveFilters] = useState<Record<string, any[]>>({});
   const [history, setHistory] = useState<SheetData[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+
+  const historyRef = useRef<SheetData[]>([]);
+  const workbookRef = useRef<Workbook | null>(null);
+
+  useEffect(() => {
+    historyRef.current = history;
+  }, [history]);
+
+  useEffect(() => {
+    workbookRef.current = workbook;
+  }, [workbook]);
+
+  const [highlightedCells, setHighlightedCells] = useState<Set<string>>(new Set());
+  const [loadSummary, setLoadSummary] = useState<{ title: string; hint: string } | null>(null);
 
   // Filtered rows for display
   const displayRows = useMemo(() => {
@@ -239,14 +251,45 @@ const App: React.FC = () => {
   }, [currentSheetData, view]);
 
   // --- History Management ---
-  const pushToHistory = useCallback((newData: SheetData) => {
-    if (!workbook) return;
+  const handleUndo = useCallback(() => {
+    const currentWorkbook = workbookRef.current;
+    if (historyIndex > 0 && currentWorkbook) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      const updatedSheets = [...currentWorkbook.sheets];
+      updatedSheets[currentWorkbook.activeSheetIndex] = historyRef.current[newIndex];
+      setWorkbook({
+        ...currentWorkbook,
+        sheets: updatedSheets,
+        lastModified: new Date()
+      });
+    }
+  }, [historyIndex]);
 
-    const updatedSheets = [...workbook.sheets];
-    updatedSheets[workbook.activeSheetIndex] = newData;
+  const handleRedo = useCallback(() => {
+    const currentWorkbook = workbookRef.current;
+    if (historyIndex < historyRef.current.length - 1 && currentWorkbook) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      const updatedSheets = [...currentWorkbook.sheets];
+      updatedSheets[currentWorkbook.activeSheetIndex] = historyRef.current[newIndex];
+      setWorkbook({
+        ...currentWorkbook,
+        sheets: updatedSheets,
+        lastModified: new Date()
+      });
+    }
+  }, [historyIndex]);
+
+  const pushToHistory = useCallback((newData: SheetData) => {
+    const currentWorkbook = workbookRef.current;
+    if (!currentWorkbook) return;
+
+    const updatedSheets = [...currentWorkbook.sheets];
+    updatedSheets[currentWorkbook.activeSheetIndex] = newData;
 
     const updatedWorkbook = {
-      ...workbook,
+      ...currentWorkbook,
       sheets: updatedSheets,
       lastModified: new Date()
     };
@@ -263,35 +306,7 @@ const App: React.FC = () => {
       const maxIndex = historyIndex + 1;
       return maxIndex > 29 ? 29 : maxIndex;
     });
-  }, [historyIndex, workbook]);
-
-  const handleUndo = useCallback(() => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      const updatedSheets = [...workbook!.sheets];
-      updatedSheets[workbook!.activeSheetIndex] = history[newIndex];
-      setWorkbook({
-        ...workbook!,
-        sheets: updatedSheets,
-        lastModified: new Date()
-      });
-    }
-  }, [history, historyIndex, workbook]);
-
-  const handleRedo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      const updatedSheets = [...workbook!.sheets];
-      updatedSheets[workbook!.activeSheetIndex] = history[newIndex];
-      setWorkbook({
-        ...workbook!,
-        sheets: updatedSheets,
-        lastModified: new Date()
-      });
-    }
-  }, [history, historyIndex, workbook]);
+  }, [historyIndex]);
 
   // Keyboard Shortcuts
   useEffect(() => {
@@ -788,10 +803,11 @@ const App: React.FC = () => {
   };
 
   const handleCellFormat = useCallback((style: any) => {
-    if (!workbook || !selectedRange) return;
+    const currentWorkbook = workbookRef.current;
+    if (!currentWorkbook || !selectedRange) return;
 
-    const updatedSheets = [...workbook.sheets];
-    const currentSheet = updatedSheets[workbook.activeSheetIndex];
+    const updatedSheets = [...currentWorkbook.sheets];
+    const currentSheet = updatedSheets[currentWorkbook.activeSheetIndex];
     const newCellStyles = { ...(currentSheet.cellStyles || {}) };
 
     for (let r = Math.min(selectedRange.start.rowIndex, selectedRange.end.rowIndex); r <= Math.max(selectedRange.start.rowIndex, selectedRange.end.rowIndex); r++) {
@@ -803,10 +819,62 @@ const App: React.FC = () => {
     }
 
     const newSheetData = { ...currentSheet, cellStyles: newCellStyles };
-    updatedSheets[workbook.activeSheetIndex] = newSheetData;
-    setWorkbook({ ...workbook, sheets: updatedSheets, lastModified: new Date() });
+    updatedSheets[currentWorkbook.activeSheetIndex] = newSheetData;
+    setWorkbook({ ...currentWorkbook, sheets: updatedSheets, lastModified: new Date() });
     pushToHistory(newSheetData);
-  }, [workbook, selectedRange, pushToHistory]);
+  }, [selectedRange, pushToHistory]);
+
+  const handleApplyCellStyle = useCallback((style: CellStyle) => {
+    const currentWorkbook = workbookRef.current;
+    if (!currentWorkbook || !selectedRange || !currentSheetData) return;
+
+    const updatedSheets = [...currentWorkbook.sheets];
+    const currentSheet = updatedSheets[currentWorkbook.activeSheetIndex];
+    const newCellStyles = { ...(currentSheet.cellStyles || {}) };
+
+    const { start, end } = selectedRange;
+    const minRow = Math.min(start.rowIndex, end.rowIndex);
+    const maxRow = Math.max(start.rowIndex, end.rowIndex);
+    const minCol = Math.min(start.colIndex, end.colIndex);
+    const maxCol = Math.max(start.colIndex, end.colIndex);
+
+    for (let r = minRow; r <= maxRow; r++) {
+      for (let c = minCol; c <= maxCol; c++) {
+        const colKey = currentSheet.columns[c];
+        const key = `${r}-${colKey}`;
+
+        // Define style properties based on the selected preset
+        let styleProps: any = {};
+
+        switch (style.id) {
+          case 'currency':
+          case 'currency-eur':
+            styleProps = { color: '#10b981', fontWeight: '500' };
+            break;
+          case 'percentage':
+            styleProps = { color: '#3b82f6', fontWeight: '500' };
+            break;
+          case 'date-short':
+          case 'date-long':
+            styleProps = { color: '#f59e0b' };
+            break;
+          case 'boolean':
+            styleProps = { fontWeight: 'bold', color: '#8b5cf6' };
+            break;
+          default:
+            styleProps = { color: 'inherit' };
+        }
+
+        newCellStyles[key] = { ...(newCellStyles[key] || {}), ...styleProps, format: style.format };
+      }
+    }
+
+    const newSheetData = { ...currentSheet, cellStyles: newCellStyles };
+    updatedSheets[currentWorkbook.activeSheetIndex] = newSheetData;
+    setWorkbook({ ...currentWorkbook, sheets: updatedSheets, lastModified: new Date() });
+    pushToHistory(newSheetData);
+    addToast('success', 'Style Applied', `${style.name} style applied to selection`);
+  }, [selectedRange, currentSheetData, pushToHistory, addToast]);
 
   const handleFormatPainterClick = () => {
     if (selectedRange && currentSheetData) {
@@ -818,10 +886,11 @@ const App: React.FC = () => {
   };
 
   const handleFormatPainterApply = useCallback((rowIndex: number, colKey: string) => {
-    if (!workbook || !formatPainterSource) return;
+    const currentWorkbook = workbookRef.current;
+    if (!currentWorkbook || !formatPainterSource) return;
 
-    const updatedSheets = [...workbook.sheets];
-    const currentSheet = updatedSheets[workbook.activeSheetIndex];
+    const updatedSheets = [...currentWorkbook.sheets];
+    const currentSheet = updatedSheets[currentWorkbook.activeSheetIndex];
     const newCellStyles = { ...(currentSheet.cellStyles || {}) };
 
     const sourceKey = `${formatPainterSource.rowIndex}-${formatPainterSource.colKey}`;
@@ -831,12 +900,12 @@ const App: React.FC = () => {
     newCellStyles[targetKey] = { ...sourceStyle };
 
     const newSheetData = { ...currentSheet, cellStyles: newCellStyles };
-    updatedSheets[workbook.activeSheetIndex] = newSheetData;
-    setWorkbook({ ...workbook, sheets: updatedSheets, lastModified: new Date() });
+    updatedSheets[currentWorkbook.activeSheetIndex] = newSheetData;
+    setWorkbook({ ...currentWorkbook, sheets: updatedSheets, lastModified: new Date() });
     pushToHistory(newSheetData);
     setIsFormatPainterActive(false);
     setFormatPainterSource(null);
-  }, [workbook, formatPainterSource, pushToHistory]);
+  }, [formatPainterSource, pushToHistory]);
 
   // --- Data Operations ---
 
@@ -1911,12 +1980,11 @@ const App: React.FC = () => {
             }))}
           />
 
-          {/* Cell Styles Gallery - temporarily disabled until handler is added */}
-          {/* <CellStylesGallery
-                    isOpen={isCellStylesOpen}
-                    onClose={() => setIsCellStylesOpen(false)}
-                    onSelectStyle={handleApplyCellStyle}
-                /> */}
+          <CellStylesGallery
+            isOpen={isCellStylesOpen}
+            onClose={() => setIsCellStylesOpen(false)}
+            onSelectStyle={handleApplyCellStyle}
+          />
         </main>
       </div>
 
