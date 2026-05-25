@@ -446,9 +446,10 @@ const HomeView: React.FC<HomeViewProps> = ({
                 {/* Templates */}
                 {[
                   { type: 'budget', label: 'Smart Budget', icon: DollarSign, color: 'emerald', desc: 'Financial intelligence' },
+                  { type: 'ecommerce', label: 'E-commerce', icon: LayoutGrid, color: 'blue', desc: 'Inventory control' },
+                  { type: 'freelancer', label: 'Freelancer', icon: FileText, color: 'purple', desc: 'Project invoicing' },
+                  { type: 'crypto', label: 'Crypto', icon: Activity, color: 'orange', desc: 'Portfolio tracking' },
                   { type: 'finance', label: 'Risk Analysis', icon: Activity, color: 'cyan', desc: 'Portfolio insights' },
-
-                  { type: 'real_estate', label: 'Valuation', icon: Home, color: 'indigo', desc: 'Property modeling' },
                 ].map((tpl) => (
                   <button key={tpl.type} onClick={() => onTemplate(tpl.type as any)} className="group flex flex-col items-start text-left">
                     <div className={`w-full aspect-[1.4/1] bg-slate-900 border border-slate-800/80 rounded-2xl mb-4 flex items-center justify-center transition-all duration-500 group-hover:border-${tpl.color}-500/50 group-hover:-translate-y-2 group-hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)] relative overflow-hidden`}>

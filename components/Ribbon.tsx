@@ -4,7 +4,8 @@ import {
   FileDown, Share2, Target, LayoutGrid, FileSpreadsheet, FunctionSquare, Filter,
   Layout, Printer, FileSpreadsheet as FileExcel, Square, SquareDot, Copy, Eraser,
   DollarSign, Type, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight,
-  ChevronDown, Percent, Hash, Binary, FileJson, Save, Info, Settings, LogOut, Search
+  ChevronDown, Percent, Hash, Binary, FileJson, Save, Info, Settings, LogOut, Search,
+  GitBranch
 } from 'lucide-react';
 
 export type RibbonTab = 'file' | 'home' | 'insert' | 'formulas' | 'data' | 'view';
@@ -118,15 +119,23 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
         role="tabpanel"
       >
         {p.activeTab === 'file' && (
-          <div className="flex items-center gap-1 pr-6 relative group">
-            <div className="grid grid-cols-2 gap-2">
-              {btn(<Save className="w-4 h-4" />, 'Save', () => { }, !p.sheetData)}
-              {btn(<FileDown className="w-4 h-4" />, 'Export', p.onExport, !p.sheetData)}
-              {btn(<Printer className="w-4 h-4" />, 'Print', p.onExport, !p.sheetData)}
-              {btn(<Info className="w-4 h-4" />, 'Info', () => { }, !p.sheetData)}
+          <>
+            <div className="flex items-center gap-1 pr-6 border-r border-white/5 relative group mr-4 py-1">
+              <div className="grid grid-cols-2 gap-2">
+                {btn(<Save className="w-4 h-4" />, 'Save', () => { }, !p.sheetData)}
+                {btn(<FileDown className="w-4 h-4" />, 'Export', p.onExport, !p.sheetData)}
+                {btn(<Printer className="w-4 h-4" />, 'Print', p.onExport, !p.sheetData)}
+                {btn(<Info className="w-4 h-4" />, 'Info', () => { }, !p.sheetData)}
+              </div>
+              {groupLabel('File Operations')}
             </div>
-            {groupLabel('File Operations')}
-          </div>
+            <div className="flex items-center gap-1 pr-6 relative group py-1">
+              <div className="flex gap-0.5">
+                {btn(<GitBranch className="w-4 h-4 text-purple-400" />, 'Branches', () => (window as any).openBranchManager?.(), !p.sheetData)}
+              </div>
+              {groupLabel('Version Control')}
+            </div>
+          </>
         )}
 
         {p.activeTab === 'home' && (
@@ -235,7 +244,7 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
           <>
             <div className="flex items-center gap-1 pr-4 border-r border-white/5 relative group mr-3 py-1">
               <div className="flex gap-0.5">
-                {btn(<FunctionSquare className="w-3.5 h-3.5" />, 'Insert', () => { }, !p.sheetData)}
+                {btn(<FunctionSquare className="w-3.5 h-3.5" />, 'Visual Builder', () => (window as any).openVisualBuilder?.(), !p.sheetData)}
                 {btn(<Wand2 className="w-3.5 h-3.5" />, 'AutoSum', () => { }, !p.sheetData)}
               </div>
               {groupLabel('Library')}

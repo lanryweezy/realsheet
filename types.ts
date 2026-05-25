@@ -186,3 +186,31 @@ export interface SearchResult {
   oldValue: string;
   newValue?: string;
 }
+
+// Git-like Versioning
+export interface Branch {
+  id: string;
+  name: string;
+  workbookId: string;
+  parentBranchId?: string;
+  createdAt: number;
+  lastModified: number;
+  workbook: Workbook;
+}
+
+export interface Commit {
+  id: string;
+  branchId: string;
+  message: string;
+  timestamp: number;
+  author: string;
+  workbookSnapshot: Workbook;
+}
+
+export interface Diff {
+  type: 'cell_change' | 'row_insert' | 'row_delete' | 'col_insert' | 'col_delete' | 'sheet_add' | 'sheet_delete';
+  sheetId: string;
+  location: { row?: number; col?: string; sheetIndex?: number };
+  oldValue?: any;
+  newValue?: any;
+}

@@ -7,7 +7,8 @@ import {
   Wand2, Search, Hash, MoreVertical, Copy, MoveRight, MoveDown,
   SplitSquareHorizontal, CopyMinus, Calculator, Filter, MessageSquare as MessageSquareIcon,
   Target, FileDown, Zap, User, Code, Home, HelpCircle, Sun, Moon,
-  Bell, CheckCircle, Calendar, Bot, Phone, TrendingUp, Plug, Sparkles, FileCode
+  Bell, CheckCircle, Calendar, Bot, Phone, TrendingUp, Plug, Sparkles, FileCode,
+  SquareFunction as FunctionSquare
 } from 'lucide-react';
 import Grid from './components/Grid';
 import Dashboard from './components/Dashboard';
@@ -36,6 +37,8 @@ import GoalSeekModal from './components/GoalSeekModal';
 import PivotModal from './components/PivotModal';
 import ChartWizardModal from './components/ChartWizardModal';
 import SmartFillModal from './components/SmartFillModal';
+import VisualFormulaBuilder from './components/VisualFormulaBuilder';
+import BranchManager from './components/BranchManager';
 import CommandPalette from './components/CommandPalette';
 import Ribbon, { type RibbonTab } from './components/Ribbon';
 import QuickAccessToolbar from './components/QuickAccessToolbar';
@@ -53,6 +56,8 @@ import { useGamification } from './src/hooks/useGamification';
 import { PowerHourBanner, CriticalHitFlash, StreakGuard } from './components/DopamineEngine';
 import { FormMode } from './components/FormMode';
 import { generateFormSchema, FormSchema } from './services/FormService';
+import { suggestAutomations, AutomationSuggestion } from './services/automationService';
+import { Branch } from './types';
 
 // Add mobile detection hook
 const useMobileDetection = () => {
@@ -153,6 +158,14 @@ const App: React.FC = () => {
   const [isPivotModalOpen, setIsPivotModalOpen] = useState(false);
   const [isChartWizardOpen, setIsChartWizardOpen] = useState(false);
   const [isSmartFillModalOpen, setIsSmartFillModalOpen] = useState(false);
+  const [isVisualFormulaBuilderOpen, setIsVisualFormulaBuilderOpen] = useState(false);
+  const [isBranchManagerOpen, setIsBranchManagerOpen] = useState(false);
+
+  useEffect(() => {
+    (window as any).openVisualBuilder = () => setIsVisualFormulaBuilderOpen(true);
+    (window as any).openBranchManager = () => setIsBranchManagerOpen(true);
+  }, []);
+
   const [isGoalSeekModalOpen, setIsGoalSeekModalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
@@ -202,6 +215,9 @@ const App: React.FC = () => {
   const [isFormatPainterActive, setIsFormatPainterActive] = useState(false);
   const [formatPainterSource, setFormatPainterSource] = useState<{ rowIndex: number; colKey: string } | null>(null);
 
+  // Automation Suggestions
+  const [automationSuggestions, setAutomationSuggestions] = useState<AutomationSuggestion[]>([]);
+
   // Cell Styles State
   const [isCellStylesOpen, setIsCellStylesOpen] = useState(false);
 
@@ -240,15 +256,23 @@ const App: React.FC = () => {
   }, []);
 
   // --- Persistence (File Based) ---
-  // Autosave
+  // Autosave & Automation detection
   useEffect(() => {
     if (currentSheetData && view === 'editor') {
       const timer = setTimeout(() => {
         saveFile(currentSheetData);
+
+        // Check for automations
+        const suggestions = suggestAutomations(currentSheetData, history);
+        setAutomationSuggestions(suggestions);
+
+        if (suggestions.length > 0 && Math.random() > 0.7) { // Don't annoy the user
+           addToast('info', 'Smart Suggestion', suggestions[0].title);
+        }
       }, 1500); // Debounce save
       return () => clearTimeout(timer);
     }
-  }, [currentSheetData, view]);
+  }, [currentSheetData, view, history]);
 
   // --- History Management ---
   const handleUndo = useCallback(() => {
@@ -1431,6 +1455,8 @@ const App: React.FC = () => {
   // Command Palette Actions
   const commandActions = [
     { id: 'smart-fill', label: 'Smart Fill / AI Generate', icon: Wand2, action: () => setIsSmartFillModalOpen(true) },
+    { id: 'formula-builder', label: 'Visual Formula Builder', icon: FunctionSquare, action: () => setIsVisualFormulaBuilderOpen(true) },
+    { id: 'version-control', label: 'Version Control (Branches)', icon: GitBranch, action: () => setIsBranchManagerOpen(true) },
     { id: 'goal-seek', label: 'Goal Seek (What-If)', icon: Target, action: () => setIsGoalSeekModalOpen(true) },
     { id: 'watch-window', label: 'Toggle Watch Window', icon: Eye, action: () => setIsWatchWindowOpen(prev => !prev) },
     { id: 'pivot', label: 'Create Pivot Table', icon: Table, action: () => setIsPivotModalOpen(true) },
@@ -1453,6 +1479,11 @@ const App: React.FC = () => {
       return `${indexToExcelCol(selectedRange.start.colIndex)}${selectedRange.start.rowIndex + 1}`;
     }
     return '';
+  };
+
+  const handleSwitchBranch = (branch: Branch) => {
+    setWorkbook(branch.workbook);
+    addToast('success', 'Branch Switched', `Now on branch: ${branch.name}`);
   };
 
   if (!currentUser) {
@@ -1524,22 +1555,22 @@ const App: React.FC = () => {
               <span className="text-slate-400 text-xs hidden sm:block ml-0 sm:ml-1">Fast, keyboard-first spreadsheets</span>
             </div>
 
-            {/* Navigation Pills - Hide on mobile */}
-            {currentSheetData && view === 'editor' && !isMobile && (
-              <div className="hidden md:flex bg-slate-800/50 rounded-lg p-1 border border-slate-700/50 animate-in fade-in zoom-in">
+            {/* Navigation Pills */}
+            {currentSheetData && view === 'editor' && (
+              <div className={`${isMobile ? 'flex' : 'hidden md:flex'} bg-slate-800/50 rounded-lg p-1 border border-slate-700/50 animate-in fade-in zoom-in`}>
                 <button
                   onClick={() => setActiveTab('grid')}
                   className={`tab-pill ${activeTab === 'grid' ? 'active' : ''}`}
                 >
                   <FileSpreadsheet className="w-4 h-4" />
-                  <span className="mobile-hidden">Data</span>
+                  {!isMobile && <span className="mobile-hidden">Data</span>}
                 </button>
                 <button
                   onClick={() => setActiveTab('dashboard')}
                   className={`tab-pill ${activeTab === 'dashboard' ? 'active' : ''}`}
                 >
                   <LayoutGrid className="w-4 h-4" />
-                  <span className="mobile-hidden">Dashboard</span>
+                  {!isMobile && <span className="mobile-hidden">Dashboard</span>}
                   {dashboardItems.length > 0 && (
                     <span className="ml-1 px-1.5 py-0.5 rounded-full bg-nexus-accent/20 text-nexus-accent text-[10px] border border-nexus-accent/30 mobile-hidden">
                       {dashboardItems.length}
@@ -1967,6 +1998,25 @@ const App: React.FC = () => {
             initialColumnName=""
             onApply={handleSmartFill}
           />
+
+          <VisualFormulaBuilder
+            isOpen={isVisualFormulaBuilderOpen}
+            onClose={() => setIsVisualFormulaBuilderOpen(false)}
+            columns={currentSheetData?.columns || []}
+            onApply={(formula) => {
+               if (selectedCell) handleCellEdit(selectedCell.rowIndex, selectedCell.colKey, formula);
+            }}
+          />
+
+          {workbook && (
+            <BranchManager
+              isOpen={isBranchManagerOpen}
+              onClose={() => setIsBranchManagerOpen(false)}
+              workbook={workbook}
+              onSwitchBranch={handleSwitchBranch}
+              onUpdateWorkbook={(wb) => setWorkbook(wb)}
+            />
+          )}
 
           <CommandPalette
             isOpen={isCommandPaletteOpen}

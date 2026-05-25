@@ -26,7 +26,7 @@
 
   /* Mobile Responsive Styles */
   .mobile-hidden {
-    @apply hidden sm:block;
+    @apply hidden md:block;
   }
 
   .mobile-only {
