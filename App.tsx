@@ -1560,19 +1560,19 @@ const App: React.FC = () => {
               <div className={`${isMobile ? 'flex' : 'hidden md:flex'} bg-slate-800/50 rounded-lg p-1 border border-slate-700/50 animate-in fade-in zoom-in`}>
                 <button
                   onClick={() => setActiveTab('grid')}
-                  className={`tab-pill ${activeTab === 'grid' ? 'active' : ''}`}
+                  className={`tab-pill px-4 py-1.5 rounded-lg transition-all ${activeTab === 'grid' ? 'active bg-cyan-500/10 text-cyan-400 shadow-[inset_0_0_10px_rgba(6,182,212,0.1)]' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                   <FileSpreadsheet className="w-4 h-4" />
                   {!isMobile && <span className="mobile-hidden">Data</span>}
                 </button>
                 <button
                   onClick={() => setActiveTab('dashboard')}
-                  className={`tab-pill ${activeTab === 'dashboard' ? 'active' : ''}`}
+                  className={`tab-pill px-4 py-1.5 rounded-lg transition-all ${activeTab === 'dashboard' ? 'active bg-purple-500/10 text-purple-400 shadow-[inset_0_0_10px_rgba(168,85,247,0.1)]' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                   <LayoutGrid className="w-4 h-4" />
                   {!isMobile && <span className="mobile-hidden">Dashboard</span>}
                   {dashboardItems.length > 0 && (
-                    <span className="ml-1 px-1.5 py-0.5 rounded-full bg-nexus-accent/20 text-nexus-accent text-[10px] border border-nexus-accent/30 mobile-hidden">
+                    <span className="ml-2 px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] border border-purple-500/30 mobile-hidden">
                       {dashboardItems.length}
                     </span>
                   )}
@@ -1585,101 +1585,113 @@ const App: React.FC = () => {
             {/* Search/Command Trigger - Compact on mobile */}
             <button
               onClick={() => setIsCommandPaletteOpen(true)}
-              className="hidden sm:flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1.5 bg-slate-800/50 border border-slate-700/50 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-700/50 transition-colors"
+              aria-label="Search commands"
+              className="hidden sm:flex items-center gap-2 px-2 py-1 sm:px-4 sm:py-2 bg-slate-900/80 border border-white/10 rounded-xl text-xs text-slate-400 hover:text-white hover:bg-slate-800 hover:border-cyan-500/50 transition-all shadow-lg group/search"
             >
-              <Search className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-              <span className="mobile-hidden">Search commands...</span>
-              <span className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] mobile-hidden">⌘K</span>
+              <Search className="w-3 h-3 sm:w-4 sm:h-4 group-hover/search:text-cyan-400 transition-colors" />
+              <span className="mobile-hidden font-medium">Search commands...</span>
+              <div className="flex items-center gap-1 ml-2 opacity-40 group-hover/search:opacity-100 transition-opacity">
+                <span className="px-1.5 py-0.5 bg-slate-800 border border-white/10 rounded text-[10px] mobile-hidden">⌘</span>
+                <span className="px-1.5 py-0.5 bg-slate-800 border border-white/10 rounded text-[10px] mobile-hidden">K</span>
+              </div>
             </button>
 
             {/* Compact toolbar for mobile */}
             {view === 'editor' && (
-              <div className={`compact-toolbar ${isMobile ? 'bg-slate-800/50 rounded-lg p-1 border border-slate-700/50' : 'toolbar-group animate-in fade-in slide-in-from-top-1'}`}>
-                <button onClick={handleUndo} disabled={!currentSheetData || historyIndex <= 0} className="btn-icon" title="Undo">
-                  <Undo2 className="w-4 h-4" />
-                </button>
-                <button onClick={handleRedo} disabled={!currentSheetData || historyIndex >= history.length - 1} className="btn-icon" title="Redo">
-                  <Redo2 className="w-4 h-4" />
-                </button>
+              <div className={`compact-toolbar ${isMobile ? 'bg-slate-800/50 rounded-lg p-1 border border-slate-700/50' : 'toolbar-group animate-in fade-in slide-in-from-top-1 bg-slate-900/40 px-3 py-1 rounded-xl border border-white/5 shadow-inner'}`}>
+                <div className="flex items-center gap-1">
+                  <button onClick={handleUndo} disabled={!currentSheetData || historyIndex <= 0} className="btn-icon hover:bg-white/5" title="Undo">
+                    <Undo2 className="w-4 h-4" />
+                  </button>
+                  <button onClick={handleRedo} disabled={!currentSheetData || historyIndex >= history.length - 1} className="btn-icon hover:bg-white/5" title="Redo">
+                    <Redo2 className="w-4 h-4" />
+                  </button>
+                </div>
 
                 {!isMobile && (
                   <>
-                    <div className="w-px h-4 bg-slate-700 mx-1"></div>
-                    <button
-                      onClick={() => setIsFormattingModalOpen(true)}
-                      disabled={!currentSheetData}
-                      className="btn-icon"
-                      title="Conditional Formatting"
-                    >
-                      <PaintBucket className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setDataToolsState({ isOpen: true, mode: 'duplicates' })}
-                      disabled={!currentSheetData}
-                      className="btn-icon"
-                      title="Data Tools"
-                    >
-                      <DatabaseZap className="w-4 h-4" />
-                    </button>
+                    <div className="w-px h-6 bg-white/10 mx-1"></div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setIsFormattingModalOpen(true)}
+                        disabled={!currentSheetData}
+                        className="btn-icon hover:bg-cyan-500/10 hover:text-cyan-400"
+                        title="Conditional Formatting"
+                      >
+                        <PaintBucket className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setDataToolsState({ isOpen: true, mode: 'duplicates' })}
+                        disabled={!currentSheetData}
+                        className="btn-icon hover:bg-emerald-500/10 hover:text-emerald-400"
+                        title="Data Tools"
+                      >
+                        <DatabaseZap className="w-4 h-4" />
+                      </button>
+                    </div>
                   </>
                 )}
 
-                <div className="w-px h-4 bg-slate-700 mx-1 mobile-hidden"></div>
-                <button
-                  onClick={() => setIsWatchWindowOpen(!isWatchWindowOpen)}
-                  disabled={!currentSheetData}
-                  className={`btn-icon ${isWatchWindowOpen ? 'active' : ''} mobile-hidden`}
-                  title="Watch Window"
-                >
-                  <Eye className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setIsSmartFillModalOpen(true)}
-                  disabled={!currentSheetData}
-                  className="btn-icon text-indigo-400 hover:text-indigo-300"
-                  title="AI Smart Fill"
-                >
-                  <Wand2 className="w-4 h-4" />
-                </button>
+                <div className="w-px h-6 bg-white/10 mx-1 mobile-hidden"></div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setIsWatchWindowOpen(!isWatchWindowOpen)}
+                    disabled={!currentSheetData}
+                    className={`btn-icon ${isWatchWindowOpen ? 'active text-cyan-400 bg-cyan-500/10' : 'hover:bg-white/5'} mobile-hidden`}
+                    title="Watch Window"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setIsSmartFillModalOpen(true)}
+                    disabled={!currentSheetData}
+                    className="btn-icon text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
+                    title="AI Smart Fill"
+                  >
+                    <Wand2 className="w-4 h-4" />
+                  </button>
+                </div>
 
                 {!isMobile && (
                   <>
-                    <button
-                      onClick={() => setIsPivotModalOpen(true)}
-                      disabled={!currentSheetData}
-                      className="btn-icon"
-                      title="Pivot Table"
-                    >
-                      <Table className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setIsChartWizardOpen(true)}
-                      disabled={!currentSheetData}
-                      className="btn-icon"
-                      title="Create Chart"
-                    >
-                      <BarChart3 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setIsPivotModalOpen(true)}
+                        disabled={!currentSheetData}
+                        className="btn-icon hover:bg-amber-500/10 hover:text-amber-400"
+                        title="Pivot Table"
+                      >
+                        <Table className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setIsChartWizardOpen(true)}
+                        disabled={!currentSheetData}
+                        className="btn-icon hover:bg-pink-500/10 hover:text-pink-400"
+                        title="Create Chart"
+                      >
+                        <BarChart3 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </>
                 )}
 
-                <button
-                  onClick={() => setIsShareModalOpen(true)}
-                  disabled={!currentSheetData}
-                  className="btn-icon text-blue-400 hover:text-blue-300 mobile-hidden"
-                  title="Share"
-                >
-                  <Share2 className="w-4 h-4" />
-                </button>
+                <div className="w-px h-6 bg-white/10 mx-1 mobile-hidden"></div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setIsShareModalOpen(true)}
+                    disabled={!currentSheetData}
+                    className="btn-icon text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                    title="Share"
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
 
-                {!isMobile && (
-                  <>
-                    <div className="w-px h-4 bg-slate-700 mx-1"></div>
-                    <button onClick={handleDownload} disabled={!currentSheetData} className="btn-icon" title="Export">
+                  {!isMobile && (
+                    <button onClick={handleDownload} disabled={!currentSheetData} className="btn-icon hover:bg-white/5" title="Export">
                       <Download className="w-4 h-4" />
                     </button>
-                  </>
-                )}
+                  )}
+                </div>
               </div>
             )}
 
@@ -1695,14 +1707,15 @@ const App: React.FC = () => {
               </button>
             )}
 
-            <button onClick={() => setIsUpgradeModalOpen(true)} className="flex items-center justify-center p-1.5 rounded-full bg-gradient-to-r from-amber-200 to-yellow-400 text-slate-900 shadow-lg shadow-amber-500/20 hover:scale-105 transition-transform" title="Upgrade to Pro – see what's included">
+            <button onClick={() => setIsUpgradeModalOpen(true)} className="flex items-center justify-center p-1.5 rounded-full bg-gradient-to-r from-amber-200 to-yellow-400 text-slate-900 shadow-lg shadow-amber-500/20 hover:scale-105 transition-transform min-w-[32px] min-h-[32px]" title="Upgrade to Pro – see what's included" aria-label="Upgrade to Pro">
               <Crown className="w-4 h-4" />
             </button>
 
             <button
               onClick={() => setIsNotificationCenterOpen(true)}
-              className="btn-icon relative"
+              className="btn-icon relative min-w-[32px] min-h-[32px]"
               title="Notifications & Tasks"
+              aria-label="Notifications"
             >
               <Bell className="w-4 h-4" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
@@ -1723,18 +1736,19 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <button onClick={() => setIsShortcutsOpen(true)} className="btn-icon" title="Help & keyboard shortcuts">
+            <button onClick={() => setIsShortcutsOpen(true)} className="btn-icon min-w-[32px] min-h-[32px]" title="Help & keyboard shortcuts" aria-label="Help">
               <HelpCircle className="w-4 h-4" />
             </button>
 
-            <button onClick={toggleTheme} className="btn-icon" title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>
+            <button onClick={toggleTheme} className="btn-icon min-w-[32px] min-h-[32px]" title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} aria-label="Toggle theme">
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
             <div className="relative">
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="w-8 h-8 rounded-full bg-gradient-to-tr from-nexus-accent to-purple-600 flex items-center justify-center border border-white/10 text-white shadow-inner hover:ring-2 hover:ring-white/20 transition-all font-bold text-xs"
+                className="w-8 h-8 rounded-full bg-gradient-to-tr from-nexus-accent to-purple-600 flex items-center justify-center border border-white/10 text-white shadow-inner hover:ring-2 hover:ring-white/20 transition-all font-bold text-xs min-w-[32px] min-h-[32px]"
+                aria-label="User menu"
               >
                 JD
               </button>
@@ -1764,9 +1778,9 @@ const App: React.FC = () => {
             />
           ) : (
             <>
-              <div className="flex-1 flex flex-row overflow-hidden relative">
+              <div className="flex-1 flex flex-row overflow-hidden relative bg-slate-950">
                 {/* Left Side: Main Editor Stack */}
-                <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-0">
+                <div className="workspace-stack">
                   {activeTab === 'grid' && currentSheetData ? (
                     <>
                       {/* Quick Access Toolbar + Ribbon (desktop) */}
@@ -1903,8 +1917,9 @@ const App: React.FC = () => {
 
                     <div className="flex items-center gap-3">
                       <div className="status-item">
-                        <span className={historyIndex > 0 ? "text-amber-400" : "text-green-400"}>
-                          {historyIndex > 0 ? "● Saving..." : "● Saved"}
+                        <div className={`w-2 h-2 rounded-full ${historyIndex > 0 ? "bg-amber-500 animate-pulse" : "bg-green-500"}`} />
+                        <span className={historyIndex > 0 ? "text-amber-400 font-medium" : "text-green-400 font-medium"}>
+                          {historyIndex > 0 ? "Saving..." : "Saved"}
                         </span>
                       </div>
                       <div className="separator" />

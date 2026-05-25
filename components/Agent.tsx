@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, StopCircle, Mic, Plus, Check, Zap, Calculator, PaintBucket, Filter, MessageSquare, Lightbulb, ListTodo } from 'lucide-react';
+import { Send, Sparkles, StopCircle, Mic, Plus, Check, Zap, Calculator, PaintBucket, Filter, MessageSquare, Lightbulb, ListTodo, Bot, AlertCircle, ChevronRight, Code } from 'lucide-react';
 import { ChatMessage, SheetData, ChartConfig, EnhancedAnalysisResult } from '../types';
 import { analyzeDataWithGemini } from '../services/geminiService';
 import { transformData } from '../services/apiClient';
@@ -562,20 +562,20 @@ const Agent: React.FC<AgentProps> = ({ sheetData, workbook, onAddToDashboard, on
   };
 
   return (
-    <div className="agent-container">
+    <div className="agent-container flex flex-col h-full bg-slate-900 border-l border-white/5 shadow-[-4px_0_24px_rgba(0,0,0,0.5)]">
       {/* Header */}
-      <div className="p-4 border-b border-slate-700/30 flex items-center justify-between shrink-0">
+      <div className="p-4 border-b border-white/5 flex items-center justify-between bg-slate-900/80 backdrop-blur-xl sticky top-0 z-10">
         <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
-                <Sparkles className="w-4 h-4 text-indigo-400" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 flex items-center justify-center border border-white/10 shadow-inner group">
+            <Bot className="w-6 h-6 text-cyan-400 group-hover:scale-110 transition-transform" />
+          </div>
+          <div>
+            <h3 className="text-white text-sm font-bold leading-tight tracking-tight">NexAgent <span className="text-[10px] bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded ml-1 border border-cyan-500/20">v2.4</span></h3>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <div className={`w-1.5 h-1.5 rounded-full ${isLoading ? 'bg-cyan-400 animate-pulse shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'}`} />
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{isLoading ? 'Analyzing Data...' : 'Agent Active'}</span>
             </div>
-            <div>
-                <h2 className="font-semibold text-white text-sm">NexAgent</h2>
-                <div className="flex items-center gap-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full ${isLoading ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`}></span>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">{isLoading ? 'THINKING' : 'THINKING'}</span>
-                </div>
-            </div>
+          </div>
         </div>
       </div>
 
@@ -737,14 +737,14 @@ const Agent: React.FC<AgentProps> = ({ sheetData, workbook, onAddToDashboard, on
       </div>
 
       {/* Input */}
-      <div className="agent-input-area">
+      <div className="agent-input-area p-4 bg-slate-900 border-t border-white/5">
         <form onSubmit={handleSubmit} className="relative">
-          <div className="agent-input-box">
+          <div className={`agent-input-box flex items-center gap-2 bg-slate-800/50 border border-white/10 p-2 rounded-xl focus-within:border-cyan-500/50 transition-all ${isLoading ? 'opacity-50 grayscale' : ''}`}>
              <button
                 type="button"
                 onClick={handleVoiceInput}
                 disabled={isLoading || !sheetData}
-                className={`p-2 rounded-md transition-colors ${isListening ? 'text-red-400 bg-red-400/10' : 'text-slate-400 hover:text-white'}`}
+                className={`p-2 rounded-lg transition-all ${isListening ? 'text-red-400 bg-red-400/10 animate-pulse shadow-[0_0_12px_rgba(248,113,113,0.3)]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
             >
                 {isListening ? <StopCircle className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </button>
@@ -752,20 +752,25 @@ const Agent: React.FC<AgentProps> = ({ sheetData, workbook, onAddToDashboard, on
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={sheetData ? "Ask: 'How should I plan to clean this data?'" : "Waiting for data..."}
-                disabled={isLoading || !input.trim()}
-                autoFocus={!!promptOverride} // Auto focus if override exists
+                placeholder={sheetData ? "Ask: 'Analyze this data...'" : "Upload data to start..."}
+                disabled={isLoading}
+                className="flex-1 bg-transparent border-none outline-none text-white text-sm py-1"
+                autoFocus={!!promptOverride}
             />
             <button
                 type="submit"
                 disabled={isLoading || !input.trim()}
-                className="p-2 bg-nexus-accent hover:bg-cyan-600 text-white rounded-md transition-colors disabled:opacity-50"
+                className="p-2.5 bg-cyan-500 hover:bg-cyan-400 text-white rounded-lg transition-all shadow-[0_4px_12px_rgba(6,182,212,0.3)] hover:shadow-[0_4px_20px_rgba(6,182,212,0.5)] disabled:opacity-30 disabled:shadow-none transform active:scale-95"
             >
                 <Send className="w-4 h-4" />
             </button>
           </div>
-          <div className="flex justify-between mt-2 px-1">
-              <p className="text-[10px] text-slate-500 font-mono">OFFLINE MODE // v2.2.0</p>
+          <div className="flex items-center justify-between mt-3 px-1">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">System Secure</p>
+              </div>
+              <p className="text-[10px] text-slate-600 font-mono font-bold tracking-tighter">AGENT v2.4.0_STABLE</p>
           </div>
         </form>
       </div>

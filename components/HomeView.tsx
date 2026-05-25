@@ -201,9 +201,9 @@ const HomeView: React.FC<HomeViewProps> = ({
         )}
 
         <div className={`flex-1 ${viewMode === 'grid' ? 'p-5' : ''} flex items-center justify-between min-w-0`}>
-          <div className="flex items-center gap-4 overflow-hidden min-w-0 flex-1" onClick={() => !inTrash && onOpenFile(file.id)}>
+          <div className="flex items-center gap-4 overflow-hidden min-w-0 flex-1 group/title" onClick={() => !inTrash && onOpenFile(file.id)}>
             {viewMode === 'list' && (
-              <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0">
+              <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0 group-hover/title:bg-emerald-500/20 transition-colors">
                 <FileSpreadsheet className="w-5 h-5" />
               </div>
             )}
@@ -220,11 +220,21 @@ const HomeView: React.FC<HomeViewProps> = ({
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <h3 className="text-sm font-bold text-white truncate group-hover:text-cyan-400 transition-colors">{file.name}</h3>
+                <h3 className="text-sm font-bold text-white truncate group-hover/title:text-cyan-400 transition-colors flex items-center gap-2">
+                  {file.name}
+                  {viewMode === 'list' && file.pinned && <Pin className="w-3 h-3 text-amber-500 fill-current" />}
+                </h3>
               )}
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{formatMeta(file)}</p>
-                {inTrash && <span className="text-[9px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded uppercase font-bold">Trash</span>}
+              <div className="flex items-center gap-2 mt-1.5">
+                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-800/50 rounded-full border border-white/5">
+                  <Clock className="w-2.5 h-2.5 text-slate-500" />
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{formatMeta(file).split('·')[1].trim()}</p>
+                </div>
+                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-800/50 rounded-full border border-white/5">
+                  <HardDrive className="w-2.5 h-2.5 text-slate-500" />
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{file.rowCount} Rows</p>
+                </div>
+                {inTrash && <span className="text-[9px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full uppercase font-black tracking-tighter border border-red-500/20">Trash</span>}
               </div>
             </div>
           </div>
@@ -359,15 +369,18 @@ const HomeView: React.FC<HomeViewProps> = ({
       {/* Sidebar - Narrow & Pro */}
       <aside className="w-56 shrink-0 border-r border-slate-800/60 flex flex-col bg-slate-900/20 backdrop-blur-md">
         <div className="p-6">
-          <div className="flex items-center gap-2 mb-8">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-              <FileSpreadsheet className="w-5 h-5 text-white" />
+          <div className="flex items-center gap-3 mb-8 group cursor-pointer" onClick={() => setNavSection('home')}>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:scale-110 transition-transform duration-300">
+              <Activity className="w-6 h-6 text-white animate-pulse" />
             </div>
-            <span className="font-bold text-white tracking-tight">RealSheet</span>
+            <div className="flex flex-col">
+              <span className="font-black text-white tracking-tighter text-lg leading-none">RealSheet</span>
+              <span className="text-[10px] text-cyan-500 font-bold tracking-[0.2em] uppercase">Enterprise</span>
+            </div>
           </div>
         </div>
 
-        <nav className="flex-1 px-3 space-y-1">
+        <nav className="flex-1 px-3 space-y-2">
           {[
             { id: 'home' as NavSection, label: 'Dashboard', icon: Home },
             { id: 'all' as NavSection, label: 'All Files', icon: FolderOpen },
@@ -377,28 +390,37 @@ const HomeView: React.FC<HomeViewProps> = ({
             <button
               key={id}
               onClick={() => setNavSection(id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-medium transition-all duration-200 ${navSection === id
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-bold transition-all duration-300 relative group/nav ${navSection === id
                 ? 'bg-cyan-500/10 text-cyan-400 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]'
-                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
                 }`}
             >
-              <Icon className={`w-4 h-4 ${navSection === id ? 'animate-pulse' : ''}`} />
+              {navSection === id && <div className="absolute left-0 w-1 h-6 bg-cyan-500 rounded-r-full shadow-[0_0_10px_rgba(6,182,212,0.8)]" />}
+              <Icon className={`w-5 h-5 transition-transform group-hover/nav:scale-110 ${navSection === id ? 'animate-pulse' : ''}`} />
               {label}
             </button>
           ))}
         </nav>
 
         <div className="p-4 border-t border-slate-800/60">
-          <div className="bg-slate-800/40 rounded-2xl p-4 border border-white/5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cloud Sync</span>
+          <div className="bg-slate-900/40 rounded-2xl p-4 border border-white/5 shadow-inner">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Storage</span>
+              </div>
+              <span className="text-[10px] font-bold text-cyan-400">68%</span>
             </div>
-            <div className="w-full bg-slate-700/50 h-1 rounded-full mb-1">
-              <div className="bg-cyan-500 h-full w-2/3 rounded-full" />
+            <div className="w-full bg-slate-800 h-1.5 rounded-full mb-2 overflow-hidden">
+              <div className="bg-gradient-to-r from-cyan-500 to-blue-500 h-full w-2/3 rounded-full shadow-[0_0_8px_rgba(6,182,212,0.4)]" />
             </div>
-            <p className="text-[10px] text-slate-500">2.4 GB of 5 GB used</p>
+            <p className="text-[10px] text-slate-500 font-medium text-center">3.4 GB of 5 GB used</p>
           </div>
+
+          <button onClick={onOpenSettings} className="w-full mt-4 flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition-all text-sm font-medium">
+            <Settings className="w-4 h-4" />
+            Settings
+          </button>
         </div>
       </aside>
 
@@ -452,10 +474,19 @@ const HomeView: React.FC<HomeViewProps> = ({
                   { type: 'finance', label: 'Risk Analysis', icon: Activity, color: 'cyan', desc: 'Portfolio insights' },
                 ].map((tpl) => (
                   <button key={tpl.type} onClick={() => onTemplate(tpl.type as any)} className="group flex flex-col items-start text-left">
-                    <div className={`w-full aspect-[1.4/1] bg-slate-900 border border-slate-800/80 rounded-2xl mb-4 flex items-center justify-center transition-all duration-500 group-hover:border-${tpl.color}-500/50 group-hover:-translate-y-2 group-hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)] relative overflow-hidden`}>
-                      <tpl.icon className={`w-10 h-10 text-${tpl.color}-500/70 group-hover:scale-110 transition-transform duration-500`} />
-                      <div className={`absolute inset-0 bg-gradient-to-tr from-${tpl.color}-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-                      <div className={`absolute bottom-0 left-0 right-0 h-1 bg-${tpl.color}-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left`} />
+                    <div className={`w-full aspect-[1.4/1] bg-slate-900 border border-slate-800/80 rounded-2xl mb-4 flex items-center justify-center transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)] relative overflow-hidden`}>
+                      <div className={`absolute inset-0 bg-gradient-to-tr opacity-0 group-hover:opacity-10 transition-opacity duration-500 ${
+                        tpl.color === 'emerald' ? 'from-emerald-500' :
+                        tpl.color === 'cyan' ? 'from-cyan-500' : 'from-indigo-500'
+                      }`} />
+                      <tpl.icon className={`w-10 h-10 transition-all duration-500 group-hover:scale-110 ${
+                        tpl.color === 'emerald' ? 'text-emerald-500/70 group-hover:text-emerald-400' :
+                        tpl.color === 'cyan' ? 'text-cyan-500/70 group-hover:text-cyan-400' : 'text-indigo-500/70 group-hover:text-indigo-400'
+                      }`} />
+                      <div className={`absolute bottom-0 left-0 right-0 h-1 transition-transform duration-500 origin-left scale-x-0 group-hover:scale-x-100 ${
+                        tpl.color === 'emerald' ? 'bg-emerald-500' :
+                        tpl.color === 'cyan' ? 'bg-cyan-500' : 'bg-indigo-500'
+                      }`} />
                     </div>
                     <span className="text-sm font-bold text-white mb-1 group-hover:text-white/90 transition-colors">{tpl.label}</span>
                     <p className="text-xs text-slate-500">{tpl.desc}</p>
