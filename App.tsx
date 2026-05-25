@@ -1438,14 +1438,14 @@ const App: React.FC = () => {
     { id: 'format', label: 'Conditional Formatting', icon: PaintBucket, action: () => setIsFormattingModalOpen(true), shortcut: 'Alt+F' },
     { id: 'tools', label: 'Data Tools (Dedup, Split)', icon: DatabaseZap, action: () => setDataToolsState({ isOpen: true, mode: 'duplicates' }), shortcut: 'Alt+D' },
     { id: 'export', label: 'Export to CSV', icon: FileDown, action: handleDownload, shortcut: 'Alt+E' },
-    { id: 'dashboard', label: 'Go to Dashboard', icon: LayoutGrid, action: () => setActiveTab('dashboard'), shortcut: 'Alt+2' },
-    { id: 'grid', label: 'Go to Data Grid', icon: FileSpreadsheet, action: () => setActiveTab('grid'), shortcut: 'Alt+1' },
+    { id: 'dashboard', label: 'Go to Dashboard', icon: LayoutGrid, action: () => setActiveTab('dashboard'), shortcut: 'Alt+Tab' },
+    { id: 'grid', label: 'Go to Data Grid', icon: FileSpreadsheet, action: () => setActiveTab('grid'), shortcut: 'Alt+Tab' },
     { id: 'agent', label: 'Toggle AI Agent', icon: Zap, action: () => setIsSidebarOpen(prev => !prev), shortcut: 'Alt+/' },
     { id: 'upgrade', label: 'Upgrade to Pro', icon: Crown, action: () => setIsUpgradeModalOpen(true), shortcut: 'Alt+U' },
     { id: 'share', label: 'Share Spreadsheet', icon: Share2, action: () => setIsShareModalOpen(true), shortcut: 'Alt+Shift+S' },
     { id: 'settings', label: 'Open Settings', icon: User, action: () => setIsSettingsOpen(true), shortcut: 'Alt+,' },
     { id: 'shortcuts', label: 'Keyboard Shortcuts', icon: Code, action: () => setIsShortcutsOpen(true), shortcut: '?' },
-    { id: 'home', label: 'Back to Home', icon: Home, action: handleGoHome, shortcut: 'Alt+Q' },
+    { id: 'home', label: 'Back to Home', icon: Home, action: handleGoHome, shortcut: 'Alt+H' },
   ];
 
   const getSelectedCellAddress = () => {
