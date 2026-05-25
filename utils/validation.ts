@@ -23,7 +23,7 @@ export const validateCell = (
   const validation = applicableValidation;
   
   switch (validation.type) {
-    case 'list':
+    case 'list': {
       if (!validation.criteria.listValues) {
         return { isValid: true };
       }
@@ -32,8 +32,9 @@ export const validateCell = (
         isValid: isValidList,
         error: !isValidList ? validation.errorMessage || 'Value not in list' : undefined
       };
+    }
 
-    case 'number':
+    case 'number': {
       const numValue = parseFloat(String(value));
       if (isNaN(numValue)) {
         return {
@@ -41,11 +42,11 @@ export const validateCell = (
           error: validation.errorMessage || 'Must be a number'
         };
       }
-      
+
       if (validation.criteria.operator && validation.criteria.value1 !== undefined) {
         const threshold = parseFloat(String(validation.criteria.value1));
         let isValid = false;
-        
+
         switch (validation.criteria.operator) {
           case '>':
             isValid = numValue > threshold;
@@ -66,15 +67,16 @@ export const validateCell = (
             isValid = numValue !== threshold;
             break;
         }
-        
+
         return {
           isValid,
           error: !isValid ? validation.errorMessage || `Number must be ${validation.criteria.operator} ${threshold}` : undefined
         };
       }
       break;
+    }
 
-    case 'date':
+    case 'date': {
       const dateValue = new Date(String(value));
       if (isNaN(dateValue.getTime())) {
         return {
@@ -82,11 +84,11 @@ export const validateCell = (
           error: validation.errorMessage || 'Must be a valid date'
         };
       }
-      
+
       if (validation.criteria.operator && validation.criteria.value1) {
         const thresholdDate = new Date(String(validation.criteria.value1));
         let isValid = false;
-        
+
         switch (validation.criteria.operator) {
           case '>':
             isValid = dateValue > thresholdDate;
@@ -104,20 +106,21 @@ export const validateCell = (
             isValid = dateValue.toDateString() === thresholdDate.toDateString();
             break;
         }
-        
+
         return {
           isValid,
           error: !isValid ? validation.errorMessage || `Date must be ${validation.criteria.operator} ${thresholdDate.toDateString()}` : undefined
         };
       }
       break;
+    }
 
-    case 'textLength':
+    case 'textLength': {
       const length = String(value).length;
       if (validation.criteria.operator && validation.criteria.value1 !== undefined) {
         const threshold = parseInt(String(validation.criteria.value1));
         let isValid = false;
-        
+
         switch (validation.criteria.operator) {
           case '>':
             isValid = length > threshold;
@@ -135,13 +138,14 @@ export const validateCell = (
             isValid = length === threshold;
             break;
         }
-        
+
         return {
           isValid,
           error: !isValid ? validation.errorMessage || `Text length must be ${validation.criteria.operator} ${threshold}` : undefined
         };
       }
       break;
+    }
   }
 
   return { isValid: true };

@@ -117,6 +117,8 @@ const EnhancedCell = memo(({ rowIndex, colIndex, col, value, displayValue, isSel
   );
 });
 
+EnhancedCell.displayName = 'EnhancedCell';
+
 const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, onSheetExpand, onFillRange, onSortColumn, onFilterChange, activeFilters, highlightedCells, isFormatPainterActive, onFormatPainterApply }: any) => {
   const [scrollTop, setScrollTop] = useState(0), [scrollLeft, setScrollLeft] = useState(0);
   const [containerHeight, setContainerHeight] = useState(600), [containerWidth, setContainerWidth] = useState(800);
