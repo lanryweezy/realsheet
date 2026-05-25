@@ -4,17 +4,23 @@ import { ChatMessage, SheetData, ChartConfig, EnhancedAnalysisResult } from '../
 import { analyzeDataWithGemini } from '../services/geminiService';
 import { transformData } from '../services/apiClient';
 import { safeEvaluate } from '../utils/safeFormulaParser';
+import { parseRange, excelColToIndex } from '../services/formulaService';
+import { evaluateWithHF, syncWorkbook } from '../services/hyperformulaService';
 import Visualization from './Visualization';
+
+import { Workbook } from '../types';
 
 interface AgentProps {
   sheetData: SheetData | null;
+  workbook?: Workbook | null;
   onAddToDashboard: (config: ChartConfig) => void;
   onUpdateData: (newData: SheetData) => void;
+  onSwitchSheet?: (index: number) => void;
   promptOverride: string | null;
   onClearPromptOverride: () => void;
 }
 
-const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData, promptOverride, onClearPromptOverride }) => {
+const Agent: React.FC<AgentProps> = ({ sheetData, workbook, onAddToDashboard, onUpdateData, onSwitchSheet, promptOverride, onClearPromptOverride }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -25,6 +31,8 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [thinkingStep, setThinkingStep] = useState<string | null>(null);
+   const [currentTurn, setCurrentTurn] = useState(0);
   const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -152,130 +160,392 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
     setIsLoading(true);
 
     try {
-        const history = messages
-            .filter(m => m.id !== 'welcome' && m.id !== 'system-start')
-            .map(m => ({ role: m.role, parts: [{ text: m.text }] }));
-            
-        // Updated to use the enhanced analysis result
-        const result: EnhancedAnalysisResult = await analyzeDataWithGemini(userMsg.text, sheetData, history);
-
-        let actionMessage = "";
+        let currentMessages = [...messages, userMsg];
+        let turnCount = 0;
+        const MAX_TURNS = 5;
         let finalSheetData = { ...sheetData } as SheetData;
         let hasChanges = false;
+        let lastResult: EnhancedAnalysisResult | null = null;
 
-        // 1. Show Chain of Thought if available
-        if (result.chainOfThought) {
-          const chainOfThoughtMsg: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            role: 'model',
-            text: `💡 **Chain of Thought:** ${result.chainOfThought}`,
-            timestamp: new Date()
-          };
-          setMessages(prev => [...prev, chainOfThoughtMsg]);
-        }
+        while (turnCount < MAX_TURNS) {
+            turnCount++;
+             setCurrentTurn(turnCount);
 
-        // 2. Show Task Plan if available
-        if (result.taskPlan && result.taskPlan.length > 0) {
-          const taskPlanMsg: ChatMessage = {
-            id: (Date.now() + 2).toString(),
-            role: 'model',
-            text: `📋 **Task Plan:**\n${result.taskPlan.map((step, i) => `${i + 1}. ${step}`).join('\n')}`,
-            timestamp: new Date()
-          };
-          setMessages(prev => [...prev, taskPlanMsg]);
-        }
+            const history = currentMessages
+                .filter(m => m.id !== 'welcome' && m.id !== 'system-start')
+                .map(m => ({ role: m.role, parts: [{ text: m.text }] }));
 
-        // 3. Handle Transformations (SECURE - uses serverless API)
-        if (result.transformationCode && sheetData) {
-            try {
-                // Use serverless API for safe execution (API key on server, sandboxed environment)
-                const transformResponse = await transformData({
-                    code: result.transformationCode,
-                    data: JSON.parse(JSON.stringify(sheetData.rows)),
+            setThinkingStep(`Reasoning turn ${turnCount}...`);
+            const result: EnhancedAnalysisResult = await analyzeDataWithGemini(
+                turnCount === 1 ? userMsg.text : "Please continue based on the tool results.",
+                finalSheetData,
+                history
+            );
+
+            lastResult = result;
+            let actionMessage = "";
+            let toolResults: string[] = [];
+
+            // 1. Log Chain of Thought internally to currentMessages for model context
+            if (result.chainOfThought) {
+                currentMessages.push({
+                    id: `cot-${Date.now()}-${turnCount}`,
+                    role: 'model',
+                    text: `💡 **Chain of Thought:** ${result.chainOfThought}`,
+                    timestamp: new Date(),
+                    isThinking: true
                 });
-
-                if (transformResponse.success && transformResponse.data) {
-                    const transformedRows = transformResponse.data;
-
-                    if (!Array.isArray(transformedRows)) {
-                        throw new Error("Transformation code did not return an array.");
-                    }
-
-                    const allKeys = new Set<string>();
-                    transformedRows.forEach((r: any) => Object.keys(r).forEach(k => allKeys.add(k)));
-                    const newColumns = Array.from(allKeys);
-
-                    finalSheetData = {
-                        ...finalSheetData,
-                        columns: newColumns,
-                        rows: transformedRows
-                    };
-                    hasChanges = true;
-                    actionMessage += "\n\n⚡ Function executed & data updated.";
-                } else {
-                    throw new Error(transformResponse.error || 'Transformation failed');
-                }
-            } catch (err) {
-                console.error("Transformation Error", err);
-                actionMessage += "\n\n⚠️ Failed to execute data transformation function.";
             }
-        }
 
-        // 4. Handle Formatting Rules
-        if (result.formattingRules && result.formattingRules.length > 0 && sheetData) {
-            try {
-                // Merge new rules with existing
-                const mergedRules = [...(sheetData.formattingRules || []), ...result.formattingRules];
-                finalSheetData = {
-                    ...finalSheetData,
-                    formattingRules: mergedRules
-                };
-                hasChanges = true;
-                actionMessage += `\n\n🎨 Applied ${result.formattingRules.length} conditional formatting rules.`;
-            } catch (err) {
-                console.error("Formatting Error", err);
-            }
-        }
-
-        // 5. Handle Filter Code
-        if (result.filterCode && sheetData) {
-             finalSheetData = {
-                 ...finalSheetData,
-                 filter: {
-                     description: `Filter: "${userMsg.text}"`,
-                     code: result.filterCode
-                 }
-             };
-             hasChanges = true;
-             actionMessage += `\n\n🔍 Filter applied based on request.`;
-        }
-
-        // 6. Handle Comments
-        if (result.generatedComments && result.generatedComments.length > 0 && sheetData) {
-            const newComments = { ...(finalSheetData.comments || {}) };
-            result.generatedComments.forEach(c => {
-                newComments[`${c.rowIndex}-${c.colIndex}`] = c.text;
-            });
-            finalSheetData = {
-                ...finalSheetData,
-                comments: newComments
+            // Verification Check - inspired by Spreadsheet-RL's outcome-based rewards
+            const verifyOutcome = () => {
+                if (!hasChanges) return "No changes made yet.";
+                // Simple verification: ensure all formula cells evaluate correctly
+                syncWorkbook(finalSheetData);
+                const errors: string[] = [];
+                finalSheetData.rows.forEach((row, rIdx) => {
+                    finalSheetData.columns.forEach((col) => {
+                        const val = row[col];
+                        if (typeof val === 'string' && val.startsWith('=')) {
+                            const result = evaluateWithHF(val, rIdx, col, finalSheetData);
+                            if (result === '#VALUE!' || result === '#ERROR!') {
+                                errors.push(`Error in cell ${col}${rIdx + 1}: ${result}`);
+                            }
+                        }
+                    });
+                });
+                return errors.length === 0 ? "Verification passed: All cells consistent." : `Verification warning: ${errors.join(', ')}`;
             };
-            hasChanges = true;
-            actionMessage += `\n\n💬 Added ${result.generatedComments.length} comments.`;
+
+            // 2. Log Task Plan internally
+            if (result.taskPlan && result.taskPlan.length > 0 && turnCount === 1) {
+                currentMessages.push({
+                    id: `plan-${Date.now()}-${turnCount}`,
+                    role: 'model',
+                    text: `📋 **Task Plan:**\n${result.taskPlan.map((step, i) => `${i + 1}. ${step}`).join('\n')}`,
+                    timestamp: new Date(),
+                    isThinking: true
+                });
+            }
+
+            // 3. Handle Transformations
+            if (result.transformationCode && finalSheetData) {
+                try {
+                    const transformResponse = await transformData({
+                        code: result.transformationCode,
+                        data: JSON.parse(JSON.stringify(finalSheetData.rows)),
+                    });
+
+                    if (transformResponse.success && transformResponse.data) {
+                        const transformedRows = transformResponse.data;
+                        const allKeys = new Set<string>();
+                        transformedRows.forEach((r: any) => Object.keys(r).forEach(k => allKeys.add(k)));
+                        const newColumns = Array.from(allKeys);
+
+                        finalSheetData = {
+                            ...finalSheetData,
+                            columns: newColumns,
+                            rows: transformedRows
+                        };
+                        hasChanges = true;
+                        actionMessage += "\n\n⚡ Function executed & data updated.";
+                        toolResults.push("Data transformation successful.");
+                    }
+                } catch (err) {
+                    console.error("Transformation Error", err);
+                    toolResults.push(`Transformation error: ${err}`);
+                }
+            }
+
+            // 4. Handle Spreadsheet-Native Tool Calls (Spreadsheet-RL style)
+            if (result.toolCalls && result.toolCalls.length > 0) {
+                const readOnlyTools = ['inspect_range', 'find_cells', 'recalculate_and_read', 'get_sheet_list'];
+                const writeTools = ['fill_formula', 'clear_range', 'delete_rows', 'delete_columns', 'code_interpreter', 'switch_active_sheet'];
+
+                // Validate mix (Harness Rule: must not mix read-only and write-related)
+                const hasReadOnly = result.toolCalls.some(c => readOnlyTools.includes(c.tool));
+                const hasWrite = result.toolCalls.some(c => writeTools.includes(c.tool));
+
+                if (hasReadOnly && hasWrite) {
+                    console.warn("Agent mixed read-only and write-related calls. Rule violation.");
+                    toolResults.push("Error: Cannot mix read-only and write-related tool calls in a single turn.");
+                    break;
+                }
+
+                if (hasWrite && result.toolCalls.length > 1) {
+                    console.warn("Agent issued multiple write calls. Rule violation.");
+                    toolResults.push("Error: Write-related calls must be issued one at a time.");
+                    break;
+                }
+
+                for (const call of result.toolCalls) {
+                    const { tool, parameters } = call;
+
+                    switch (tool) {
+                        case 'fill_formula': {
+                            const { range, formula } = parameters;
+                            setThinkingStep(`Filling formula ${formula} in ${range}...`);
+                            const rangeRef = parseRange(range);
+                            if (rangeRef[0] && rangeRef[1]) {
+                                const newRows = [...finalSheetData.rows];
+                                const startR = rangeRef[0].rowIndex;
+                                const startC = rangeRef[0].colIndex;
+
+                                for (let r = startR; r <= rangeRef[1].rowIndex; r++) {
+                                    for (let c = startC; c <= rangeRef[1].colIndex; c++) {
+                                        if (r < newRows.length) {
+                                            const colKey = finalSheetData.columns[c];
+                                            // Adjust formula references relative to the top-left cell of the range
+                                            const adjustedFormula = adjustFormulaReferences(formula, r - startR, c - startC);
+                                            newRows[r] = { ...newRows[r], [colKey]: adjustedFormula };
+                                        }
+                                    }
+                                }
+                                finalSheetData = { ...finalSheetData, rows: newRows };
+                                hasChanges = true;
+                                actionMessage += `\n\n📝 Filled formula ${formula} in range ${range}.`;
+                                toolResults.push(`Successfully filled formula ${formula} in range ${range}.`);
+                            }
+                            break;
+                        }
+                        case 'clear_range': {
+                            const { range } = parameters;
+                            setThinkingStep(`Clearing range ${range}...`);
+                            const rangeRef = parseRange(range);
+                            if (rangeRef[0] && rangeRef[1]) {
+                                const newRows = [...finalSheetData.rows];
+                                for (let r = rangeRef[0].rowIndex; r <= rangeRef[1].rowIndex; r++) {
+                                    for (let c = rangeRef[0].colIndex; c <= rangeRef[1].colIndex; c++) {
+                                        if (r < newRows.length) {
+                                            const colKey = finalSheetData.columns[c];
+                                            newRows[r] = { ...newRows[r], [colKey]: "" };
+                                        }
+                                    }
+                                }
+                                finalSheetData = { ...finalSheetData, rows: newRows };
+                                hasChanges = true;
+                                actionMessage += `\n\n🧹 Cleared range ${range}.`;
+                                toolResults.push(`Successfully cleared range ${range}.`);
+                            }
+                            break;
+                        }
+                        case 'delete_rows': {
+                            const { startIndex, count } = parameters;
+                            setThinkingStep(`Deleting ${count} rows from index ${startIndex}...`);
+                            const newRows = [...finalSheetData.rows];
+                            newRows.splice(startIndex, count);
+                            finalSheetData = { ...finalSheetData, rows: newRows };
+                            hasChanges = true;
+                            actionMessage += `\n\n🗑️ Deleted ${count} rows starting from index ${startIndex}.`;
+                            toolResults.push(`Successfully deleted ${count} rows starting from index ${startIndex}.`);
+                            break;
+                        }
+                        case 'delete_columns': {
+                            const { columns: colsToDelete } = parameters;
+                            setThinkingStep(`Deleting columns: ${colsToDelete.join(', ')}...`);
+                            const newColumns = finalSheetData.columns.filter(c => !colsToDelete.includes(c));
+                            const newRows = finalSheetData.rows.map(row => {
+                                const newRow = { ...row };
+                                colsToDelete.forEach((c: string) => delete newRow[c]);
+                                return newRow;
+                            });
+                            finalSheetData = { ...finalSheetData, columns: newColumns, rows: newRows };
+                            hasChanges = true;
+                            actionMessage += `\n\n🗑️ Deleted columns: ${colsToDelete.join(', ')}.`;
+                            toolResults.push(`Successfully deleted columns: ${colsToDelete.join(', ')}.`);
+                            break;
+                        }
+                        case 'inspect_range': {
+                            const { range } = parameters;
+                            setThinkingStep(`Inspecting range ${range}...`);
+                            const rangeRef = parseRange(range);
+                            const sheetSummary = `Sheet name: ${finalSheetData.name}, Dimension: ${finalSheetData.rows.length + 1}x${finalSheetData.columns.length}`;
+
+                            if (rangeRef[0] && rangeRef[1]) {
+                                const inspected: any[] = [];
+                                for (let r = rangeRef[0].rowIndex; r <= rangeRef[1].rowIndex; r++) {
+                                    const rowData: any = {};
+                                    for (let c = rangeRef[0].colIndex; c <= rangeRef[1].colIndex; c++) {
+                                        if (r < finalSheetData.rows.length) {
+                                            const colKey = finalSheetData.columns[c];
+                                            const cellValue = finalSheetData.rows[r][colKey];
+                                            const cellStyle = finalSheetData.cellStyles?.[`${r}-${colKey}`];
+                                            const hasComment = finalSheetData.comments?.[`${r}-${colKey}`];
+
+                                            rowData[colKey] = {
+                                                value: cellValue,
+                                                isFormula: typeof cellValue === 'string' && cellValue.startsWith('='),
+                                                style: cellStyle,
+                                                hasComment: !!hasComment
+                                            };
+                                        }
+                                    }
+                                    inspected.push(rowData);
+                                }
+                                toolResults.push(`INSPECT [${range}]:\nSummary: ${sheetSummary}\nData: ${JSON.stringify(inspected)}`);
+                                actionMessage += `\n\n🔍 Inspected range ${range} with metadata.`;
+                            }
+                            break;
+                        }
+                        case 'find_cells': {
+                            const { query } = parameters;
+                            setThinkingStep(`Searching for "${query}"...`);
+                            const matches: Array<{address: string, value: any}> = [];
+                            const lowerQuery = String(query).toLowerCase();
+
+                            // Check headers first (highest importance)
+                            finalSheetData.columns.forEach((col) => {
+                                if (col.toLowerCase().includes(lowerQuery)) {
+                                    matches.push({ address: `${col}1 (Header)`, value: col });
+                                }
+                            });
+
+                            // Check data cells
+                            finalSheetData.rows.forEach((row, rIdx) => {
+                                finalSheetData.columns.forEach((col) => {
+                                    const val = String(row[col]);
+                                    if (val.toLowerCase().includes(lowerQuery)) {
+                                        matches.push({ address: `${col}${rIdx + 2}`, value: val }); // +2 because 1-based and row 1 is headers
+                                    }
+                                });
+                            });
+
+                            const resultStr = matches.length > 0
+                                ? `Found ${matches.length} matches. Top results:\n${matches.slice(0, 15).map(m => `- ${m.address}: "${m.value}"`).join('\n')}`
+                                : "No matches found.";
+
+                            toolResults.push(`Search results for "${query}":\n${resultStr}`);
+                            actionMessage += `\n\n🔎 Searched for "${query}".`;
+                            break;
+                        }
+                        case 'recalculate_and_read': {
+                            const { range } = parameters;
+                            setThinkingStep(`Recalculating and reading ${range}...`);
+                            // Force a fresh sync for accurate recalculation
+                            syncWorkbook(finalSheetData);
+                            const rangeRef = parseRange(range);
+                            if (rangeRef[0] && rangeRef[1]) {
+                                const calculated: any[] = [];
+                                for (let r = rangeRef[0].rowIndex; r <= rangeRef[1].rowIndex; r++) {
+                                    const rowValues: any = {};
+                                    for (let c = rangeRef[0].colIndex; c <= rangeRef[1].colIndex; c++) {
+                                        if (r < finalSheetData.rows.length) {
+                                            const colKey = finalSheetData.columns[c];
+                                            const evaluated = evaluateWithHF(finalSheetData.rows[r][colKey], r, colKey, finalSheetData);
+                                            rowValues[colKey] = evaluated;
+                                        }
+                                    }
+                                    calculated.push(rowValues);
+                                }
+                                toolResults.push(`Recalculated evaluated values for ${range}: ${JSON.stringify(calculated)}`);
+                                actionMessage += `\n\n🔄 Recalculated and verified values in ${range}.`;
+                            }
+                            break;
+                        }
+                        case 'code_interpreter': {
+                            const { code } = parameters;
+                            setThinkingStep(`Executing custom code...`);
+                            try {
+                                const response = await transformData({
+                                    code,
+                                    data: JSON.parse(JSON.stringify(finalSheetData.rows)),
+                                });
+                                if (response.success && response.data) {
+                                    finalSheetData = { ...finalSheetData, rows: response.data };
+                                    hasChanges = true;
+                                    toolResults.push("Code execution successful.");
+                                    actionMessage += `\n\n💻 Executed custom code.`;
+                                }
+                            } catch (err) {
+                                toolResults.push(`Code execution error: ${err}`);
+                            }
+                            break;
+                        }
+                        case 'get_sheet_list': {
+                            setThinkingStep(`Retrieving sheet list...`);
+                            if (workbook) {
+                                const sheets = workbook.sheets.map((s, idx) => `${idx}: ${s.name}${idx === workbook.activeSheetIndex ? ' (Active)' : ''}`);
+                                toolResults.push(`Sheets in workbook:\n${sheets.join('\n')}`);
+                                actionMessage += `\n\n📋 Retrieved sheet list.`;
+                            } else {
+                                toolResults.push("Error: No workbook context available.");
+                            }
+                            break;
+                        }
+                        case 'switch_active_sheet': {
+                            const { index } = parameters;
+                            setThinkingStep(`Switching to sheet ${index}...`);
+                            if (workbook && onSwitchSheet && index >= 0 && index < workbook.sheets.length) {
+                                onSwitchSheet(index);
+                                toolResults.push(`Successfully switched to sheet: ${workbook.sheets[index].name}`);
+                                actionMessage += `\n\n🔌 Switched active sheet to "${workbook.sheets[index].name}".`;
+                                // Update local state for next turns in the loop
+                                finalSheetData = workbook.sheets[index];
+                            } else {
+                                toolResults.push(`Error: Invalid sheet index ${index}.`);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Handle other result fields (Formatting, Filter, Comments) if this is the final turn or they are present
+            if (result.formattingRules && result.formattingRules.length > 0) {
+                 const mergedRules = [...(finalSheetData.formattingRules || []), ...result.formattingRules];
+                 finalSheetData = { ...finalSheetData, formattingRules: mergedRules };
+                 hasChanges = true;
+            }
+            if (result.filterCode) {
+                 finalSheetData = { ...finalSheetData, filter: { description: `Filter: "${userMsg.text}"`, code: result.filterCode } };
+                 hasChanges = true;
+            }
+            if (result.generatedComments && result.generatedComments.length > 0) {
+                 const newComments = { ...(finalSheetData.comments || {}) };
+                 result.generatedComments.forEach(c => { newComments[`${c.rowIndex}-${c.colIndex}`] = c.text; });
+                 finalSheetData = { ...finalSheetData, comments: newComments };
+                 hasChanges = true;
+            }
+
+            const aiMsg: ChatMessage = {
+                id: `res-${Date.now()}-${turnCount}`,
+                role: 'model',
+                text: result.textResponse + actionMessage,
+                chartConfig: result.chartConfig,
+                timestamp: new Date(),
+                toolCalls: result.toolCalls,
+                turnResult: toolResults.join('\n')
+            };
+
+            // Only show the result to the user if it's the final turn or has a meaningful textResponse
+            if (turnCount === MAX_TURNS || (!result.toolCalls?.length && result.textResponse)) {
+                setMessages(prev => [...prev, aiMsg]);
+            }
+            currentMessages.push(aiMsg);
+
+            // If we have tool results, we need to feed them back to the model in the next turn
+            if (toolResults.length > 0 && turnCount < MAX_TURNS) {
+                const verificationResult = verifyOutcome();
+                const workbookSummary = `Workbook state: ${finalSheetData.rows.length} rows, ${finalSheetData.columns.length} columns. Columns: ${finalSheetData.columns.join(', ')}.`;
+
+                const systemFeedback: ChatMessage = {
+                    id: `sys-${Date.now()}-${turnCount}`,
+                    role: 'user',
+                    text: `TOOL RESULTS:\n${toolResults.join('\n')}\n\nVERIFICATION:\n${verificationResult}\n\nCONTEXT:\n${workbookSummary}\n\nINSTRUCTION:\nEvaluate if your plan is working. If verification failed or results are unexpected, state an "Alternative plan" and backtrack. If results are correct, proceed to the next step or finalize with a summary.`,
+                    timestamp: new Date()
+                };
+                currentMessages.push(systemFeedback);
+                // We don't show the raw tool results to the user to keep the chat clean
+                // But we continue the loop
+            } else {
+                // No tool results or max turns reached, exit loop
+                break;
+            }
         }
 
         if (hasChanges) {
             onUpdateData(finalSheetData);
         }
-
-        const aiMsg: ChatMessage = {
-            id: (Date.now() + 3).toString(),
-            role: 'model',
-            text: result.textResponse + actionMessage,
-            chartConfig: result.chartConfig,
-            timestamp: new Date()
-        };
-        setMessages(prev => [...prev, aiMsg]);
     } catch (error) {
         console.error(error);
         setMessages(prev => [...prev, {
@@ -286,6 +556,8 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
         }]);
     } finally {
         setIsLoading(false);
+        setThinkingStep(null);
+         setCurrentTurn(0);
     }
   };
 
@@ -316,6 +588,18 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
           >
             <div className={`chat-bubble ${msg.role}`}>
              <div className="whitespace-pre-wrap">{msg.text}</div>
+             {msg.text.includes("mixed read-only and write-related") && (
+                 <div className="mt-3 flex items-center gap-2 text-xs text-red-300 bg-red-900/30 p-2 rounded border border-red-500/20">
+                     <AlertCircle className="w-3 h-3" />
+                     <span>Harness Rule Violation: Mixed Calls</span>
+                 </div>
+             )}
+             {msg.text.includes("must be issued one at a time") && (
+                 <div className="mt-3 flex items-center gap-2 text-xs text-amber-300 bg-amber-900/30 p-2 rounded border border-amber-500/20">
+                     <AlertCircle className="w-3 h-3" />
+                     <span>Harness Rule: Serialized Write</span>
+                 </div>
+             )}
              {msg.text.includes("Function executed") && (
                  <div className="mt-3 flex items-center gap-2 text-xs text-emerald-300 bg-emerald-900/30 p-2 rounded border border-emerald-500/20">
                      <Calculator className="w-3 h-3" /> 
@@ -340,17 +624,73 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
                      <span>Comments added</span>
                  </div>
              )}
-             {msg.text.includes("Chain of Thought") && (
-                 <div className="mt-2 flex items-center gap-2 text-xs text-amber-300 bg-amber-900/30 p-2 rounded border border-amber-500/20">
-                     <Lightbulb className="w-3 h-3" /> 
-                     <span>Reasoning Process</span>
-                 </div>
+             {(msg.isThinking || msg.toolCalls) && (
+                <details className="mt-2 group/thinking">
+                    <summary className="flex items-center gap-2 text-[10px] text-slate-500 cursor-pointer hover:text-slate-400 transition-colors uppercase tracking-widest list-none">
+                        <div className="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center">
+                            <Sparkles className="w-2.5 h-2.5" />
+                        </div>
+                        {msg.isThinking ? (msg.text.includes("Chain of Thought") ? "View Reasoning" : "View Action Plan") : "View Agent Audit Log"}
+                        <ChevronRight className="w-3 h-3 group-open/thinking:rotate-90 transition-transform" />
+                    </summary>
+                    <div className="mt-2 text-[11px] text-slate-400 bg-slate-800/30 p-3 rounded-lg border border-slate-700/30 animate-in slide-in-from-top-1">
+                        {msg.isThinking ? (
+                            msg.text.replace(/💡 \*\*Chain of Thought:\*\* |📋 \*\*Task Plan:\*\*\n/, '')
+                        ) : (
+                            <div className="space-y-3">
+                                <div>
+                                    <div className="text-[10px] text-slate-500 uppercase tracking-tighter mb-1 font-bold">Tool Sequence</div>
+                                    <div className="space-y-1">
+                                        {msg.toolCalls?.map((call, i) => (
+                                            <div key={i} className="flex items-center gap-2 bg-slate-900/50 p-1.5 rounded border border-white/5">
+                                                <Code className="w-3 h-3 text-nexus-accent" />
+                                                <span className="font-mono text-[10px] text-nexus-accent">{call.tool}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                {msg.turnResult && (
+                                    <div>
+                                        <div className="text-[10px] text-slate-500 uppercase tracking-tighter mb-1 font-bold">Execution Feedback</div>
+                                        <pre className="p-2 bg-black/30 rounded text-[9px] font-mono whitespace-pre-wrap border border-white/5 overflow-x-auto max-h-32">
+                                            {msg.turnResult}
+                                        </pre>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </details>
              )}
-             {msg.text.includes("Task Plan") && (
-                 <div className="mt-2 flex items-center gap-2 text-xs text-blue-300 bg-blue-900/30 p-2 rounded border border-blue-500/20">
-                     <ListTodo className="w-3 h-3" /> 
-                     <span>Action Plan</span>
-                 </div>
+
+             {!msg.isThinking && (
+                <>
+                    <div className="whitespace-pre-wrap">{msg.text}</div>
+                    {msg.text.includes("Function executed") && (
+                        <div className="mt-3 flex items-center gap-2 text-xs text-emerald-300 bg-emerald-900/30 p-2 rounded border border-emerald-500/20">
+                            <Calculator className="w-3 h-3" />
+                            <span>Calculation applied</span>
+                        </div>
+                    )}
+                    {msg.text.includes("Applied") && msg.text.includes("rules") && (
+                        <div className="mt-2 flex items-center gap-2 text-xs text-indigo-300 bg-indigo-900/30 p-2 rounded border border-indigo-500/20">
+                            <PaintBucket className="w-3 h-3" />
+                            <span>Formatting rules applied</span>
+                        </div>
+                    )}
+                    {msg.text.includes("Filter applied") && (
+                        <div className="mt-2 flex items-center gap-2 text-xs text-cyan-300 bg-cyan-900/30 p-2 rounded border border-cyan-500/20">
+                            <Filter className="w-3 h-3" />
+                            <span>Filter Active</span>
+                        </div>
+                    )}
+                    {msg.text.includes("Added") && msg.text.includes("comments") && (
+                        <div className="mt-2 flex items-center gap-2 text-xs text-orange-300 bg-orange-900/30 p-2 rounded border border-orange-500/20">
+                            <MessageSquare className="w-3 h-3" />
+                            <span>Comments added</span>
+                        </div>
+                    )}
+                </>
              )}
             </div>
             
@@ -374,9 +714,23 @@ const Agent: React.FC<AgentProps> = ({ sheetData, onAddToDashboard, onUpdateData
           </div>
         ))}
         {isLoading && (
-            <div className="flex items-center gap-2 text-slate-500 text-xs p-2">
-                <Sparkles className="w-3 h-3 animate-spin text-nexus-accent" />
-                <span>Thinking through your request...</span>
+             <div className="p-2 space-y-2">
+                 <div className="flex items-center gap-2 text-slate-500 text-xs">
+                    <Sparkles className="w-3 h-3 animate-spin text-nexus-accent" />
+                    <span className="font-medium">{thinkingStep || 'Thinking through your request...'}</span>
+                 </div>
+                 <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map(step => (
+                        <div
+                            key={step}
+                            className={`h-1 flex-1 rounded-full transition-all duration-500 ${
+                                step < currentTurn ? 'bg-emerald-500' :
+                                step === currentTurn ? 'bg-nexus-accent animate-pulse' :
+                                'bg-slate-800'
+                            }`}
+                        />
+                    ))}
+                 </div>
             </div>
         )}
         <div ref={messagesEndRef} />

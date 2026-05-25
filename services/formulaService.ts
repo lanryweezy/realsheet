@@ -513,7 +513,7 @@ const evaluateFormula = (formula: string, allRows: Row[], columns: string[]): an
     }
 };
 
-const parseRange = (rangeStr: string): [{ rowIndex: number; colIndex: number } | null, { rowIndex: number; colIndex: number } | null] => {
+export const parseRange = (rangeStr: string): [{ rowIndex: number; colIndex: number } | null, { rowIndex: number; colIndex: number } | null] => {
     const parts = rangeStr.split(':');
     if (parts.length !== 2) return [null, null];
 

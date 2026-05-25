@@ -315,8 +315,8 @@ const HomeView: React.FC<HomeViewProps> = ({
     return renderFileCard(fileList[0], { showPin: true });
   };
 
-  const skeleton = () => (
-    <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden animate-pulse">
+  const skeleton = (key: number) => (
+    <div key={key} className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden animate-pulse">
       <div className="h-32 bg-slate-800/30" />
       <div className="p-5 space-y-3">
         <div className="h-4 bg-slate-800/50 rounded-lg w-3/4" />
@@ -446,8 +446,9 @@ const HomeView: React.FC<HomeViewProps> = ({
                 {/* Templates */}
                 {[
                   { type: 'budget', label: 'Smart Budget', icon: DollarSign, color: 'emerald', desc: 'Financial intelligence' },
-                  { type: 'invoice', label: 'Pro Invoice', icon: FileText, color: 'blue', desc: 'Enterprise billing' },
-                  { type: 'schedule', label: 'Dynamic Schedule', icon: Calendar, color: 'purple', desc: 'Perfect timing' },
+                  { type: 'finance', label: 'Risk Analysis', icon: Activity, color: 'cyan', desc: 'Portfolio insights' },
+
+                  { type: 'real_estate', label: 'Valuation', icon: Home, color: 'indigo', desc: 'Property modeling' },
                 ].map((tpl) => (
                   <button key={tpl.type} onClick={() => onTemplate(tpl.type as any)} className="group flex flex-col items-start text-left">
                     <div className={`w-full aspect-[1.4/1] bg-slate-900 border border-slate-800/80 rounded-2xl mb-4 flex items-center justify-center transition-all duration-500 group-hover:border-${tpl.color}-500/50 group-hover:-translate-y-2 group-hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)] relative overflow-hidden`}>
@@ -528,7 +529,7 @@ const HomeView: React.FC<HomeViewProps> = ({
                 <div className="min-h-[400px]">
                   {loading ? (
                     <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-3 gap-6' : 'space-y-4'}>
-                      {[...Array(6)].map((_, i) => skeleton())}
+                      {[...Array(6)].map((_, i) => skeleton(i))}
                     </div>
                   ) : filteredRecentGrouped.length === 0 && filteredPinned.length === 0 ? (
                     emptyState()

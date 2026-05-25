@@ -7,7 +7,7 @@ import {
   Wand2, Search, Hash, MoreVertical, Copy, MoveRight, MoveDown,
   SplitSquareHorizontal, CopyMinus, Calculator, Filter, MessageSquare as MessageSquareIcon,
   Target, FileDown, Zap, User, Code, Home, HelpCircle, Sun, Moon,
-  Bell, CheckCircle, Calendar, Bot, Phone, TrendingUp, Plug, Sparkles
+  Bell, CheckCircle, Calendar, Bot, Phone, TrendingUp, Plug, Sparkles, FileCode
 } from 'lucide-react';
 import Grid from './components/Grid';
 import Dashboard from './components/Dashboard';
@@ -92,7 +92,7 @@ const App: React.FC = () => {
   const [isSheetTabsVisible, setIsSheetTabsVisible] = useState(true);
 
   // Get current sheet data
-  const currentSheetData = workbook?.sheets[workbook.activeSheetIndex] || null;
+  const currentSheetData = workbook ? workbook.sheets[workbook.activeSheetIndex] : null;
 
   const [activeFilters, setActiveFilters] = useState<Record<string, any[]>>({});
   const [history, setHistory] = useState<SheetData[]>([]);
@@ -1827,8 +1827,11 @@ const App: React.FC = () => {
                 <aside className={`saas-sidebar-panel ${!isSidebarOpen ? 'hidden-panel' : ''}`}>
                   <Agent
                     sheetData={currentSheetData}
+                    workbook={workbook}
                     onAddToDashboard={addToDashboard}
                     onUpdateData={pushToHistory}
+                    onUpdateWorkbook={(wb) => setWorkbook(wb)}
+                    onSwitchSheet={handleActiveSheetChange}
                     promptOverride={agentPromptOverride}
                     onClearPromptOverride={() => setAgentPromptOverride(null)}
                   />

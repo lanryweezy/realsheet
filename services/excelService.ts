@@ -226,8 +226,75 @@ export const getMaxColumnIndex = (): number => {
     return 17576;
 };
 
-export const getTemplateData = (type: 'budget' | 'invoice' | 'schedule'): SheetData => {
+export const getTemplateData = (type: 'budget' | 'invoice' | 'schedule' | 'finance' | 'supply_chain' | 'hr' | 'sales' | 'real_estate'): SheetData => {
     switch(type) {
+        case 'finance':
+            return {
+                name: "Portfolio_Risk_Analysis.xlsx",
+                columns: ["Asset_ID", "Ticker", "Value_USD", "Volatility", "Beta", "Expected_Return", "Weight_%", "Contrib_to_Risk"],
+                rows: [
+                    { Asset_ID: "A001", Ticker: "SPY", Value_USD: 50000, Volatility: 0.15, Beta: 1.0, Expected_Return: 0.08, "Weight_%": "=C2/SUM($C$2:$C$5)", "Contrib_to_Risk": "=G2*D2" },
+                    { Asset_ID: "A002", Ticker: "QQQ", Value_USD: 35000, Volatility: 0.22, Beta: 1.2, Expected_Return: 0.12, "Weight_%": "=C3/SUM($C$2:$C$5)", "Contrib_to_Risk": "=G3*D3" },
+                    { Asset_ID: "A003", Ticker: "VTI", Value_USD: 75000, Volatility: 0.14, Beta: 0.95, Expected_Return: 0.07, "Weight_%": "=C4/SUM($C$2:$C$5)", "Contrib_to_Risk": "=G4*D4" },
+                    { Asset_ID: "A004", Ticker: "BND", Value_USD: 40000, Volatility: 0.05, Beta: 0.05, Expected_Return: 0.03, "Weight_%": "=C5/SUM($C$2:$C$5)", "Contrib_to_Risk": "=G5*D5" }
+                ],
+                formattingRules: [
+                    { id: 'risk-high', type: 'greaterThan', column: 'Contrib_to_Risk', value1: 0.03, style: { backgroundColor: '#fee2e2', textColor: '#991b1b' } }
+                ]
+            };
+        case 'supply_chain':
+            return {
+                name: "Inventory_Optimization.xlsx",
+                columns: ["SKU", "Warehouse", "Stock_Level", "Safety_Stock", "Status", "Demand_Forecast", "Restock_Qty"],
+                rows: [
+                    { SKU: "SKU-992", Warehouse: "East-01", Stock_Level: 450, Safety_Stock: 100, Status: "=IF(C2<D2,\"Low\",\"OK\")", Demand_Forecast: 500, Restock_Qty: "=MAX(0, F2-C2)" },
+                    { SKU: "SKU-104", Warehouse: "West-02", Stock_Level: 80, Safety_Stock: 150, Status: "=IF(C3<D3,\"Low\",\"OK\")", Demand_Forecast: 200, Restock_Qty: "=MAX(0, F3-C3)" },
+                    { SKU: "SKU-441", Warehouse: "East-01", Stock_Level: 1200, Safety_Stock: 500, Status: "=IF(C4<D4,\"Low\",\"OK\")", Demand_Forecast: 1500, Restock_Qty: "=MAX(0, F4-C4)" }
+                ],
+                formattingRules: [
+                    { id: 'low-stock', type: 'containsText', column: 'Status', value1: 'Low', style: { backgroundColor: '#fef3c7', textColor: '#92400e' } }
+                ]
+            };
+        case 'hr':
+            return {
+                name: "Compensation_Audit.xlsx",
+                columns: ["Employee_ID", "Department", "Position", "Salary_USD", "Performance_Rating", "Tenure_Years", "Bonus_Ratio", "Total_Comp"],
+                rows: [
+                    { Employee_ID: "E1001", Department: "Engineering", Position: "Senior Dev", Salary_USD: 145000, Performance_Rating: 4.5, Tenure_Years: 3, Bonus_Ratio: 0.15, Total_Comp: "=D2*(1+G2)" },
+                    { Employee_ID: "E1002", Department: "Sales", Position: "Account Manager", Salary_USD: 95000, Performance_Rating: 3.8, Tenure_Years: 1.5, Bonus_Ratio: 0.25, Total_Comp: "=D3*(1+G3)" },
+                    { Employee_ID: "E1003", Department: "Engineering", Position: "Junior Dev", Salary_USD: 85000, Performance_Rating: 4.2, Tenure_Years: 0.5, Bonus_Ratio: 0.10, Total_Comp: "=D4*(1+G4)" }
+                ],
+                formattingRules: [
+                    { id: 'high-perf', type: 'greaterThan', column: 'Performance_Rating', value1: 4.0, style: { backgroundColor: '#dcfce7', textColor: '#166534' } }
+                ]
+            };
+        case 'sales':
+            return {
+                name: "Sales_Performance_Tracker.xlsx",
+                columns: ["Region", "Sales_Rep", "Q1_Actual", "Q1_Target", "Gap", "Achievement_%", "Status"],
+                rows: [
+                    { Region: "North", Sales_Rep: "Sarah J.", Q1_Actual: 450000, Q1_Target: 400000, Gap: "=C2-D2", "Achievement_%": "=C2/D2", Status: "=IF(F2>=1,\"Quota Met\",\"Under\")" },
+                    { Region: "South", Sales_Rep: "Mike R.", Q1_Actual: 320000, Q1_Target: 350000, Gap: "=C3-D3", "Achievement_%": "=C3/D3", Status: "=IF(F3>=1,\"Quota Met\",\"Under\")" },
+                    { Region: "West", Sales_Rep: "Chris L.", Q1_Actual: 510000, Q1_Target: 480000, Gap: "=C4-D4", "Achievement_%": "=C4/D4", Status: "=IF(F4>=1,\"Quota Met\",\"Under\")" }
+                ],
+                formattingRules: [
+                    { id: 'quota-met', type: 'containsText', column: 'Status', value1: 'Quota Met', style: { backgroundColor: '#dcfce7', textColor: '#166534' } },
+                    { id: 'quota-under', type: 'containsText', column: 'Status', value1: 'Under', style: { backgroundColor: '#fee2e2', textColor: '#991b1b' } }
+                ]
+            };
+        case 'real_estate':
+            return {
+                name: "Property_Valuation_Model.xlsx",
+                columns: ["Property_Name", "Units", "Avg_Rent", "Gross_Income", "Op_Expenses", "NOI", "Cap_Rate", "Valuation"],
+                rows: [
+                    { Property_Name: "Sunset Apartments", Units: 24, Avg_Rent: 1200, Gross_Income: "=B2*C2*12", Op_Expenses: "=D2*0.35", NOI: "=D2-E2", Cap_Rate: 0.055, Valuation: "=F2/G2" },
+                    { Property_Name: "Oak Ridge Lofts", Units: 12, Avg_Rent: 1850, Gross_Income: "=B3*C3*12", Op_Expenses: "=D3*0.40", NOI: "=D3-E3", Cap_Rate: 0.060, Valuation: "=F3/G3" },
+                    { Property_Name: "Pine View Suites", Units: 48, Avg_Rent: 950, Gross_Income: "=B4*C4*12", Op_Expenses: "=D4*0.30", NOI: "=D4-E4", Cap_Rate: 0.052, Valuation: "=F4/G4" }
+                ],
+                formattingRules: [
+                    { id: 'high-val', type: 'greaterThan', column: 'Valuation', value1: 5000000, style: { backgroundColor: '#f0f9ff', textColor: '#075985' } }
+                ]
+            };
         case 'budget':
             return {
                 name: "Budget.xlsx",
