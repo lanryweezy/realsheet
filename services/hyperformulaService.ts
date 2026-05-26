@@ -61,7 +61,7 @@ export const evaluateWithHF = (
   if (!sheetData) return value;
 
   const strVal = String(value);
-  if (isAIFormula(strVal)) return "AI-PROCESSING...";
+  if (isAIFormula(strVal)) return "🪄 AI-PROCESSING...";
 
   if (!strVal.startsWith('=')) {
     const num = Number(strVal);

@@ -226,8 +226,49 @@ export const getMaxColumnIndex = (): number => {
     return 17576;
 };
 
-export const getTemplateData = (type: 'budget' | 'invoice' | 'schedule' | 'finance' | 'supply_chain' | 'hr' | 'sales' | 'real_estate'): SheetData => {
+export const getTemplateData = (type: 'budget' | 'invoice' | 'schedule' | 'finance' | 'supply_chain' | 'hr' | 'sales' | 'real_estate' | 'ecommerce' | 'freelancer' | 'crypto'): SheetData => {
     switch(type) {
+        case 'ecommerce':
+            return {
+                name: "E-commerce_Inventory.xlsx",
+                columns: ["Product_ID", "Name", "Category", "Supplier", "Cost_Price", "Sale_Price", "Markup_%", "Stock", "Reorder_Level", "Status"],
+                rows: [
+                    { Product_ID: "P101", Name: "Wireless Mouse", Category: "Electronics", Supplier: "TechSupply", Cost_Price: 15, Sale_Price: 29.99, "Markup_%": "=(F2-E2)/E2", Stock: 150, Reorder_Level: 20, Status: "=IF(H2<=I2,\"Restock\",\"OK\")" },
+                    { Product_ID: "P102", Name: "Mechanical Keyboard", Category: "Electronics", Supplier: "TechSupply", Cost_Price: 45, Sale_Price: 89.99, "Markup_%": "=(F3-E3)/E3", Stock: 15, Reorder_Level: 20, Status: "=IF(H3<=I3,\"Restock\",\"OK\")" },
+                    { Product_ID: "P103", Name: "USB-C Cable", Category: "Accessories", Supplier: "GlobalLink", Cost_Price: 3, Sale_Price: 12.99, "Markup_%": "=(F4-E4)/E4", Stock: 500, Reorder_Level: 100, Status: "=IF(H4<=I4,\"Restock\",\"OK\")" }
+                ],
+                formattingRules: [
+                    { id: 'restock', type: 'containsText', column: 'Status', value1: 'Restock', style: { backgroundColor: '#fee2e2', textColor: '#991b1b' } }
+                ]
+            };
+        case 'freelancer':
+            return {
+                name: "Freelancer_Invoicing.xlsx",
+                columns: ["Project", "Client", "Hours", "Rate", "Amount", "Status", "Due_Date", "Tax_%", "Total"],
+                rows: [
+                    { Project: "Website Redesign", Client: "Nexus App", Hours: 40, Rate: 75, Amount: "=C2*D2", Status: "Paid", Due_Date: "2024-05-15", "Tax_%": 0.1, Total: "=E2*(1+H2)" },
+                    { Project: "Logo Design", Client: "GreenEnergy", Hours: 10, Rate: 80, Amount: "=C3*D3", Status: "Sent", Due_Date: "2024-06-01", "Tax_%": 0.1, Total: "=E3*(1+H3)" },
+                    { Project: "SEO Audit", Client: "CloudNine", Hours: 15, Rate: 90, Amount: "=C4*D4", Status: "Overdue", Due_Date: "2024-05-01", "Tax_%": 0.1, Total: "=E4*(1+H4)" }
+                ],
+                formattingRules: [
+                    { id: 'overdue', type: 'containsText', column: 'Status', value1: 'Overdue', style: { backgroundColor: '#fee2e2', textColor: '#991b1b' } },
+                    { id: 'paid', type: 'containsText', column: 'Status', value1: 'Paid', style: { backgroundColor: '#dcfce7', textColor: '#166534' } }
+                ]
+            };
+        case 'crypto':
+            return {
+                name: "Crypto_Portfolio.xlsx",
+                columns: ["Asset", "Holdings", "Buy_Price", "Current_Price", "Investment", "Current_Value", "P/L", "P/L_%"],
+                rows: [
+                    { Asset: "Bitcoin", Holdings: 0.5, Buy_Price: 45000, Current_Price: 65000, Investment: "=B2*C2", Current_Value: "=B2*D2", "P/L": "=F2-E2", "P/L_%": "=(D2-C2)/C2" },
+                    { Asset: "Ethereum", Holdings: 5.0, Buy_Price: 2500, Current_Price: 3500, Investment: "=B3*C3", Current_Value: "=B3*D3", "P/L": "=F3-E3", "P/L_%": "=(D3-C3)/C3" },
+                    { Asset: "Solana", Holdings: 100, Buy_Price: 120, Current_Price: 150, Investment: "=B4*C4", Current_Value: "=B4*D4", "P/L": "=F4-E4", "P/L_%": "=(D4-C4)/C4" }
+                ],
+                formattingRules: [
+                    { id: 'profit', type: 'greaterThan', column: 'P/L', value1: 0, style: { backgroundColor: '#dcfce7', textColor: '#166534' } },
+                    { id: 'loss', type: 'lessThan', column: 'P/L', value1: 0, style: { backgroundColor: '#fee2e2', textColor: '#991b1b' } }
+                ]
+            };
         case 'finance':
             return {
                 name: "Portfolio_Risk_Analysis.xlsx",

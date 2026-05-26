@@ -119,15 +119,27 @@ const EnhancedCell = memo(({ rowIndex, colIndex, col, value, displayValue, isSel
 
 EnhancedCell.displayName = 'EnhancedCell';
 
-const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, onSheetExpand, onFillRange, onSortColumn, onFilterChange, activeFilters, highlightedCells, isFormatPainterActive, onFormatPainterApply }: any) => {
+const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, onSheetExpand, onFillRange, onSortColumn, onFilterChange, activeFilters, highlightedCells, isFormatPainterActive, onFormatPainterApply, presences = [] }: any) => {
   const [scrollTop, setScrollTop] = useState(0), [scrollLeft, setScrollLeft] = useState(0);
-  const [containerHeight, setContainerHeight] = useState(600), [containerWidth, setContainerWidth] = useState(800);
+  const [containerHeight, setContainerHeight] = useState(800), [containerWidth, setContainerWidth] = useState(1200);
   const [hoverCell, setHoverCell] = useState<any>(null), [isDragging, setIsDragging] = useState(false);
   const [isFilling, setIsFilling] = useState(false), [fillRange, setFillRange] = useState<any>(null);
   const [precedents, setPrecedents] = useState<Set<string>>(new Set());
   const [neuralPoints, setNeuralPoints] = useState<any>({ source: null, targets: [] });
   const [contextMenu, setContextMenu] = useState<any>(null);
   const gridContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!gridContainerRef.current) return;
+    const observer = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        setContainerHeight(entry.contentRect.height);
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(gridContainerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => { if (data) syncWorkbook(data); }, [data]);
 
@@ -199,17 +211,40 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
           </thead>
           <tbody>
             <tr style={{ height: visibleRange.startRow * ROW_HEIGHT }}><td colSpan={data.columns.length + 1} /></tr>
-            {data.rows.slice(visibleRange.startRow, visibleRange.startRow + 40).map((row: any, ri: number) => {
+            {data.rows.slice(visibleRange.startRow, visibleRange.endRow).map((row: any, ri: number) => {
               const rowIndex = visibleRange.startRow + ri;
               return (
                 <tr key={rowIndex} style={{ height: ROW_HEIGHT }}>
-                  <td className="bg-slate-900 border-b border-r border-slate-700 text-center text-[10px] font-bold text-slate-500 sticky left-0 z-10">{rowIndex + 1}</td>
+                  <td
+                    className="bg-slate-900 border-b border-r border-slate-700 text-center text-[10px] font-bold text-slate-500 sticky left-0 z-10 cursor-pointer hover:text-cyan-400 transition-colors"
+                    onClick={() => (window as any).openRecordDetail?.(rowIndex)}
+                  >
+                    {rowIndex + 1}
+                  </td>
                   {data.columns.map((col: any, ci: number) => {
                     const isSelected = selectedRange && rowIndex >= Math.min(selectedRange.start.rowIndex, selectedRange.end.rowIndex) && rowIndex <= Math.max(selectedRange.start.rowIndex, selectedRange.end.rowIndex) && ci >= Math.min(selectedRange.start.colIndex, selectedRange.end.colIndex) && ci <= Math.max(selectedRange.start.colIndex, selectedRange.end.colIndex);
                     const isPrecedent = precedents.has(`${rowIndex}-${ci}`);
                     const cellStyle = data.cellStyles?.[`${rowIndex}-${col}`] || {};
+
+                    // Presence check
+                    const remotePresence = presences.find((p: any) =>
+                      p.selection &&
+                      rowIndex >= Math.min(p.selection.start.rowIndex, p.selection.end.rowIndex) &&
+                      rowIndex <= Math.max(p.selection.start.rowIndex, p.selection.end.rowIndex) &&
+                      ci >= Math.min(p.selection.start.colIndex, p.selection.end.colIndex) &&
+                      ci <= Math.max(p.selection.start.colIndex, p.selection.end.colIndex)
+                    );
+
                     return (
-                      <td key={col} data-row={rowIndex} data-col={ci} className="p-0 border-b border-r border-slate-800 relative" onMouseDown={() => handleMouseDown(rowIndex, ci)} onMouseEnter={() => handleMouseEnter(rowIndex, ci)} style={{ border: isPrecedent ? '1px solid var(--nexus-accent)' : undefined }}>
+                      <td
+                        key={col}
+                        data-row={rowIndex}
+                        data-col={ci}
+                        className="p-0 border-b border-r border-slate-800 relative"
+                        onMouseDown={() => handleMouseDown(rowIndex, ci)}
+                        onMouseEnter={() => handleMouseEnter(rowIndex, ci)}
+                        style={{ border: isPrecedent ? '1px solid var(--nexus-accent)' : remotePresence ? `1px solid ${remotePresence.color}` : undefined }}
+                      >
                         <EnhancedCell rowIndex={rowIndex} colIndex={ci} col={col} value={row[col]} displayValue={evaluateWithHF(row[col], rowIndex, col, data)} isSelected={isSelected} onCellEdit={onCellEdit} isInHoverRange={hoverCell?.rowIndex === rowIndex || hoverCell?.colIndex === ci} onFillStart={(e: any) => { e.preventDefault(); setIsFilling(true); setFillRange(selectedRange); }} style={cellStyle} />
                       </td>
                     );
@@ -217,6 +252,7 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
                 </tr>
               );
             })}
+            <tr style={{ height: Math.max(0, (data.rows.length - visibleRange.endRow) * ROW_HEIGHT) }}><td colSpan={data.columns.length + 1} /></tr>
           </tbody>
         </table>
       </div>

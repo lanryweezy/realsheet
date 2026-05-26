@@ -7,7 +7,8 @@ import {
   Wand2, Search, Hash, MoreVertical, Copy, MoveRight, MoveDown,
   SplitSquareHorizontal, CopyMinus, Calculator, Filter, MessageSquare as MessageSquareIcon,
   Target, FileDown, Zap, User, Code, Home, HelpCircle, Sun, Moon,
-  Bell, CheckCircle, Calendar, Bot, Phone, TrendingUp, Plug, Sparkles, FileCode
+  Bell, CheckCircle, Calendar, Bot, Phone, TrendingUp, Plug, Sparkles, FileCode,
+  SquareFunction as FunctionSquare, GitBranch
 } from 'lucide-react';
 import Grid from './components/Grid';
 import Dashboard from './components/Dashboard';
@@ -36,6 +37,10 @@ import GoalSeekModal from './components/GoalSeekModal';
 import PivotModal from './components/PivotModal';
 import ChartWizardModal from './components/ChartWizardModal';
 import SmartFillModal from './components/SmartFillModal';
+import VisualFormulaBuilder from './components/VisualFormulaBuilder';
+import BranchManager from './components/BranchManager';
+import RecordDetailView from './components/RecordDetailView';
+import OnboardingTour from './components/OnboardingTour';
 import CommandPalette from './components/CommandPalette';
 import Ribbon, { type RibbonTab } from './components/Ribbon';
 import QuickAccessToolbar from './components/QuickAccessToolbar';
@@ -53,6 +58,9 @@ import { useGamification } from './src/hooks/useGamification';
 import { PowerHourBanner, CriticalHitFlash, StreakGuard } from './components/DopamineEngine';
 import { FormMode } from './components/FormMode';
 import { generateFormSchema, FormSchema } from './services/FormService';
+import { suggestAutomations, AutomationSuggestion } from './services/automationService';
+import { CollaborationService, Presence } from './services/collaborationService';
+import { Branch, Row } from './types';
 
 // Add mobile detection hook
 const useMobileDetection = () => {
@@ -153,6 +161,42 @@ const App: React.FC = () => {
   const [isPivotModalOpen, setIsPivotModalOpen] = useState(false);
   const [isChartWizardOpen, setIsChartWizardOpen] = useState(false);
   const [isSmartFillModalOpen, setIsSmartFillModalOpen] = useState(false);
+  const [isVisualFormulaBuilderOpen, setIsVisualFormulaBuilderOpen] = useState(false);
+  const [isBranchManagerOpen, setIsBranchManagerOpen] = useState(false);
+  const [isRecordDetailOpen, setIsRecordDetailOpen] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [activeDetailRowIndex, setActiveDetailRowIndex] = useState<number | null>(null);
+  const [presences, setPresences] = useState<Presence[]>([]);
+  const collabServiceRef = useRef<CollaborationService | null>(null);
+
+  useEffect(() => {
+     if (currentUser && !collabServiceRef.current) {
+        collabServiceRef.current = new CollaborationService(currentUser.name, (p) => {
+           setPresences(p.filter(presence => presence.userId !== collabServiceRef.current?.['currentUser'].userId));
+        });
+     }
+     return () => {
+        collabServiceRef.current?.disconnect();
+        collabServiceRef.current = null;
+     };
+  }, [currentUser]);
+
+  useEffect(() => {
+    const hasSeenTour = localStorage.getItem('realsheet_tour_seen');
+    if (!hasSeenTour) {
+       setIsOnboardingOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    (window as any).openVisualBuilder = () => setIsVisualFormulaBuilderOpen(true);
+    (window as any).openBranchManager = () => setIsBranchManagerOpen(true);
+    (window as any).openRecordDetail = (index: number) => {
+       setActiveDetailRowIndex(index);
+       setIsRecordDetailOpen(true);
+    };
+  }, []);
+
   const [isGoalSeekModalOpen, setIsGoalSeekModalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
@@ -202,6 +246,9 @@ const App: React.FC = () => {
   const [isFormatPainterActive, setIsFormatPainterActive] = useState(false);
   const [formatPainterSource, setFormatPainterSource] = useState<{ rowIndex: number; colKey: string } | null>(null);
 
+  // Automation Suggestions
+  const [automationSuggestions, setAutomationSuggestions] = useState<AutomationSuggestion[]>([]);
+
   // Cell Styles State
   const [isCellStylesOpen, setIsCellStylesOpen] = useState(false);
 
@@ -240,15 +287,23 @@ const App: React.FC = () => {
   }, []);
 
   // --- Persistence (File Based) ---
-  // Autosave
+  // Autosave & Automation detection
   useEffect(() => {
     if (currentSheetData && view === 'editor') {
       const timer = setTimeout(() => {
         saveFile(currentSheetData);
+
+        // Check for automations
+        const suggestions = suggestAutomations(currentSheetData, history);
+        setAutomationSuggestions(suggestions);
+
+        if (suggestions.length > 0 && Math.random() > 0.7) { // Don't annoy the user
+           addToast('info', 'Smart Suggestion', suggestions[0].title);
+        }
       }, 1500); // Debounce save
       return () => clearTimeout(timer);
     }
-  }, [currentSheetData, view]);
+  }, [currentSheetData, view, history]);
 
   // --- History Management ---
   const handleUndo = useCallback(() => {
@@ -1431,6 +1486,8 @@ const App: React.FC = () => {
   // Command Palette Actions
   const commandActions = [
     { id: 'smart-fill', label: 'Smart Fill / AI Generate', icon: Wand2, action: () => setIsSmartFillModalOpen(true) },
+    { id: 'formula-builder', label: 'Visual Formula Builder', icon: FunctionSquare, action: () => setIsVisualFormulaBuilderOpen(true) },
+    { id: 'version-control', label: 'Version Control (Branches)', icon: GitBranch, action: () => setIsBranchManagerOpen(true) },
     { id: 'goal-seek', label: 'Goal Seek (What-If)', icon: Target, action: () => setIsGoalSeekModalOpen(true) },
     { id: 'watch-window', label: 'Toggle Watch Window', icon: Eye, action: () => setIsWatchWindowOpen(prev => !prev) },
     { id: 'pivot', label: 'Create Pivot Table', icon: Table, action: () => setIsPivotModalOpen(true) },
@@ -1453,6 +1510,22 @@ const App: React.FC = () => {
       return `${indexToExcelCol(selectedRange.start.colIndex)}${selectedRange.start.rowIndex + 1}`;
     }
     return '';
+  };
+
+  const handleSwitchBranch = (branch: Branch) => {
+    setWorkbook(branch.workbook);
+    addToast('success', 'Branch Switched', `Now on branch: ${branch.name}`);
+  };
+
+  const handleSaveDetailRow = (rowIndex: number, updatedRow: Row) => {
+     if (!workbook || !currentSheetData) return;
+     const updatedSheets = [...workbook.sheets];
+     const currentSheet = updatedSheets[workbook.activeSheetIndex];
+     const newRows = [...currentSheet.rows];
+     newRows[rowIndex] = updatedRow;
+     const newSheetData = { ...currentSheet, rows: newRows };
+     pushToHistory(newSheetData);
+     addToast('success', 'Row Updated');
   };
 
   if (!currentUser) {
@@ -1524,22 +1597,22 @@ const App: React.FC = () => {
               <span className="text-slate-400 text-xs hidden sm:block ml-0 sm:ml-1">Fast, keyboard-first spreadsheets</span>
             </div>
 
-            {/* Navigation Pills - Hide on mobile */}
-            {currentSheetData && view === 'editor' && !isMobile && (
-              <div className="hidden md:flex bg-slate-800/50 rounded-lg p-1 border border-slate-700/50 animate-in fade-in zoom-in">
+            {/* Navigation Pills */}
+            {currentSheetData && view === 'editor' && (
+              <div className={`${isMobile ? 'flex' : 'hidden md:flex'} bg-slate-800/50 rounded-lg p-1 border border-slate-700/50 animate-in fade-in zoom-in`}>
                 <button
                   onClick={() => setActiveTab('grid')}
                   className={`tab-pill ${activeTab === 'grid' ? 'active' : ''}`}
                 >
                   <FileSpreadsheet className="w-4 h-4" />
-                  <span className="mobile-hidden">Data</span>
+                  {!isMobile && <span className="mobile-hidden">Data</span>}
                 </button>
                 <button
                   onClick={() => setActiveTab('dashboard')}
                   className={`tab-pill ${activeTab === 'dashboard' ? 'active' : ''}`}
                 >
                   <LayoutGrid className="w-4 h-4" />
-                  <span className="mobile-hidden">Dashboard</span>
+                  {!isMobile && <span className="mobile-hidden">Dashboard</span>}
                   {dashboardItems.length > 0 && (
                     <span className="ml-1 px-1.5 py-0.5 rounded-full bg-nexus-accent/20 text-nexus-accent text-[10px] border border-nexus-accent/30 mobile-hidden">
                       {dashboardItems.length}
@@ -1663,6 +1736,20 @@ const App: React.FC = () => {
                 {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
             )}
+
+            {/* Presence Indicators */}
+            <div className="flex -space-x-2 mr-2">
+              {presences.map((presence) => (
+                <div
+                  key={presence.userId}
+                  className="w-7 h-7 rounded-full border-2 border-slate-900 flex items-center justify-center text-[10px] font-bold text-white shadow-lg"
+                  style={{ backgroundColor: presence.color }}
+                  title={presence.userName}
+                >
+                  {presence.userName.charAt(0)}
+                </div>
+              ))}
+            </div>
 
             <button onClick={() => setIsUpgradeModalOpen(true)} className="flex items-center justify-center p-1.5 rounded-full bg-gradient-to-r from-amber-200 to-yellow-400 text-slate-900 shadow-lg shadow-amber-500/20 hover:scale-105 transition-transform" title="Upgrade to Pro – see what's included">
               <Crown className="w-4 h-4" />
@@ -1813,6 +1900,7 @@ const App: React.FC = () => {
                             onRedo={handleRedo}
                             isFormatPainterActive={isFormatPainterActive}
                             highlightedCells={highlightedCells}
+                            presences={presences}
                           />
                         </GridErrorBoundary>
                       </div>
@@ -1966,6 +2054,46 @@ const App: React.FC = () => {
             onClose={() => setIsSmartFillModalOpen(false)}
             initialColumnName=""
             onApply={handleSmartFill}
+          />
+
+          <VisualFormulaBuilder
+            isOpen={isVisualFormulaBuilderOpen}
+            onClose={() => setIsVisualFormulaBuilderOpen(false)}
+            columns={currentSheetData?.columns || []}
+            onApply={(formula) => {
+               if (selectedCell) handleCellEdit(selectedCell.rowIndex, selectedCell.colKey, formula);
+            }}
+          />
+
+          {workbook && (
+            <BranchManager
+              isOpen={isBranchManagerOpen}
+              onClose={() => setIsBranchManagerOpen(false)}
+              workbook={workbook}
+              onSwitchBranch={handleSwitchBranch}
+              onUpdateWorkbook={(wb) => setWorkbook(wb)}
+            />
+          )}
+
+          {isRecordDetailOpen && activeDetailRowIndex !== null && currentSheetData && (
+            <RecordDetailView
+              isOpen={isRecordDetailOpen}
+              onClose={() => setIsRecordDetailOpen(false)}
+              row={currentSheetData.rows[activeDetailRowIndex]}
+              columns={currentSheetData.columns}
+              rowIndex={activeDetailRowIndex}
+              onSave={handleSaveDetailRow}
+              onNext={activeDetailRowIndex < currentSheetData.rows.length - 1 ? () => setActiveDetailRowIndex(activeDetailRowIndex + 1) : undefined}
+              onPrev={activeDetailRowIndex > 0 ? () => setActiveDetailRowIndex(activeDetailRowIndex - 1) : undefined}
+            />
+          )}
+
+          <OnboardingTour
+             isOpen={isOnboardingOpen}
+             onClose={() => {
+                setIsOnboardingOpen(false);
+                localStorage.setItem('realsheet_tour_seen', 'true');
+             }}
           />
 
           <CommandPalette

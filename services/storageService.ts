@@ -186,3 +186,21 @@ export const renameFile = (id: string, newName: string) => {
         saveFile(data);
     }
 };
+
+export const saveWorkbook = (workbook: Workbook) => {
+    localStorage.setItem(`realsheet_workbook_${workbook.id}`, JSON.stringify(workbook));
+
+    // Update metadata if it exists
+    const files = getFiles();
+    const i = files.findIndex(f => f.id === workbook.id);
+    if (i >= 0) {
+        files[i].name = workbook.name;
+        files[i].lastModified = Date.now();
+        localStorage.setItem(FILES_INDEX_KEY, JSON.stringify(files));
+    }
+};
+
+export const loadWorkbook = (id: string): Workbook | null => {
+    const raw = localStorage.getItem(`realsheet_workbook_${id}`);
+    return raw ? JSON.parse(raw) : null;
+};
