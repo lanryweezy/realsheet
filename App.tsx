@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Download, Upload, Plus, Settings, MessageSquare, BarChart3,
   Table, Share2, Menu, Crown, X, Activity, FileSpreadsheet,
   LayoutGrid, Undo2, Redo2, PaintBucket, DatabaseZap, Eye,
   Wand2, Search, Hash, MoreVertical, Copy, MoveRight, MoveDown,
   SplitSquareHorizontal, CopyMinus, Calculator, Filter, MessageSquare as MessageSquareIcon,
-  Target, FileDown, Zap, User, Code, Home, HelpCircle, Sun, Moon,
+  Target, FileDown, Zap, User, Code, Home, HelpCircle, Sun, Moon, Lightbulb,
   Bell, CheckCircle, Calendar, Bot, Phone, TrendingUp, Plug, Sparkles, FileCode,
   SquareFunction as FunctionSquare, GitBranch
 } from 'lucide-react';
@@ -41,6 +42,7 @@ import VisualFormulaBuilder from './components/VisualFormulaBuilder';
 import BranchManager from './components/BranchManager';
 import RecordDetailView from './components/RecordDetailView';
 import OnboardingTour from './components/OnboardingTour';
+import Tooltip from './components/Tooltip';
 import CommandPalette from './components/CommandPalette';
 import Ribbon, { type RibbonTab } from './components/Ribbon';
 import QuickAccessToolbar from './components/QuickAccessToolbar';
@@ -118,6 +120,24 @@ const App: React.FC = () => {
   const [highlightedCells, setHighlightedCells] = useState<Set<string>>(new Set());
   const [loadSummary, setLoadSummary] = useState<{ title: string; hint: string } | null>(null);
 
+  const tips = [
+    "Tip: Double-click a cell to edit its content.",
+    "Tip: Use Ctrl+K to open the Command Palette.",
+    "Tip: Tap the row number to open the Record Detail View.",
+    "Tip: NexAgent can create charts if you ask nicely.",
+    "Tip: Right-click columns to rename or delete them.",
+    "Tip: Branches allow you to experiment with data safely.",
+    "Tip: Visual Formula Builder helps you create logic without code."
+  ];
+  const [currentTipIndex, setCurrentTipIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+       setCurrentTipIndex(prev => (prev + 1) % tips.length);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Filtered rows for display
   const displayRows = useMemo(() => {
     if (!currentSheetData) return [];
@@ -138,6 +158,11 @@ const App: React.FC = () => {
   };
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Closed by default
+
+  const sidebarVariants = {
+    open: { width: 320, opacity: 1, visibility: 'visible' as const },
+    closed: { width: 0, opacity: 0, visibility: 'hidden' as const }
+  };
   const [activeTab, setActiveTab] = useState<'grid' | 'dashboard'>('grid');
   const [ribbonTab, setRibbonTab] = useState<RibbonTab>('home');
   const [pageLayoutView, setPageLayoutView] = useState(false);
@@ -1637,12 +1662,16 @@ const App: React.FC = () => {
             {/* Compact toolbar for mobile */}
             {view === 'editor' && (
               <div className={`compact-toolbar ${isMobile ? 'bg-slate-800/50 rounded-lg p-1 border border-slate-700/50' : 'toolbar-group animate-in fade-in slide-in-from-top-1'}`}>
-                <button onClick={handleUndo} disabled={!currentSheetData || historyIndex <= 0} className="btn-icon" title="Undo">
-                  <Undo2 className="w-4 h-4" />
-                </button>
-                <button onClick={handleRedo} disabled={!currentSheetData || historyIndex >= history.length - 1} className="btn-icon" title="Redo">
-                  <Redo2 className="w-4 h-4" />
-                </button>
+                <Tooltip content="Undo" shortcut="⌘Z">
+                  <button onClick={handleUndo} disabled={!currentSheetData || historyIndex <= 0} className="btn-icon">
+                    <Undo2 className="w-4 h-4" />
+                  </button>
+                </Tooltip>
+                <Tooltip content="Redo" shortcut="⌘Y">
+                  <button onClick={handleRedo} disabled={!currentSheetData || historyIndex >= history.length - 1} className="btn-icon">
+                    <Redo2 className="w-4 h-4" />
+                  </button>
+                </Tooltip>
 
                 {!isMobile && (
                   <>
@@ -1728,13 +1757,14 @@ const App: React.FC = () => {
             <div className="h-6 w-px bg-slate-700/50 mobile-hidden"></div>
 
             {view === 'editor' && (
-              <button
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className={`btn-icon ${isSidebarOpen ? 'active' : ''}`}
-                title="Toggle Agent"
-              >
-                {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
+                <Tooltip content={isSidebarOpen ? "Close Agent" : "Open Agent"}>
+                  <button
+                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                    className={`btn-icon ${isSidebarOpen ? 'active' : ''}`}
+                  >
+                    {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                  </button>
+                </Tooltip>
             )}
 
             {/* Presence Indicators */}
@@ -1930,6 +1960,21 @@ const App: React.FC = () => {
                         <span className="text-[11px]" style={{ color: 'var(--nexus-text-muted)' }}>Ready</span>
                       </div>
                       <div className="separator" />
+                      <div className="status-item mobile-hidden">
+                        <Lightbulb className="w-3 h-3 text-amber-400" />
+                        <AnimatePresence mode="wait">
+                          <motion.span
+                            key={currentTipIndex}
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -5 }}
+                            className="text-[10px] font-medium italic text-slate-500"
+                          >
+                            {tips[currentTipIndex]}
+                          </motion.span>
+                        </AnimatePresence>
+                      </div>
+                      <div className="separator" />
                       <div className="status-item">
                         <Database className="w-3.5 h-3.5" />
                         <span className="font-medium" style={{ color: 'var(--nexus-text-main)' }}>{currentSheetData?.name || 'Untitled'}</span>
@@ -1981,7 +2026,13 @@ const App: React.FC = () => {
                 </div>
 
                 {/* Right Side: Agent Sidebar */}
-                <aside className={`saas-sidebar-panel ${!isSidebarOpen ? 'hidden-panel' : ''}`}>
+                <motion.aside
+                  className="saas-sidebar-panel overflow-hidden border-l border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-blur-xl"
+                  initial={false}
+                  animate={isSidebarOpen ? "open" : "closed"}
+                  variants={sidebarVariants}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                >
                   <Agent
                     sheetData={currentSheetData}
                     workbook={workbook}
@@ -1992,7 +2043,7 @@ const App: React.FC = () => {
                     promptOverride={agentPromptOverride}
                     onClearPromptOverride={() => setAgentPromptOverride(null)}
                   />
-                </aside>
+                </motion.aside>
               </div>
 
               {/* Watch Window - Floating overlay */}

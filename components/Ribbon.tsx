@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Undo2, Redo2, PaintBucket, DatabaseZap, BarChart3, Table, Wand2, Eye,
   FileDown, Share2, Target, LayoutGrid, FileSpreadsheet, SquareFunction as FunctionSquare, Filter,
@@ -61,28 +62,32 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
   );
 
   const btn = (icon: React.ReactNode, label: string, onClick: () => void, disabled = false) => (
-    <button
+    <motion.button
+      whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+      whileTap={{ scale: 0.95 }}
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex flex-col items-center justify-center min-w-[48px] py-1 px-1 rounded-xl hover:bg-white/5 transition-all duration-200 disabled:opacity-20 group"
+      className="flex flex-col items-center justify-center min-w-[48px] py-1 px-1 rounded-xl transition-all duration-200 disabled:opacity-20 group"
       title={label}
     >
       <div className="mb-1 text-slate-400 group-hover:text-cyan-400 transition-colors">{icon}</div>
       <span className="text-[10px] font-bold text-slate-500 group-hover:text-slate-300 leading-tight truncate px-1 uppercase tracking-tighter transition-colors">{label}</span>
-    </button>
+    </motion.button>
   );
 
   const iconBtn = (icon: React.ReactNode, title: string, onClick: () => void, disabled = false) => (
-    <button
+    <motion.button
+      whileHover={{ scale: 1.1, backgroundColor: 'rgba(6, 182, 212, 0.1)' }}
+      whileTap={{ scale: 0.9 }}
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="p-2 rounded-xl hover:bg-cyan-500/10 hover:text-cyan-400 text-slate-400 transition-all duration-200 disabled:opacity-20"
+      className="p-2 rounded-xl text-slate-400 transition-all duration-200 disabled:opacity-20"
       title={title}
     >
       {icon}
-    </button>
+    </motion.button>
   );
 
   return (

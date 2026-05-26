@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { FunctionSquare, Sparkles, Send } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { SquareFunction as FunctionSquare, Sparkles, Send, X } from 'lucide-react';
 import { generateFormulaFromDescription } from '../services/geminiService';
 import { getFormulaSuggestions } from '../utils/formulaFunctions';
 
@@ -154,10 +155,13 @@ const FormulaBar: React.FC<FormulaBarProps> = ({ selectedCell, value, columns, o
               style={{ color: 'var(--nexus-text-main)' }}
               spellCheck={false}
             />
+            <AnimatePresence>
             {hasSuggestions && (
-              <div
-                className="absolute left-0 top-full mt-1 py-1 min-w-[220px] max-h-[240px] overflow-y-auto rounded-lg border shadow-xl z-50"
-                style={{ background: 'var(--nexus-surface)', borderColor: 'var(--nexus-border)' }}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute left-0 top-full mt-1 py-1 min-w-[280px] max-h-[320px] overflow-y-auto rounded-xl border border-[var(--nexus-border)] shadow-2xl z-50 backdrop-blur-xl bg-[var(--nexus-surface)]/95"
               >
                 <div className="px-2 py-1 text-[10px] uppercase font-semibold" style={{ color: 'var(--nexus-text-muted)' }}>
                   Functions
@@ -167,16 +171,21 @@ const FormulaBar: React.FC<FormulaBarProps> = ({ selectedCell, value, columns, o
                     key={fn.name}
                     type="button"
                     onClick={() => insertSuggestion(fn.name)}
-                    className={`w-full text-left px-3 py-2 text-sm flex flex-col gap-0.5 ${idx === suggestionIndex ? 'bg-nexus-accent/20' : ''
+                    className={`w-full text-left px-3 py-2 text-sm flex flex-col gap-0.5 transition-colors ${
+                       idx === suggestionIndex ? 'bg-nexus-accent/20 border-l-4 border-nexus-accent' : 'hover:bg-white/5 border-l-4 border-transparent'
                       }`}
                     style={{ color: 'var(--nexus-text-main)' }}
                   >
-                    <span className="font-mono font-medium">{fn.name}</span>
-                    <span className="text-xs truncate" style={{ color: 'var(--nexus-text-muted)' }}>{fn.description}</span>
+                    <div className="flex items-center justify-between">
+                       <span className="font-mono font-bold text-nexus-accent">{fn.name}</span>
+                       <span className="text-[10px] opacity-40 font-mono italic">{fn.syntax}</span>
+                    </div>
+                    <span className="text-xs leading-tight opacity-70" style={{ color: 'var(--nexus-text-muted)' }}>{fn.description}</span>
                   </button>
                 ))}
-              </div>
+              </motion.div>
             )}
+            </AnimatePresence>
           </div>
         )}
       </div>

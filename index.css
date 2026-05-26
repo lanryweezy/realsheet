@@ -60,19 +60,19 @@
 
 :root,
 [data-theme="dark"] {
-  --nexus-bg: #0f172a;
-  --nexus-surface: #1e293b;
-  --nexus-border: #334155;
-  --nexus-accent: #06b6d4;
-  --nexus-accent-hover: #0891b2;
-  --nexus-text-main: #f8fafc;
-  --nexus-text-muted: #94a3b8;
-  --glass-bg: rgba(15, 23, 42, 0.7);
-  --glass-border: rgba(51, 65, 85, 0.5);
-  --glass-blur: 12px;
-  --ribbon-bg: #1e293b;
-  --ribbon-border: #334155;
-  --status-bg: rgba(15, 23, 42, 0.95);
+  --nexus-bg: #030712;
+  --nexus-surface: #111827;
+  --nexus-border: #1f2937;
+  --nexus-accent: #22d3ee;
+  --nexus-accent-hover: #0ea5e9;
+  --nexus-text-main: #f3f4f6;
+  --nexus-text-muted: #9ca3af;
+  --glass-bg: rgba(17, 24, 39, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-blur: 16px;
+  --ribbon-bg: #111827;
+  --ribbon-border: #1f2937;
+  --status-bg: rgba(3, 7, 18, 0.9);
   --nexus-success: #10b981;
   --nexus-warning: #f59e0b;
   --nexus-error: #ef4444;

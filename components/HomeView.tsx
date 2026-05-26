@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Upload, FileSpreadsheet, MoreVertical, Search, Trash2, Edit2,
   LayoutGrid, List as ListIcon, Pin, PinOff, Copy, FileDown, Home, FolderOpen,
@@ -326,32 +327,44 @@ const HomeView: React.FC<HomeViewProps> = ({
   );
 
   const emptyState = () => (
-    <div className="flex flex-col items-center justify-center py-24 px-6 text-center animate-in fade-in zoom-in-95 duration-1000">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col items-center justify-center py-24 px-6 text-center"
+    >
       <div className="relative mb-8">
-        <div className="absolute inset-0 bg-cyan-500/20 blur-3xl rounded-full" />
+        <motion.div
+          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 4, repeat: Infinity }}
+          className="absolute inset-0 bg-cyan-500/20 blur-3xl rounded-full"
+        />
         <div className="relative w-24 h-24 bg-slate-900 border border-slate-800 rounded-3xl flex items-center justify-center shadow-2xl">
           <Activity className="w-10 h-10 text-cyan-500" />
         </div>
       </div>
-      <h3 className="text-xl font-bold text-white mb-3">Your workspace is quiet</h3>
-      <p className="text-slate-500 max-w-sm mx-auto mb-10 leading-relaxed font-medium">
-        Ready to build the future? Start with a blank sheet or explore our professional templates to get started in seconds.
+      <h3 className="text-2xl font-bold text-white mb-3 tracking-tight">Your workspace is quiet</h3>
+      <p className="text-slate-400 max-w-sm mx-auto mb-10 leading-relaxed font-medium">
+        The most powerful spreadsheets are built here. Start with a blank canvas or use our AI-ready templates to accelerate your workflow.
       </p>
       <div className="flex flex-wrap justify-center gap-4">
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={onNewFile}
-          className="px-6 py-3 bg-cyan-500 text-white rounded-2xl font-bold text-sm hover:bg-cyan-400 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all transform hover:-translate-y-1"
+          className="px-8 py-3.5 bg-cyan-500 text-slate-950 rounded-2xl font-bold text-sm hover:bg-cyan-400 hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] transition-all"
         >
-          New Spreadsheet
-        </button>
-        <button
+          Create New Workbook
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => setNavSection('templates')}
-          className="px-6 py-3 bg-slate-800 text-slate-200 rounded-2xl font-bold text-sm hover:bg-slate-700 transition-all border border-white/5"
+          className="px-8 py-3.5 bg-slate-800 text-slate-200 rounded-2xl font-bold text-sm hover:bg-slate-700 transition-all border border-white/5"
         >
-          View Templates
-        </button>
+          Browse Templates
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 
   return (

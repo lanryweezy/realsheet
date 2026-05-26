@@ -204,9 +204,12 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
           <thead>
             <tr style={{ height: HEADER_HEIGHT }}>
               <th className="bg-slate-900 border-b border-r border-slate-700 text-center"><Hash className="w-3 h-3 mx-auto text-slate-500" /></th>
-              {data.columns.map((col: any, i: number) => (
-                <th key={col} className="bg-slate-900 border-b border-r border-slate-700 text-left px-2 text-xs font-bold text-slate-400 overflow-hidden truncate">{col}</th>
-              ))}
+              {data.columns.map((col: any, i: number) => {
+                const isActive = selectedRange && i >= Math.min(selectedRange.start.colIndex, selectedRange.end.colIndex) && i <= Math.max(selectedRange.start.colIndex, selectedRange.end.colIndex);
+                return (
+                  <th key={col} className={`border-b border-r border-slate-700 text-left px-2 text-xs font-bold transition-colors overflow-hidden truncate ${isActive ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-900 text-slate-400'}`}>{col}</th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -216,7 +219,11 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
               return (
                 <tr key={rowIndex} style={{ height: ROW_HEIGHT }}>
                   <td
-                    className="bg-slate-900 border-b border-r border-slate-700 text-center text-[10px] font-bold text-slate-500 sticky left-0 z-10 cursor-pointer hover:text-cyan-400 transition-colors"
+                    className={`border-b border-r border-slate-700 text-center text-[10px] font-bold sticky left-0 z-10 cursor-pointer transition-colors ${
+                      selectedRange && rowIndex >= Math.min(selectedRange.start.rowIndex, selectedRange.end.rowIndex) && rowIndex <= Math.max(selectedRange.start.rowIndex, selectedRange.end.rowIndex)
+                        ? 'bg-cyan-500/20 text-cyan-400'
+                        : 'bg-slate-900 text-slate-500 hover:text-cyan-400'
+                    }`}
                     onClick={() => (window as any).openRecordDetail?.(rowIndex)}
                   >
                     {rowIndex + 1}
