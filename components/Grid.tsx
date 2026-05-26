@@ -12,6 +12,9 @@ const HEADER_HEIGHT = 28;
 const VISIBLE_ROWS_BUFFER = 5;
 const EXPANSION_THRESHOLD = 5;
 
+// Performance: Reuse empty style object to prevent breaking React.memo shallow comparison on EnhancedCell
+const EMPTY_STYLE = {};
+
 const COMMON_FUNCTIONS = [
   { name: 'SUM', description: 'Calculates the sum of a range of cells.', syntax: 'SUM(range)' },
   { name: 'AVERAGE', description: 'Calculates the average of a range of cells.', syntax: 'AVERAGE(range)' },
@@ -164,6 +167,13 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
     if (data.rows.length - visibleRange.endRow <= EXPANSION_THRESHOLD && onSheetExpand) onSheetExpand(data.rows.length + 50, data.columns.length);
   }, [visibleRange.endRow, data.rows.length, onSheetExpand]);
 
+  // Performance: Extract inline function to stable reference to prevent EnhancedCell re-renders
+  const handleFillStart = useCallback((e: any) => {
+    e.preventDefault();
+    setIsFilling(true);
+    setFillRange(selectedRange);
+  }, [selectedRange]);
+
   const handleMouseDown = (r: number, c: number) => {
     if (isFormatPainterActive) { onFormatPainterApply(r, data.columns[c]); return; }
     setIsDragging(true); onRangeSelect({ start: { rowIndex: r, colIndex: c }, end: { rowIndex: r, colIndex: c } });
@@ -212,10 +222,10 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
                   {data.columns.map((col: any, ci: number) => {
                     const isSelected = selectedRange && rowIndex >= Math.min(selectedRange.start.rowIndex, selectedRange.end.rowIndex) && rowIndex <= Math.max(selectedRange.start.rowIndex, selectedRange.end.rowIndex) && ci >= Math.min(selectedRange.start.colIndex, selectedRange.end.colIndex) && ci <= Math.max(selectedRange.start.colIndex, selectedRange.end.colIndex);
                     const isPrecedent = precedents.has(`${rowIndex}-${ci}`);
-                    const cellStyle = data.cellStyles?.[`${rowIndex}-${col}`] || {};
+                    const cellStyle = data.cellStyles?.[`${rowIndex}-${col}`] || EMPTY_STYLE;
                     return (
                       <td key={col} data-row={rowIndex} data-col={ci} className={`p-0 border-b border-r border-slate-800/80 relative ${isSelected ? 'ring-inset ring-2 ring-cyan-400 z-10' : ''}`} onMouseDown={() => handleMouseDown(rowIndex, ci)} onMouseEnter={() => handleMouseEnter(rowIndex, ci)} style={{ border: isPrecedent ? '1px solid var(--nexus-accent)' : undefined }}>
-                        <EnhancedCell rowIndex={rowIndex} colIndex={ci} col={col} value={row[col]} displayValue={evaluateWithHF(row[col], rowIndex, col, data)} isSelected={isSelected} onCellEdit={onCellEdit} isInHoverRange={hoverCell?.rowIndex === rowIndex || hoverCell?.colIndex === ci} onFillStart={(e: any) => { e.preventDefault(); setIsFilling(true); setFillRange(selectedRange); }} style={cellStyle} />
+                        <EnhancedCell rowIndex={rowIndex} colIndex={ci} col={col} value={row[col]} displayValue={evaluateWithHF(row[col], rowIndex, col, data)} isSelected={isSelected} onCellEdit={onCellEdit} isInHoverRange={hoverCell?.rowIndex === rowIndex || hoverCell?.colIndex === ci} onFillStart={handleFillStart} style={cellStyle} />
                       </td>
                     );
                   })}

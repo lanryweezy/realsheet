@@ -1,0 +1,3 @@
+## 2026-05-26 - React Component Re-rendering in Grid.tsx
+**Learning:** In a highly interactive grid with thousands of cells, small inline objects or functions can severely impact performance. In `components/Grid.tsx`, `EnhancedCell` is wrapped in `React.memo()`, but passing an inline empty object (`{}`) for default styles or an inline function for `onFillStart` was breaking the shallow comparison, causing every visible cell to re-render whenever the grid re-rendered (e.g. from state changes).
+**Action:** Always extract static default values (like an empty object `EMPTY_STYLE`) outside the component and use `useCallback` for event handlers passed to many children to ensure referential stability and keep React rendering fast.
