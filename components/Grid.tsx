@@ -13,6 +13,9 @@ const VISIBLE_ROWS_BUFFER = 5;
 const EXPANSION_THRESHOLD = 5;
 const EMPTY_STYLE = {};
 
+// Performance: Reuse empty style object to prevent breaking React.memo shallow comparison on EnhancedCell
+const EMPTY_STYLE = {};
+
 const COMMON_FUNCTIONS = [
   { name: 'SUM', description: 'Calculates the sum of a range of cells.', syntax: 'SUM(range)' },
   { name: 'AVERAGE', description: 'Calculates the average of a range of cells.', syntax: 'AVERAGE(range)' },
@@ -170,6 +173,13 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
   useEffect(() => {
     if (data.rows.length - visibleRange.endRow <= EXPANSION_THRESHOLD && onSheetExpand) onSheetExpand(data.rows.length + 50, data.columns.length);
   }, [visibleRange.endRow, data.rows.length, onSheetExpand]);
+
+  // Performance: Extract inline function to stable reference to prevent EnhancedCell re-renders
+  const handleFillStart = useCallback((e: any) => {
+    e.preventDefault();
+    setIsFilling(true);
+    setFillRange(selectedRange);
+  }, [selectedRange]);
 
   const handleMouseDown = (r: number, c: number) => {
     if (isFormatPainterActive) { onFormatPainterApply(r, data.columns[c]); return; }
