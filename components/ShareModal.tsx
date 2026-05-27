@@ -39,7 +39,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, fileName, onNo
                 </div>
                 Share "{fileName}"
             </h2>
-            <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+            <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors" aria-label="Close">
                 <X className="w-5 h-5" />
             </button>
         </div>

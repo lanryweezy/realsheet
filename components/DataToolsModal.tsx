@@ -142,7 +142,7 @@ const DataToolsModal: React.FC<DataToolsModalProps> = ({
               {activeMode === 'find' && 'Find & Replace'}
               {activeMode === 'clean' && 'AI Magic Clean'}
             </h2>
-            <button onClick={onClose} className="text-slate-400 hover:text-white">
+            <button onClick={onClose} className="text-slate-400 hover:text-white" aria-label="Close">
               <X className="w-5 h-5" />
             </button>
           </div>
