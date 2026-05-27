@@ -1,3 +1,6 @@
 ## 2026-05-26 - React Component Re-rendering in Grid.tsx
 **Learning:** In a highly interactive grid with thousands of cells, small inline objects or functions can severely impact performance. In `components/Grid.tsx`, `EnhancedCell` is wrapped in `React.memo()`, but passing an inline empty object (`{}`) for default styles or an inline function for `onFillStart` was breaking the shallow comparison, causing every visible cell to re-render whenever the grid re-rendered (e.g. from state changes).
 **Action:** Always extract static default values (like an empty object `EMPTY_STYLE`) outside the component and use `useCallback` for event handlers passed to many children to ensure referential stability and keep React rendering fast.
+## 2024-05-27 - Grid Performance Fix
+**Learning:** `npm run lint:fix` makes destructive changes globally in this codebase, breaking things like `services/formulaService.ts` by blindly transforming `let` to `const`.
+**Action:** Do not use `npm run lint:fix`. Validate optimizations with `npm run build` or `npm run type-check`. And for React specific things, memoization in lists only works if object and function references are stable. So extract inline objects `{}` into module-level variables (e.g. `EMPTY_STYLE = {}`) and wrap inline functions in `useCallback`.

@@ -11,6 +11,7 @@ const ROW_HEIGHT = 32;
 const HEADER_HEIGHT = 28;
 const VISIBLE_ROWS_BUFFER = 5;
 const EXPANSION_THRESHOLD = 5;
+const EMPTY_STYLE = {};
 
 // Performance: Reuse empty style object to prevent breaking React.memo shallow comparison on EnhancedCell
 const EMPTY_STYLE = {};
@@ -131,6 +132,12 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
   const [neuralPoints, setNeuralPoints] = useState<any>({ source: null, targets: [] });
   const [contextMenu, setContextMenu] = useState<any>(null);
   const gridContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleFillStart = useCallback((e: any) => {
+    e.preventDefault();
+    setIsFilling(true);
+    setFillRange(selectedRange);
+  }, [selectedRange]);
 
   useEffect(() => { if (data) syncWorkbook(data); }, [data]);
 
