@@ -5,7 +5,7 @@ import {
   Download, Upload, Plus, Settings, MessageSquare, BarChart3,
   Table, Share2, Menu, Crown, X, Activity, FileSpreadsheet,
   LayoutGrid, Undo2, Redo2, PaintBucket, DatabaseZap, Eye,
-  Wand2, Search, Hash, MoreVertical, Copy, MoveRight, MoveDown,
+  Wand2, Search, Hash, MoreVertical, Copy, MoveRight, MoveDown, Terminal,
   SplitSquareHorizontal, CopyMinus, Calculator, Filter, MessageSquare as MessageSquareIcon,
   Target, FileDown, Zap, User, Code, Home, HelpCircle, Sun, Moon, Lightbulb,
   Bell, CheckCircle, Calendar, Bot, Phone, TrendingUp, Plug, Sparkles, FileCode,
@@ -40,6 +40,7 @@ import ChartWizardModal from './components/ChartWizardModal';
 import SmartFillModal from './components/SmartFillModal';
 import VisualFormulaBuilder from './components/VisualFormulaBuilder';
 import BranchManager from './components/BranchManager';
+import DeveloperConsole from './components/DeveloperConsole';
 import RecordDetailView from './components/RecordDetailView';
 import OnboardingTour from './components/OnboardingTour';
 import Tooltip from './components/Tooltip';
@@ -276,6 +277,9 @@ const App: React.FC = () => {
 
   // Cell Styles State
   const [isCellStylesOpen, setIsCellStylesOpen] = useState(false);
+
+  // Developer Console State
+  const [isDevConsoleOpen, setIsDevConsoleOpen] = useState(false);
 
   const [smartFillSourceColumn, setSmartFillSourceColumn] = useState('');
 
@@ -1522,6 +1526,7 @@ const App: React.FC = () => {
     { id: 'export', label: 'Export to CSV', icon: FileDown, action: handleDownload },
     { id: 'dashboard', label: 'Go to Dashboard', icon: LayoutGrid, action: () => setActiveTab('dashboard') },
     { id: 'grid', label: 'Go to Data Grid', icon: FileSpreadsheet, action: () => setActiveTab('grid') },
+    { id: 'terminal', label: 'Open Developer Terminal', icon: Terminal, action: () => setIsDevConsoleOpen(true) },
     { id: 'agent', label: 'Toggle AI Agent', icon: Zap, action: () => setIsSidebarOpen(prev => !prev) },
     { id: 'upgrade', label: 'Upgrade to Pro', icon: Crown, action: () => setIsUpgradeModalOpen(true) },
     { id: 'share', label: 'Share Spreadsheet', icon: Share2, action: () => setIsShareModalOpen(true) },
@@ -1895,6 +1900,7 @@ const App: React.FC = () => {
                             hasPrintArea={!!(currentSheetData?.printArea)}
                             onExportExcel={handleExportExcel}
                             onPrint={handlePrint}
+                            onDevConsole={() => setIsDevConsoleOpen(true)}
                           />
                         </>
                       )}
@@ -2172,6 +2178,16 @@ const App: React.FC = () => {
             onClose={() => setIsCellStylesOpen(false)}
             onSelectStyle={handleApplyCellStyle}
           />
+
+          {workbook && (
+            <DeveloperConsole
+              isOpen={isDevConsoleOpen}
+              onClose={() => setIsDevConsoleOpen(false)}
+              workbook={workbook}
+              onUpdateWorkbook={setWorkbook}
+              onUpdateData={pushToHistory}
+            />
+          )}
         </main>
       </div>
 

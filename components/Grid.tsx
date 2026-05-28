@@ -4,6 +4,7 @@ import { Hash, ArrowUp, ArrowDown, MoreVertical, Trash2, Sparkles, Copy, XCircle
 import { evaluateCellValue, indexToExcelCol } from '../services/formulaService';
 import { evaluateWithHF, syncWorkbook, getDependencies } from '../services/hyperformulaService';
 import { NeuralLines } from "./NeuralLines";
+import { Sparkline } from './Sparkline';
 import { ToastType } from './Toast';
 import { safeFilterEvaluate } from '../utils/safeFormulaParser';
 
@@ -102,6 +103,19 @@ const EnhancedCell = memo(({ rowIndex, colIndex, col, value, displayValue, isSel
   }
 
   const isFormula = typeof value === 'string' && value.startsWith('=');
+
+  // Sparkline detection
+  const isSparkline = typeof value === 'string' && value.startsWith('=SPARKLINE(');
+  const sparklineData = useMemo(() => {
+    if (!isSparkline) return null;
+    // Simple extraction for demo: =SPARKLINE(1,2,3,4,5)
+    try {
+      const content = value.match(/\((.*)\)/)?.[1];
+      if (!content) return null;
+      return content.split(',').map(Number).filter(n => !isNaN(n));
+    } catch { return null; }
+  }, [value, isSparkline]);
+
   return (
     <div
       className={`w-full h-full flex flex-col justify-center px-1 text-xs relative ${isSelected ? 'ring-2 ring-cyan-400 bg-cyan-400/10' : ''} ${isHovered || isInHoverRange ? 'bg-white/5' : ''} ${isFormula ? 'formula-glow' : ''}`}
@@ -111,7 +125,13 @@ const EnhancedCell = memo(({ rowIndex, colIndex, col, value, displayValue, isSel
       onDoubleClick={handleDoubleClick}
       onContextMenu={onContextMenu}
     >
-      <div className={`truncate ${isFormula ? 'text-cyan-400 font-medium' : ''}`}>{displayValue}</div>
+      {isSparkline && sparklineData ? (
+        <div className="flex items-center justify-center w-full h-full">
+          <Sparkline values={sparklineData} width={80} height={20} />
+        </div>
+      ) : (
+        <div className={`truncate ${isFormula ? 'text-cyan-400 font-medium' : ''}`}>{displayValue}</div>
+      )}
       {isSelected && <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-cyan-400 border border-slate-900 rounded-sm cursor-crosshair z-30" onMouseDown={onFillStart} />}
     </div>
   );

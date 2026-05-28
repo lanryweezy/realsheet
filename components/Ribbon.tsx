@@ -6,10 +6,10 @@ import {
   Layout, Printer, FileSpreadsheet as FileExcel, Square, SquareDot, Copy, Eraser,
   DollarSign, Type, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight,
   ChevronDown, Percent, Hash, Binary, FileJson, Save, Info, Settings, LogOut, Search,
-  GitBranch
+  GitBranch, Terminal, Code, Database, Bug
 } from 'lucide-react';
 
-export type RibbonTab = 'file' | 'home' | 'insert' | 'formulas' | 'data' | 'view';
+export type RibbonTab = 'file' | 'home' | 'insert' | 'formulas' | 'data' | 'view' | 'developer';
 
 interface RibbonProps {
   activeTab: RibbonTab;
@@ -43,6 +43,7 @@ interface RibbonProps {
   /** Export Excel and Print (opens print dialog; user can Save as PDF) */
   onExportExcel?: () => void;
   onPrint?: () => void;
+  onDevConsole?: () => void;
 }
 
 const Ribbon: React.FC<RibbonProps> = (p) => {
@@ -53,6 +54,7 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
     { id: 'formulas', label: 'Formulas' },
     { id: 'data', label: 'Data' },
     { id: 'view', label: 'View' },
+    { id: 'developer', label: 'Developer' },
   ];
 
   const groupLabel = (label: string) => (
@@ -305,6 +307,26 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
                 {p.onPrint && btn(<Printer className="w-3.5 h-3.5" />, 'Print', p.onPrint, !p.sheetData)}
               </div>
               {groupLabel('Output')}
+            </div>
+          </>
+        )}
+
+        {p.activeTab === 'developer' && (
+          <>
+            <div className="flex items-center gap-1 pr-4 border-r border-white/5 relative group mr-3 py-1">
+              <div className="flex gap-0.5">
+                {btn(<Terminal className="w-3.5 h-3.5 text-cyan-400" />, 'Terminal', () => p.onDevConsole?.(), !p.sheetData)}
+                {btn(<Code className="w-3.5 h-3.5" />, 'JS Script', () => p.onDevConsole?.(), !p.sheetData)}
+                {btn(<Database className="w-3.5 h-3.5" />, 'SQL Query', () => p.onDevConsole?.(), !p.sheetData)}
+              </div>
+              {groupLabel('Code Interface')}
+            </div>
+            <div className="flex items-center gap-1 pr-4 relative group py-1">
+              <div className="flex gap-0.5">
+                {btn(<Bug className="w-3.5 h-3.5" />, 'Debug', () => { }, !p.sheetData)}
+                {btn(<Info className="w-3.5 h-3.5" />, 'Add-ins', () => { }, !p.sheetData)}
+              </div>
+              {groupLabel('Add-ins')}
             </div>
           </>
         )}
