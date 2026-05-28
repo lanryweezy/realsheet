@@ -19,8 +19,13 @@ export default async function handler(
   request: VercelRequest,
   response: VercelResponse
 ) {
+  // Set CORS headers
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    response.setHeader(key, value);
+  });
+
   if (request.method === 'OPTIONS') {
-    return response.status(200).headers(corsHeaders).send();
+    return response.status(200).end();
   }
 
   if (request.method !== 'POST') {
@@ -79,7 +84,7 @@ Example responses:
     // Remove markdown code blocks if present
     formula = formula.replace(/```(?:excel)?\n?/g, '').trim();
 
-    return response.status(200).headers(corsHeaders).json({
+    return response.status(200).json({
       success: true,
       formula,
       description
@@ -88,7 +93,7 @@ Example responses:
   } catch (error: any) {
     console.error('Formula Generation Error:', error);
     
-    return response.status(500).headers(corsHeaders).json({
+    return response.status(500).json({
       success: false,
       error: 'Formula generation failed',
       message: error.message || 'An unexpected error occurred'

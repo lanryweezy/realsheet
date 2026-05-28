@@ -514,7 +514,7 @@ const App: React.FC = () => {
     }, 800);
   };
 
-  const handleTemplate = (type: 'budget' | 'invoice' | 'schedule') => {
+  const handleTemplate = (type: any) => {
     loadData(getTemplateData(type));
   };
 

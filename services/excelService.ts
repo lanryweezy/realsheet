@@ -226,8 +226,50 @@ export const getMaxColumnIndex = (): number => {
     return 17576;
 };
 
-export const getTemplateData = (type: 'budget' | 'invoice' | 'schedule' | 'finance' | 'supply_chain' | 'hr' | 'sales' | 'real_estate' | 'ecommerce' | 'freelancer' | 'crypto'): SheetData => {
+export const getTemplateData = (type: 'budget' | 'invoice' | 'schedule' | 'finance' | 'supply_chain' | 'hr' | 'sales' | 'real_estate' | 'ecommerce' | 'freelancer' | 'crypto' | 'banking' | 'manufacturing' | 'fmcg'): SheetData => {
     switch(type) {
+        case 'banking':
+            return {
+                name: "Fintech_Loan_Portfolio.xlsx",
+                columns: ["Loan_ID", "Client", "Principal", "Interest_Rate", "Term_Months", "Monthly_Payment", "Current_Balance", "Risk_Score", "Provisioning", "Status"],
+                rows: [
+                    { Loan_ID: "L-9001", Client: "FinNovate Ltd", Principal: 500000, Interest_Rate: 0.045, Term_Months: 60, Monthly_Payment: "=(C2*(D2/12))/(1-(1+D2/12)^(-E2))", Current_Balance: 420000, Risk_Score: 820, Provisioning: "=IF(H2<600, G2*0.05, G2*0.01)", Status: "Current" },
+                    { Loan_ID: "L-9002", Client: "Alpha Retail", Principal: 150000, Interest_Rate: 0.082, Term_Months: 24, Monthly_Payment: "=(C3*(D3/12))/(1-(1+D3/12)^(-E3))", Current_Balance: 85000, Risk_Score: 540, Provisioning: "=IF(H3<600, G3*0.05, G3*0.01)", Status: "Watchlist" },
+                    { Loan_ID: "L-9003", Client: "Zenith Corp", Principal: 1200000, Interest_Rate: 0.038, Term_Months: 120, Monthly_Payment: "=(C4*(D4/12))/(1-(1+D4/12)^(-E4))", Current_Balance: 1150000, Risk_Score: 890, Provisioning: "=IF(H4<600, G4*0.05, G4*0.01)", Status: "Current" }
+                ],
+                formattingRules: [
+                    { id: 'risk-high', type: 'lessThan', column: 'Risk_Score', value1: 600, style: { backgroundColor: '#fee2e2', textColor: '#991b1b' } },
+                    { id: 'watchlist', type: 'containsText', column: 'Status', value1: 'Watchlist', style: { backgroundColor: '#fff7ed', textColor: '#9a3412' } }
+                ]
+            };
+        case 'manufacturing':
+            return {
+                name: "Manufacturing_OEE_Tracker.xlsx",
+                columns: ["Line_ID", "Shift", "Availability_%", "Performance_%", "Quality_%", "OEE", "Target_OEE", "Downtime_Mins", "Defects", "Status"],
+                rows: [
+                    { Line_ID: "LINE-A", Shift: "Morning", "Availability_%": 0.92, "Performance_%": 0.88, "Quality_%": 0.99, OEE: "=C2*D2*E2", Target_OEE: 0.85, Downtime_Mins: 45, Defects: 12, Status: "=IF(F2>=G2,\"Optimal\",\"Under\")" },
+                    { Line_ID: "LINE-B", Shift: "Morning", "Availability_%": 0.78, "Performance_%": 0.82, "Quality_%": 0.95, OEE: "=C3*D3*E3", Target_OEE: 0.85, Downtime_Mins: 120, Defects: 45, Status: "=IF(F3>=G3,\"Optimal\",\"Under\")" },
+                    { Line_ID: "LINE-C", Shift: "Night", "Availability_%": 0.95, "Performance_%": 0.91, "Quality_%": 0.98, OEE: "=C4*D4*E4", Target_OEE: 0.85, Downtime_Mins: 20, Defects: 8, Status: "=IF(F4>=G4,\"Optimal\",\"Under\")" }
+                ],
+                formattingRules: [
+                    { id: 'oee-under', type: 'lessThan', column: 'OEE', value1: 0.8, style: { backgroundColor: '#fee2e2', textColor: '#991b1b' } },
+                    { id: 'oee-optimal', type: 'greaterThan', column: 'OEE', value1: 0.85, style: { backgroundColor: '#dcfce7', textColor: '#166534' } }
+                ]
+            };
+        case 'fmcg':
+            return {
+                name: "Consumer_Goods_Promotion_ROI.xlsx",
+                columns: ["Product", "Promo_Type", "Channel", "Base_Sales", "Promo_Sales", "Uplift_%", "Cost", "Incremental_Profit", "ROI"],
+                rows: [
+                    { Product: "Organic Milk 1L", Promo_Type: "BOGO", Channel: "Tesco", Base_Sales: 12000, Promo_Sales: 28000, "Uplift_%": "=(E2-D2)/D2", Cost: 5000, Incremental_Profit: "=(E2-D2)*0.4-G2", ROI: "=H2/G2" },
+                    { Product: "Greek Yogurt", Promo_Type: "Price Cut", Channel: "Sainsbury", Base_Sales: 8000, Promo_Sales: 11000, "Uplift_%": "=(E3-D3)/D3", Cost: 1500, Incremental_Profit: "=(E3-D3)*0.35-G3", ROI: "=H3/G3" },
+                    { Product: "Cheddar 500g", Promo_Type: "Multipack", Channel: "ASDA", Base_Sales: 15000, Promo_Sales: 22000, "Uplift_%": "=(E4-D4)/D4", Cost: 3000, Incremental_Profit: "=(E4-D4)*0.3-G4", ROI: "=H4/G4" }
+                ],
+                formattingRules: [
+                    { id: 'roi-positive', type: 'greaterThan', column: 'ROI', value1: 0.2, style: { backgroundColor: '#dcfce7', textColor: '#166534' } },
+                    { id: 'roi-negative', type: 'lessThan', column: 'ROI', value1: 0, style: { backgroundColor: '#fee2e2', textColor: '#991b1b' } }
+                ]
+            };
         case 'ecommerce':
             return {
                 name: "E-commerce_Inventory.xlsx",

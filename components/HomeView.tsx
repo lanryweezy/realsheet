@@ -4,7 +4,8 @@ import {
   Plus, Upload, FileSpreadsheet, MoreVertical, Search, Trash2, Edit2,
   LayoutGrid, List as ListIcon, Pin, PinOff, Copy, FileDown, Home, FolderOpen,
   Trash2 as TrashIcon, Settings, FileText, Calendar, DollarSign, ChevronDown,
-  Activity, Share2, User as UserIcon, Clock, HardDrive, Filter, ArrowUpDown
+  Activity, Share2, User as UserIcon, Clock, HardDrive, Filter, ArrowUpDown,
+  Database
 } from 'lucide-react';
 import { FileMetadata } from '../types';
 import {
@@ -30,7 +31,7 @@ interface HomeViewProps {
   onOpenFile: (id: string) => void;
   onNewFile: () => void;
   onUpload: (file: File) => void;
-  onTemplate: (type: 'budget' | 'invoice' | 'schedule') => void;
+  onTemplate: (type: any) => void;
   onOpenSettings?: () => void;
   onDownloadFile?: (id: string) => void;
 }
@@ -462,7 +463,9 @@ const HomeView: React.FC<HomeViewProps> = ({
                   { type: 'ecommerce', label: 'E-commerce', icon: LayoutGrid, color: 'blue', desc: 'Inventory control' },
                   { type: 'freelancer', label: 'Freelancer', icon: FileText, color: 'purple', desc: 'Project invoicing' },
                   { type: 'crypto', label: 'Crypto', icon: Activity, color: 'orange', desc: 'Portfolio tracking' },
-                  { type: 'finance', label: 'Risk Analysis', icon: Activity, color: 'cyan', desc: 'Portfolio insights' },
+                  { type: 'banking', label: 'Fintech', icon: Database, color: 'blue', desc: 'Loan Portfolios' },
+                  { type: 'manufacturing', label: 'Manufacturing', icon: Settings, color: 'slate', desc: 'OEE Tracking' },
+                  { type: 'fmcg', label: 'Consumer Goods', icon: LayoutGrid, color: 'emerald', desc: 'Market Insights' },
                 ].map((tpl) => (
                   <button key={tpl.type} onClick={() => onTemplate(tpl.type as any)} className="group flex flex-col items-start text-left">
                     <div className={`w-full aspect-[1.4/1] bg-slate-900 border border-slate-800/80 rounded-2xl mb-4 flex items-center justify-center transition-all duration-500 group-hover:border-${tpl.color}-500/50 group-hover:-translate-y-2 group-hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)] relative overflow-hidden`}>
