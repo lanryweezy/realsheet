@@ -400,7 +400,7 @@ export const getOperatorOptions = (type: ValidationType): Array<{
   value: ValidationOperator;
   label: string;
 }> => {
-  const commonOperators = [
+  const commonOperators: Array<{ value: ValidationOperator; label: string }> = [
     { value: 'between', label: 'between' },
     { value: 'notBetween', label: 'not between' },
     { value: 'equal', label: 'equal to' },

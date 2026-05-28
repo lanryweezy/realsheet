@@ -1,4 +1,4 @@
-import { SheetData, FileMetadata } from '../types';
+import { SheetData, FileMetadata, Workbook } from '../types';
 
 const FILES_INDEX_KEY = 'nexsheet_files_index';
 const FILE_PREFIX = 'nexsheet_file_';

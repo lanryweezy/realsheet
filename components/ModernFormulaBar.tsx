@@ -231,7 +231,7 @@ const ModernFormulaBar: React.FC<ModernFormulaBarProps> = ({
         </button>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .modern-formula-bar {
           display: flex;
           align-items: flex-start;

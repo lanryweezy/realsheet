@@ -1568,7 +1568,15 @@ const App: React.FC = () => {
       
       <UpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} />
       <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} fileName={currentSheetData?.name || 'Untitled'} onNotify={addToast} />
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSave={(settings) => {
+          localStorage.setItem('nexsheet_api_key', settings.apiKey);
+          addToast('success', 'Settings Saved');
+        }}
+        currentApiKey={localStorage.getItem('nexsheet_api_key') || ''}
+      />
       <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
       <NexusActionCenter
         isOpen={isNotificationCenterOpen}

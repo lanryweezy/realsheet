@@ -73,7 +73,7 @@ const FormulaBar: React.FC<FormulaBarProps> = ({ selectedCell, value, columns, o
     }
     if (e.key === 'Enter') {
       onChange(localValue);
-      e.currentTarget.blur();
+      (e.currentTarget as HTMLInputElement).blur();
     }
   };
 
@@ -86,7 +86,7 @@ const FormulaBar: React.FC<FormulaBarProps> = ({ selectedCell, value, columns, o
   const handleAiSubmit = async () => {
     if (!aiPrompt.trim()) return;
     setIsGenerating(true);
-    const formula = await generateFormulaFromDescription(aiPrompt, columns);
+    const formula = await generateFormulaFromDescription(aiPrompt, { name: 'Cell Context', columns, rows: [] });
     setIsGenerating(false);
     if (formula) {
       setLocalValue(formula);

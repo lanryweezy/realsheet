@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PowerHour as PowerHourType, CriticalHit as CriticalHitType } from '../hooks/useGamification';
+import { PowerHour as PowerHourType, CriticalHit as CriticalHitType } from '../src/hooks/useGamification';
 
 export const PowerHourBanner: React.FC<{ powerHour: PowerHourType }> = ({ powerHour }) => {
   const [remaining, setRemaining] = useState('');

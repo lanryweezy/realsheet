@@ -30,33 +30,6 @@ const ContextualHelp: React.FC<ContextualHelpProps> = ({
   const [suggestedFormula, setSuggestedFormula] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Detect formula and get info
-  const formulaInfo = detectFormulaInfo(formula || '');
-
-  // Get formula suggestion if there's an error
-  useEffect(() => {
-    if (error && formula) {
-      getSuggestion();
-    }
-  }, [error, formula]);
-
-  const getSuggestion = async () => {
-    setIsLoading(true);
-    try {
-      const response = await suggestFormulaAPI({
-        description: `Fix this broken formula: ${formula}, Error: ${error}`
-      });
-      
-      if (response.success && response.formula) {
-        setSuggestedFormula(response.formula);
-      }
-    } catch (error) {
-      console.error('Suggestion error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const detectFormulaInfo = (formulaText: string): FormulaInfo | null => {
     if (!formulaText) return null;
 
@@ -251,6 +224,34 @@ const ContextualHelp: React.FC<ContextualHelpProps> = ({
 
     return formulaDB[funcName] || null;
   };
+
+  // Detect formula and get info
+  const formulaInfo = detectFormulaInfo(formula || '');
+
+  // Get formula suggestion if there's an error
+  useEffect(() => {
+    if (error && formula) {
+      getSuggestion();
+    }
+  }, [error, formula]);
+
+  const getSuggestion = async () => {
+    setIsLoading(true);
+    try {
+      const response = await suggestFormulaAPI({
+        description: `Fix this broken formula: ${formula}, Error: ${error}`
+      });
+
+      if (response.success && response.formula) {
+        setSuggestedFormula(response.formula);
+      }
+    } catch (error) {
+      console.error('Suggestion error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   const commonErrors: Record<string, string> = {
     '#NAME?': 'The formula contains a function name or range reference that Excel/Sheets doesn\'t recognize. Check for typos.',

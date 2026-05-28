@@ -36,7 +36,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   // Load tasks from storage
   useEffect(() => {
     const storedTasks = loadFromStorage<Task[]>(STORAGE_KEYS.TASKS);
-    if (storedTasks) {
+    if (storedTasks && Array.isArray(storedTasks)) {
       setTasks(storedTasks.map(t => ({
         ...t,
         dueDate: t.dueDate ? new Date(t.dueDate) : undefined,
@@ -126,7 +126,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
     review: filteredTasks.filter(t => t.status === 'review'),
     done: filteredTasks.filter(t => t.status === 'done'),
     blocked: filteredTasks.filter(t => t.status === 'blocked'),
-  }), [filteredTasks]);
+  } as Record<string, Task[]>), [filteredTasks]);
 
   const addTask = () => {
     if (!newTaskTitle.trim()) return;

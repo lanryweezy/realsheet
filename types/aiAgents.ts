@@ -1,4 +1,5 @@
-import { Task, Goal, Notification, SheetData } from './productivity';
+import { Task, Goal, Notification } from './productivity';
+import { SheetData } from '../types';
 
 // ============ AGENT TYPES ============
 

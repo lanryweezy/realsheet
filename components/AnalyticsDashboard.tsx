@@ -3,7 +3,7 @@ import {
   BarChart3, TrendingUp, Activity, Clock, Calendar, Target,
   Award, Zap, PieChart, ArrowUp, ArrowDown, Users, CheckCircle,
   Star, Trophy, Flame, Heart, Brain, Lightbulb, Download,
-  RefreshCw, ChevronDown, Filter, DateRange
+  RefreshCw, ChevronDown, Filter, X
 } from 'lucide-react';
 import { Task, Goal, Habit, Notification, loadFromStorage, STORAGE_KEYS } from '../types/productivity';
 import { AIAgent, AgentTask } from '../types/aiAgents';

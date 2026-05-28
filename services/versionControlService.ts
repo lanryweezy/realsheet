@@ -87,10 +87,55 @@ export const calculateDiff = (oldWorkbook: Workbook, newWorkbook: Workbook): Dif
 };
 
 export const mergeBranches = (sourceBranch: Branch, targetBranch: Branch): Workbook => {
-  // Simple merge strategy: source overwrites target
-  // In a real app, this would involve 3-way merge
-  const mergedWorkbook = JSON.parse(JSON.stringify(sourceBranch.workbook));
-  return mergedWorkbook;
+  /**
+   * Enhanced Structural Merge:
+   * Iterates through all sheets and cells, performing a property-level merge.
+   * Prioritizes the source (incoming) branch for conflicting cell values
+   * but preserves structural elements (new columns/sheets) from both.
+   */
+  const target = JSON.parse(JSON.stringify(targetBranch.workbook)) as Workbook;
+  const source = sourceBranch.workbook;
+
+  source.sheets.forEach(sourceSheet => {
+    let targetSheet = target.sheets.find(s => s.id === sourceSheet.id);
+
+    if (!targetSheet) {
+      // New sheet from source - add it
+      target.sheets.push(JSON.parse(JSON.stringify(sourceSheet)));
+      return;
+    }
+
+    // Merge columns (union of column names)
+    const allCols = Array.from(new Set([...targetSheet.columns, ...sourceSheet.columns]));
+    targetSheet.columns = allCols;
+
+    // Merge rows
+    sourceSheet.rows.forEach((sourceRow, ri) => {
+      if (!targetSheet) return; // TS guard
+
+      if (!targetSheet.rows[ri]) {
+        // Source has more rows
+        targetSheet.rows[ri] = { ...sourceRow };
+      } else {
+        // Structural merge of the row object
+        targetSheet.rows[ri] = {
+          ...targetSheet.rows[ri],
+          ...sourceRow
+        };
+      }
+    });
+
+    // Merge styles if they exist
+    if (sourceSheet.cellStyles) {
+      targetSheet.cellStyles = {
+        ...(targetSheet.cellStyles || {}),
+        ...sourceSheet.cellStyles
+      };
+    }
+  });
+
+  target.lastModified = new Date();
+  return target;
 };
 
 export const saveBranch = (branch: Branch) => {

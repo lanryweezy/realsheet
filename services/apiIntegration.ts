@@ -184,6 +184,60 @@ export const connectStripe = async (endpoint: string, apiKey: string): Promise<a
   }
 };
 
+export const connectShopify = async (shopName: string, accessToken: string, endpoint: string): Promise<any[]> => {
+  try {
+    const response = await fetch(`https://${shopName}.myshopify.com/admin/api/2024-01/${endpoint}.json`, {
+      headers: {
+        'X-Shopify-Access-Token': accessToken,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Shopify API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    // Shopify usually wraps the response in a key named after the endpoint
+    const key = endpoint.split('/')[0];
+    return data[key] || data;
+  } catch (error) {
+    console.error('Shopify connection error:', error);
+    return [];
+  }
+};
+
+export const connectPayPal = async (clientId: string, clientSecret: string, endpoint: string): Promise<any[]> => {
+  try {
+    // 1. Get access token
+    const auth = btoa(`${clientId}:${clientSecret}`);
+    const tokenResponse = await fetch('https://api-m.sandbox.paypal.com/v1/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'grant_type=client_credentials',
+    });
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+
+    // 2. Fetch data
+    const response = await fetch(`https://api-m.sandbox.paypal.com/v1/${endpoint}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    const data = await response.json();
+    return data.items || data;
+  } catch (error) {
+    console.error('PayPal connection error:', error);
+    return [];
+  }
+};
+
 export const connectAirtable = async (baseId: string, tableName: string, apiKey: string): Promise<Row[]> => {
   try {
     const response = await fetch(`https://api.airtable.com/v0/${baseId}/${tableName}`, {

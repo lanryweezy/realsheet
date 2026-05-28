@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, BarChart3, LineChart, PieChart, AreaChart, TrendingUp, CircleDot, Layers, ArrowDownWideNarrow, Gauge, Grid3X3, Activity, Plus } from 'lucide-react';
+import { X, BarChart3, LineChart, PieChart, AreaChart, TrendingUp, CircleDot, Layers, ArrowDownWideNarrow, Gauge, Grid3X3, Activity, Plus, Gauge as Speedometer } from 'lucide-react';
 import { ChartConfig } from '../types';
 
 interface ChartWizardModalProps {

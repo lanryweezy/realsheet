@@ -31,7 +31,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   // Load notifications from storage
   useEffect(() => {
     const stored = loadFromStorage<Notification[]>(STORAGE_KEYS.NOTIFICATIONS);
-    if (stored) {
+    if (stored && Array.isArray(stored)) {
       setNotifications(stored.map(n => ({
         ...n,
         scheduledAt: n.scheduledAt ? new Date(n.scheduledAt) : undefined,
@@ -81,7 +81,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
   // Group by priority
   const groupedNotifications = useMemo(() => {
-    const groups = {
+    const groups: Record<string, Notification[]> = {
       urgent: filteredNotifications.filter(n => n.priority === 'urgent'),
       high: filteredNotifications.filter(n => n.priority === 'high'),
       medium: filteredNotifications.filter(n => n.priority === 'medium'),
