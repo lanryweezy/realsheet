@@ -13,8 +13,6 @@ const VISIBLE_ROWS_BUFFER = 5;
 const EXPANSION_THRESHOLD = 5;
 const EMPTY_STYLE = {};
 
-// Performance: Reuse empty style object to prevent breaking React.memo shallow comparison on EnhancedCell
-const EMPTY_STYLE = {};
 
 const COMMON_FUNCTIONS = [
   { name: 'SUM', description: 'Calculates the sum of a range of cells.', syntax: 'SUM(range)' },
@@ -133,11 +131,6 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
   const [contextMenu, setContextMenu] = useState<any>(null);
   const gridContainerRef = useRef<HTMLDivElement>(null);
 
-  const handleFillStart = useCallback((e: any) => {
-    e.preventDefault();
-    setIsFilling(true);
-    setFillRange(selectedRange);
-  }, [selectedRange]);
 
   useEffect(() => { if (data) syncWorkbook(data); }, [data]);
 
