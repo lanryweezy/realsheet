@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import {
   ResponsiveContainer,
   BarChart,
@@ -357,4 +357,7 @@ const Visualization: React.FC<VisualizationProps> = ({ config, data }) => {
   );
 };
 
-export default Visualization;
+// Performance Optimization: Wrapped Visualization in React.memo to prevent unnecessary re-renders when parent state changes.
+// Visualizations are expensive components to render. As long as `config` and `data` props remain referentially stable,
+// this eliminates deep React rendering cycles, reducing CPU load significantly.
+export default memo(Visualization);

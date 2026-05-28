@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { LayoutGrid, X } from 'lucide-react';
 import { DashboardItem, SheetData } from '../types';
 import Visualization from './Visualization';
@@ -52,4 +52,7 @@ const Dashboard: React.FC<DashboardProps> = ({ items, sheetData, onRemoveItem })
   );
 };
 
-export default Dashboard;
+// Performance Optimization: Wrapped Dashboard in React.memo. Dashboard contains multiple expensive Visualization components.
+// This prevents the entire dashboard from re-rendering if its props (`items`, `sheetData`, `onRemoveItem`) haven't changed.
+// Ensure parent components pass stable references for props like `onRemoveItem`.
+export default memo(Dashboard);
