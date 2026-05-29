@@ -348,10 +348,13 @@ const Visualization: React.FC<VisualizationProps> = ({ config, data }) => {
         <p className="text-xs text-slate-400">{config.description}</p>
       </div>
       <div className="flex-1 w-full min-h-[250px]">
-        <ResponsiveContainer width="100%" height="100%">
-          {config.type !== 'gauge' && config.type !== 'heatmap' && renderChart()}
-          {(config.type === 'gauge' || config.type === 'heatmap') && renderChart()}
-        </ResponsiveContainer>
+        {config.type === 'gauge' || config.type === 'heatmap' ? (
+          renderChart()
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            {renderChart() as React.ReactElement}
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );

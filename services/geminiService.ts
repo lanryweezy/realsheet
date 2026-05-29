@@ -30,7 +30,9 @@ export const analyzeDataWithGemini = async (
         chartConfig: apiResponse.data.chartConfig,
         transformationCode: apiResponse.data.transformationCode,
         confidence: apiResponse.data.confidence,
-        toolCalls: apiResponse.data.toolCalls,
+        toolCalls: (apiResponse.data as any).toolCalls,
+        chainOfThought: (apiResponse.data as any).chainOfThought,
+        taskPlan: (apiResponse.data as any).taskPlan,
       };
     }
 

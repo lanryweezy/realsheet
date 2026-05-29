@@ -38,15 +38,20 @@ export default async function handler(
   request: VercelRequest,
   response: VercelResponse
 ) {
+  // Set CORS headers
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    response.setHeader(key, value);
+  });
+
   if (request.method === 'OPTIONS') {
-    return response.status(200).headers(corsHeaders).send();
+    return response.status(200).end();
   }
 
   if (request.method !== 'POST') {
     return response.status(405).json({ error: 'Method not allowed' });
   }
 
-  const ip = request.ip || request.socket.remoteAddress || 'unknown';
+  const ip = (request.headers['x-forwarded-for'] as string) || request.socket.remoteAddress || 'unknown';
   if (!checkRateLimit(ip)) {
     return response.status(429).json({ 
       error: 'Rate limit exceeded',
@@ -93,7 +98,7 @@ ${formatInstruction}
     const aiResponse = await result.response;
     const generatedContent = aiResponse.text().trim();
 
-    return response.status(200).headers(corsHeaders).json({
+    return response.status(200).json({
       success: true,
       content: generatedContent,
       format,
@@ -103,7 +108,7 @@ ${formatInstruction}
   } catch (error: any) {
     console.error('Content Generation Error:', error);
     
-    return response.status(500).headers(corsHeaders).json({
+    return response.status(500).json({
       success: false,
       error: 'Content generation failed',
       message: error.message || 'An unexpected error occurred'

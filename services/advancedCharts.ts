@@ -102,7 +102,7 @@ export class ChartDataProcessor {
     let runningTotal = 0;
     return data.map((row, index) => {
       const value = Number(row[valueKey]) || 0;
-      const isTotal = row.isTotal === true || row.isTotal === 'true';
+      const isTotal = (row.isTotal as any) === true || String(row.isTotal) === 'true';
       
       if (isTotal) {
         return {

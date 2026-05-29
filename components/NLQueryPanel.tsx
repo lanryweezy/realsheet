@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Sparkles, BarChart3, TrendingUp, Zap, X, MessageSquare, Lightbulb, Table2 } from 'lucide-react';
-import { analyzeDataViaAPI, transformData } from '../services/apiClient';
+import { analyzeData as analyzeDataViaAPI, transformData } from '../services/apiClient';
 import { SheetData, ChartConfig } from '../types';
 import Visualization from './Visualization';
 

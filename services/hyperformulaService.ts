@@ -31,16 +31,18 @@ const getSheetIdSafe = (name: string | undefined): number => {
       if (typeof firstId === 'number') return firstId;
   }
 
-  return hf.addSheet(sheetName);
+  const newSheetId = hf.addSheet(sheetName);
+  return typeof newSheetId === 'number' ? newSheetId : 0;
 };
 
 export const syncWorkbook = (sheetData: SheetData): number => {
-  if (!sheetData) return 0;
+  if (!sheetData) return -1;
   const sheetName = sheetData.name || 'Sheet1';
-  let sheetId = hf.getSheetId(sheetName);
+  let sheetId: number | undefined = hf.getSheetId(sheetName);
 
   if (typeof sheetId !== 'number') {
-    sheetId = hf.addSheet(sheetName);
+    const newId = hf.addSheet(sheetName);
+    sheetId = typeof newId === 'number' ? newId : undefined;
   }
 
   if (typeof sheetId === 'number') {
@@ -48,7 +50,7 @@ export const syncWorkbook = (sheetData: SheetData): number => {
     hf.setSheetContent(sheetId, data);
     return sheetId;
   }
-  return 0;
+  return -1;
 };
 
 export const evaluateWithHF = (
@@ -61,7 +63,7 @@ export const evaluateWithHF = (
   if (!sheetData) return value;
 
   const strVal = String(value);
-  if (isAIFormula(strVal)) return "AI-PROCESSING...";
+  if (isAIFormula(strVal)) return "🪄 AI-PROCESSING...";
 
   if (!strVal.startsWith('=')) {
     const num = Number(strVal);

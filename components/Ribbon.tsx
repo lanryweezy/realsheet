@@ -1,13 +1,15 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Undo2, Redo2, PaintBucket, DatabaseZap, BarChart3, Table, Wand2, Eye,
-  FileDown, Share2, Target, LayoutGrid, FileSpreadsheet, FunctionSquare, Filter,
+  FileDown, Share2, Target, LayoutGrid, FileSpreadsheet, SquareFunction as FunctionSquare, Filter,
   Layout, Printer, FileSpreadsheet as FileExcel, Square, SquareDot, Copy, Eraser,
   DollarSign, Type, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight,
-  ChevronDown, Percent, Hash, Binary, FileJson, Save, Info, Settings, LogOut, Search
+  ChevronDown, Percent, Hash, Binary, FileJson, Save, Info, Settings, LogOut, Search,
+  GitBranch, Terminal, Code, Database, Bug
 } from 'lucide-react';
 
-export type RibbonTab = 'file' | 'home' | 'insert' | 'formulas' | 'data' | 'view';
+export type RibbonTab = 'file' | 'home' | 'insert' | 'formulas' | 'data' | 'view' | 'developer';
 
 interface RibbonProps {
   activeTab: RibbonTab;
@@ -41,6 +43,7 @@ interface RibbonProps {
   /** Export Excel and Print (opens print dialog; user can Save as PDF) */
   onExportExcel?: () => void;
   onPrint?: () => void;
+  onDevConsole?: () => void;
 }
 
 const Ribbon: React.FC<RibbonProps> = (p) => {
@@ -51,6 +54,7 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
     { id: 'formulas', label: 'Formulas' },
     { id: 'data', label: 'Data' },
     { id: 'view', label: 'View' },
+    { id: 'developer', label: 'Developer' },
   ];
 
   const groupLabel = (label: string) => (
@@ -60,28 +64,32 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
   );
 
   const btn = (icon: React.ReactNode, label: string, onClick: () => void, disabled = false) => (
-    <button
+    <motion.button
+      whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+      whileTap={{ scale: 0.95 }}
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex flex-col items-center justify-center min-w-[48px] py-1 px-1 rounded-xl hover:bg-white/5 transition-all duration-200 disabled:opacity-20 group"
+      className="flex flex-col items-center justify-center min-w-[48px] py-1 px-1 rounded-xl transition-all duration-200 disabled:opacity-20 group"
       title={label}
     >
       <div className="mb-1 text-slate-400 group-hover:text-cyan-400 transition-colors">{icon}</div>
       <span className="text-[10px] font-bold text-slate-500 group-hover:text-slate-300 leading-tight truncate px-1 uppercase tracking-tighter transition-colors">{label}</span>
-    </button>
+    </motion.button>
   );
 
   const iconBtn = (icon: React.ReactNode, title: string, onClick: () => void, disabled = false) => (
-    <button
+    <motion.button
+      whileHover={{ scale: 1.1, backgroundColor: 'rgba(6, 182, 212, 0.1)' }}
+      whileTap={{ scale: 0.9 }}
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="p-2 rounded-xl hover:bg-cyan-500/10 hover:text-cyan-400 text-slate-400 transition-all duration-200 disabled:opacity-20"
+      className="p-2 rounded-xl text-slate-400 transition-all duration-200 disabled:opacity-20"
       title={title}
     >
       {icon}
-    </button>
+    </motion.button>
   );
 
   return (
@@ -118,15 +126,23 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
         role="tabpanel"
       >
         {p.activeTab === 'file' && (
-          <div className="flex items-center gap-1 pr-6 relative group">
-            <div className="grid grid-cols-2 gap-2">
-              {btn(<Save className="w-4 h-4" />, 'Save', () => { }, !p.sheetData)}
-              {btn(<FileDown className="w-4 h-4" />, 'Export', p.onExport, !p.sheetData)}
-              {btn(<Printer className="w-4 h-4" />, 'Print', p.onExport, !p.sheetData)}
-              {btn(<Info className="w-4 h-4" />, 'Info', () => { }, !p.sheetData)}
+          <>
+            <div className="flex items-center gap-1 pr-6 border-r border-white/5 relative group mr-4 py-1">
+              <div className="grid grid-cols-2 gap-2">
+                {btn(<Save className="w-4 h-4" />, 'Save', () => { }, !p.sheetData)}
+                {btn(<FileDown className="w-4 h-4" />, 'Export', p.onExport, !p.sheetData)}
+                {btn(<Printer className="w-4 h-4" />, 'Print', p.onExport, !p.sheetData)}
+                {btn(<Info className="w-4 h-4" />, 'Info', () => { }, !p.sheetData)}
+              </div>
+              {groupLabel('File Operations')}
             </div>
-            {groupLabel('File Operations')}
-          </div>
+            <div className="flex items-center gap-1 pr-6 relative group py-1">
+              <div className="flex gap-0.5">
+                {btn(<GitBranch className="w-4 h-4 text-purple-400" />, 'Branches', () => (window as any).openBranchManager?.(), !p.sheetData)}
+              </div>
+              {groupLabel('Version Control')}
+            </div>
+          </>
         )}
 
         {p.activeTab === 'home' && (
@@ -235,7 +251,7 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
           <>
             <div className="flex items-center gap-1 pr-4 border-r border-white/5 relative group mr-3 py-1">
               <div className="flex gap-0.5">
-                {btn(<FunctionSquare className="w-3.5 h-3.5" />, 'Insert', () => { }, !p.sheetData)}
+                {btn(<FunctionSquare className="w-3.5 h-3.5" />, 'Visual Builder', () => (window as any).openVisualBuilder?.(), !p.sheetData)}
                 {btn(<Wand2 className="w-3.5 h-3.5" />, 'AutoSum', () => { }, !p.sheetData)}
               </div>
               {groupLabel('Library')}
@@ -291,6 +307,26 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
                 {p.onPrint && btn(<Printer className="w-3.5 h-3.5" />, 'Print', p.onPrint, !p.sheetData)}
               </div>
               {groupLabel('Output')}
+            </div>
+          </>
+        )}
+
+        {p.activeTab === 'developer' && (
+          <>
+            <div className="flex items-center gap-1 pr-4 border-r border-white/5 relative group mr-3 py-1">
+              <div className="flex gap-0.5">
+                {btn(<Terminal className="w-3.5 h-3.5 text-cyan-400" />, 'Terminal', () => p.onDevConsole?.(), !p.sheetData)}
+                {btn(<Code className="w-3.5 h-3.5" />, 'JS Script', () => p.onDevConsole?.(), !p.sheetData)}
+                {btn(<Database className="w-3.5 h-3.5" />, 'SQL Query', () => p.onDevConsole?.(), !p.sheetData)}
+              </div>
+              {groupLabel('Code Interface')}
+            </div>
+            <div className="flex items-center gap-1 pr-4 relative group py-1">
+              <div className="flex gap-0.5">
+                {btn(<Bug className="w-3.5 h-3.5" />, 'Debug', () => { }, !p.sheetData)}
+                {btn(<Info className="w-3.5 h-3.5" />, 'Add-ins', () => { }, !p.sheetData)}
+              </div>
+              {groupLabel('Add-ins')}
             </div>
           </>
         )}

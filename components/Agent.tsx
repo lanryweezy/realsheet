@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, StopCircle, Mic, Plus, Check, Zap, Calculator, PaintBucket, Filter, MessageSquare, Lightbulb, ListTodo, Bot, AlertCircle, ChevronRight, Code } from 'lucide-react';
+import { Send, Sparkles, StopCircle, Mic, Plus, Check, Zap, Calculator, PaintBucket, Filter, MessageSquare, Lightbulb, ListTodo, AlertCircle, ChevronRight, Code } from 'lucide-react';
 import { ChatMessage, SheetData, ChartConfig, EnhancedAnalysisResult } from '../types';
 import { analyzeDataWithGemini } from '../services/geminiService';
 import { transformData } from '../services/apiClient';
 import { safeEvaluate } from '../utils/safeFormulaParser';
-import { parseRange, excelColToIndex } from '../services/formulaService';
+import { parseRange, excelColToIndex, adjustFormulaReferences } from '../services/formulaService';
 import { evaluateWithHF, syncWorkbook } from '../services/hyperformulaService';
 import Visualization from './Visualization';
 
@@ -15,6 +15,7 @@ interface AgentProps {
   workbook?: Workbook | null;
   onAddToDashboard: (config: ChartConfig) => void;
   onUpdateData: (newData: SheetData) => void;
+  onUpdateWorkbook?: (workbook: Workbook) => void;
   onSwitchSheet?: (index: number) => void;
   promptOverride: string | null;
   onClearPromptOverride: () => void;

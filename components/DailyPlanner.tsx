@@ -102,10 +102,14 @@ const DailyPlanner: React.FC<DailyPlannerProps> = ({
   const completeTask = (taskId: string) => {
     if (!dailyPlan) return;
     
-    const updatedPlan = {
+    const updatedPlan: DailyPlan = {
       ...dailyPlan,
       tasks: dailyPlan.tasks.map(t => 
-        t.id === taskId ? { ...t, status: t.status === 'done' ? 'todo' : 'done' as const, completedAt: t.status === 'done' ? undefined : new Date() } : t
+        t.id === taskId ? {
+          ...t,
+          status: (t.status === 'done' ? 'todo' : 'done') as Task['status'],
+          completedAt: t.status === 'done' ? undefined : new Date()
+        } : t
       )
     };
     

@@ -4,6 +4,7 @@ import { Hash, ArrowUp, ArrowDown, MoreVertical, Trash2, Sparkles, Copy, XCircle
 import { evaluateCellValue, indexToExcelCol } from '../services/formulaService';
 import { evaluateWithHF, syncWorkbook, getDependencies } from '../services/hyperformulaService';
 import { NeuralLines } from "./NeuralLines";
+import { Sparkline } from './Sparkline';
 import { ToastType } from './Toast';
 import { safeFilterEvaluate } from '../utils/safeFormulaParser';
 
@@ -104,6 +105,19 @@ const EnhancedCell = memo(({ rowIndex, colIndex, col, value, displayValue, isSel
   }
 
   const isFormula = typeof value === 'string' && value.startsWith('=');
+
+  // Sparkline detection
+  const isSparkline = typeof value === 'string' && value.startsWith('=SPARKLINE(');
+  const sparklineData = useMemo(() => {
+    if (!isSparkline) return null;
+    // Simple extraction for demo: =SPARKLINE(1,2,3,4,5)
+    try {
+      const content = value.match(/\((.*)\)/)?.[1];
+      if (!content) return null;
+      return content.split(',').map(Number).filter(n => !isNaN(n));
+    } catch { return null; }
+  }, [value, isSparkline]);
+
   return (
     <div
       className={`w-full h-full flex flex-col justify-center px-1 text-xs relative ${isSelected ? 'ring-2 ring-cyan-400 bg-cyan-400/10' : ''} ${isHovered || isInHoverRange ? 'bg-white/5' : ''} ${isFormula ? 'formula-glow' : ''}`}
@@ -113,7 +127,13 @@ const EnhancedCell = memo(({ rowIndex, colIndex, col, value, displayValue, isSel
       onDoubleClick={handleDoubleClick}
       onContextMenu={onContextMenu}
     >
-      <div className={`truncate ${isFormula ? 'text-cyan-400 font-medium' : ''}`}>{displayValue}</div>
+      {isSparkline && sparklineData ? (
+        <div className="flex items-center justify-center w-full h-full">
+          <Sparkline values={sparklineData} width={80} height={20} />
+        </div>
+      ) : (
+        <div className={`truncate ${isFormula ? 'text-cyan-400 font-medium' : ''}`}>{displayValue}</div>
+      )}
       {isSelected && <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-cyan-400 border border-slate-900 rounded-sm cursor-crosshair z-30" onMouseDown={onFillStart} />}
     </div>
   );
@@ -121,9 +141,9 @@ const EnhancedCell = memo(({ rowIndex, colIndex, col, value, displayValue, isSel
 
 EnhancedCell.displayName = 'EnhancedCell';
 
-const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, onSheetExpand, onFillRange, onSortColumn, onFilterChange, activeFilters, highlightedCells, isFormatPainterActive, onFormatPainterApply }: any) => {
+const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, onSheetExpand, onFillRange, onSortColumn, onFilterChange, activeFilters, highlightedCells, isFormatPainterActive, onFormatPainterApply, presences = [] }: any) => {
   const [scrollTop, setScrollTop] = useState(0), [scrollLeft, setScrollLeft] = useState(0);
-  const [containerHeight, setContainerHeight] = useState(600), [containerWidth, setContainerWidth] = useState(800);
+  const [containerHeight, setContainerHeight] = useState(800), [containerWidth, setContainerWidth] = useState(1200);
   const [hoverCell, setHoverCell] = useState<any>(null), [isDragging, setIsDragging] = useState(false);
   const [isFilling, setIsFilling] = useState(false), [fillRange, setFillRange] = useState<any>(null);
   const [precedents, setPrecedents] = useState<Set<string>>(new Set());
@@ -131,15 +151,16 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
   const [contextMenu, setContextMenu] = useState<any>(null);
   const gridContainerRef = useRef<HTMLDivElement>(null);
 
-  const selectedRangeRef = useRef(selectedRange);
-  useLayoutEffect(() => {
-    selectedRangeRef.current = selectedRange;
-  }, [selectedRange]);
-
-  const handleFillStart = useCallback((e: any) => {
-    e.preventDefault();
-    setIsFilling(true);
-    setFillRange(selectedRangeRef.current);
+  useEffect(() => {
+    if (!gridContainerRef.current) return;
+    const observer = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        setContainerHeight(entry.contentRect.height);
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(gridContainerRef.current);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => { if (data) syncWorkbook(data); }, [data]);
@@ -205,36 +226,62 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
           <thead>
             <tr style={{ height: HEADER_HEIGHT }}>
               <th className="bg-slate-900 border-b border-r border-slate-700 text-center"><Hash className="w-3 h-3 mx-auto text-slate-500" /></th>
-              {data.columns.map((col: any, i: number) => (
-                <th key={col} className="bg-slate-900 border-b border-r border-slate-700 text-left px-2 text-xs font-bold text-slate-400 overflow-hidden truncate hover:bg-slate-800 transition-colors cursor-pointer group/col">
-                  <div className="flex items-center justify-between">
-                    <span>{col}</span>
-                    <ArrowDown className="w-2 h-2 opacity-0 group-hover/col:opacity-40 transition-opacity" />
-                  </div>
-                </th>
-              ))}
+              {data.columns.map((col: any, i: number) => {
+                const isActive = selectedRange && i >= Math.min(selectedRange.start.colIndex, selectedRange.end.colIndex) && i <= Math.max(selectedRange.start.colIndex, selectedRange.end.colIndex);
+                return (
+                  <th key={col} className={`border-b border-r border-slate-700 text-left px-2 text-xs font-bold transition-colors overflow-hidden truncate ${isActive ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-900 text-slate-400'}`}>{col}</th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
             <tr style={{ height: visibleRange.startRow * ROW_HEIGHT }}><td colSpan={data.columns.length + 1} /></tr>
-            {data.rows.slice(visibleRange.startRow, visibleRange.startRow + 40).map((row: any, ri: number) => {
+            {data.rows.slice(visibleRange.startRow, visibleRange.endRow).map((row: any, ri: number) => {
               const rowIndex = visibleRange.startRow + ri;
               return (
                 <tr key={rowIndex} style={{ height: ROW_HEIGHT }}>
-                  <td className="bg-slate-900 border-b border-r border-slate-700 text-center text-[10px] font-bold text-slate-500 sticky left-0 z-10 group/row hover:bg-slate-800 transition-colors cursor-pointer">{rowIndex + 1}</td>
+                  <td
+                    className={`border-b border-r border-slate-700 text-center text-[10px] font-bold sticky left-0 z-10 cursor-pointer transition-colors ${
+                      selectedRange && rowIndex >= Math.min(selectedRange.start.rowIndex, selectedRange.end.rowIndex) && rowIndex <= Math.max(selectedRange.start.rowIndex, selectedRange.end.rowIndex)
+                        ? 'bg-cyan-500/20 text-cyan-400'
+                        : 'bg-slate-900 text-slate-500 hover:text-cyan-400'
+                    }`}
+                    onClick={() => (window as any).openRecordDetail?.(rowIndex)}
+                  >
+                    {rowIndex + 1}
+                  </td>
                   {data.columns.map((col: any, ci: number) => {
                     const isSelected = selectedRange && rowIndex >= Math.min(selectedRange.start.rowIndex, selectedRange.end.rowIndex) && rowIndex <= Math.max(selectedRange.start.rowIndex, selectedRange.end.rowIndex) && ci >= Math.min(selectedRange.start.colIndex, selectedRange.end.colIndex) && ci <= Math.max(selectedRange.start.colIndex, selectedRange.end.colIndex);
                     const isPrecedent = precedents.has(`${rowIndex}-${ci}`);
-                    const cellStyle = data.cellStyles?.[`${rowIndex}-${col}`] || EMPTY_STYLE;
+                    const cellStyle = data.cellStyles?.[`${rowIndex}-${col}`] || {};
+
+                    // Presence check
+                    const remotePresence = presences.find((p: any) =>
+                      p.selection &&
+                      rowIndex >= Math.min(p.selection.start.rowIndex, p.selection.end.rowIndex) &&
+                      rowIndex <= Math.max(p.selection.start.rowIndex, p.selection.end.rowIndex) &&
+                      ci >= Math.min(p.selection.start.colIndex, p.selection.end.colIndex) &&
+                      ci <= Math.max(p.selection.start.colIndex, p.selection.end.colIndex)
+                    );
+
                     return (
-                      <td key={col} data-row={rowIndex} data-col={ci} className={`p-0 border-b border-r border-slate-800/80 relative ${isSelected ? 'ring-inset ring-2 ring-cyan-400 z-10' : ''}`} onMouseDown={() => handleMouseDown(rowIndex, ci)} onMouseEnter={() => handleMouseEnter(rowIndex, ci)} style={{ border: isPrecedent ? '1px solid var(--nexus-accent)' : undefined }}>
-                        <EnhancedCell rowIndex={rowIndex} colIndex={ci} col={col} value={row[col]} displayValue={evaluateWithHF(row[col], rowIndex, col, data)} isSelected={isSelected} onCellEdit={onCellEdit} isInHoverRange={hoverCell?.rowIndex === rowIndex || hoverCell?.colIndex === ci} onFillStart={handleFillStart} style={cellStyle} />
+                      <td
+                        key={col}
+                        data-row={rowIndex}
+                        data-col={ci}
+                        className="p-0 border-b border-r border-slate-800 relative"
+                        onMouseDown={() => handleMouseDown(rowIndex, ci)}
+                        onMouseEnter={() => handleMouseEnter(rowIndex, ci)}
+                        style={{ border: isPrecedent ? '1px solid var(--nexus-accent)' : remotePresence ? `1px solid ${remotePresence.color}` : undefined }}
+                      >
+                        <EnhancedCell rowIndex={rowIndex} colIndex={ci} col={col} value={row[col]} displayValue={evaluateWithHF(row[col], rowIndex, col, data)} isSelected={isSelected} onCellEdit={onCellEdit} isInHoverRange={hoverCell?.rowIndex === rowIndex || hoverCell?.colIndex === ci} onFillStart={(e: any) => { e.preventDefault(); setIsFilling(true); setFillRange(selectedRange); }} style={cellStyle} />
                       </td>
                     );
                   })}
                 </tr>
               );
             })}
+            <tr style={{ height: Math.max(0, (data.rows.length - visibleRange.endRow) * ROW_HEIGHT) }}><td colSpan={data.columns.length + 1} /></tr>
           </tbody>
         </table>
       </div>

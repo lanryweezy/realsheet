@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Download, Upload, Plus, Settings, MessageSquare, BarChart3,
   Table, Share2, Menu, Crown, X, Activity, FileSpreadsheet,
   LayoutGrid, Undo2, Redo2, PaintBucket, DatabaseZap, Eye,
-  Wand2, Search, Hash, MoreVertical, Copy, MoveRight, MoveDown,
+  Wand2, Search, Hash, MoreVertical, Copy, MoveRight, MoveDown, Terminal,
   SplitSquareHorizontal, CopyMinus, Calculator, Filter, MessageSquare as MessageSquareIcon,
-  Target, FileDown, Zap, User, Code, Home, HelpCircle, Sun, Moon,
-  Bell, CheckCircle, Calendar, Bot, Phone, TrendingUp, Plug, Sparkles, FileCode
+  Target, FileDown, Zap, User, Code, Home, HelpCircle, Sun, Moon, Lightbulb,
+  Bell, CheckCircle, Calendar, Bot, Phone, TrendingUp, Plug, Sparkles, FileCode,
+  SquareFunction as FunctionSquare, GitBranch
 } from 'lucide-react';
 import Grid from './components/Grid';
 import Dashboard from './components/Dashboard';
@@ -36,6 +38,12 @@ import GoalSeekModal from './components/GoalSeekModal';
 import PivotModal from './components/PivotModal';
 import ChartWizardModal from './components/ChartWizardModal';
 import SmartFillModal from './components/SmartFillModal';
+import VisualFormulaBuilder from './components/VisualFormulaBuilder';
+import BranchManager from './components/BranchManager';
+import DeveloperConsole from './components/DeveloperConsole';
+import RecordDetailView from './components/RecordDetailView';
+import OnboardingTour from './components/OnboardingTour';
+import Tooltip from './components/Tooltip';
 import CommandPalette from './components/CommandPalette';
 import Ribbon, { type RibbonTab } from './components/Ribbon';
 import QuickAccessToolbar from './components/QuickAccessToolbar';
@@ -53,6 +61,9 @@ import { useGamification } from './src/hooks/useGamification';
 import { PowerHourBanner, CriticalHitFlash, StreakGuard } from './components/DopamineEngine';
 import { FormMode } from './components/FormMode';
 import { generateFormSchema, FormSchema } from './services/FormService';
+import { suggestAutomations, AutomationSuggestion } from './services/automationService';
+import { CollaborationService, Presence } from './services/collaborationService';
+import { Branch, Row } from './types';
 
 // Add mobile detection hook
 const useMobileDetection = () => {
@@ -110,6 +121,24 @@ const App: React.FC = () => {
   const [highlightedCells, setHighlightedCells] = useState<Set<string>>(new Set());
   const [loadSummary, setLoadSummary] = useState<{ title: string; hint: string } | null>(null);
 
+  const tips = [
+    "Tip: Double-click a cell to edit its content.",
+    "Tip: Use Ctrl+K to open the Command Palette.",
+    "Tip: Tap the row number to open the Record Detail View.",
+    "Tip: NexAgent can create charts if you ask nicely.",
+    "Tip: Right-click columns to rename or delete them.",
+    "Tip: Branches allow you to experiment with data safely.",
+    "Tip: Visual Formula Builder helps you create logic without code."
+  ];
+  const [currentTipIndex, setCurrentTipIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+       setCurrentTipIndex(prev => (prev + 1) % tips.length);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Filtered rows for display
   const displayRows = useMemo(() => {
     if (!currentSheetData) return [];
@@ -130,6 +159,11 @@ const App: React.FC = () => {
   };
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Closed by default
+
+  const sidebarVariants = {
+    open: { width: 320, opacity: 1, visibility: 'visible' as const },
+    closed: { width: 0, opacity: 0, visibility: 'hidden' as const }
+  };
   const [activeTab, setActiveTab] = useState<'grid' | 'dashboard'>('grid');
   const [ribbonTab, setRibbonTab] = useState<RibbonTab>('home');
   const [pageLayoutView, setPageLayoutView] = useState(false);
@@ -153,6 +187,42 @@ const App: React.FC = () => {
   const [isPivotModalOpen, setIsPivotModalOpen] = useState(false);
   const [isChartWizardOpen, setIsChartWizardOpen] = useState(false);
   const [isSmartFillModalOpen, setIsSmartFillModalOpen] = useState(false);
+  const [isVisualFormulaBuilderOpen, setIsVisualFormulaBuilderOpen] = useState(false);
+  const [isBranchManagerOpen, setIsBranchManagerOpen] = useState(false);
+  const [isRecordDetailOpen, setIsRecordDetailOpen] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [activeDetailRowIndex, setActiveDetailRowIndex] = useState<number | null>(null);
+  const [presences, setPresences] = useState<Presence[]>([]);
+  const collabServiceRef = useRef<CollaborationService | null>(null);
+
+  useEffect(() => {
+     if (currentUser && !collabServiceRef.current) {
+        collabServiceRef.current = new CollaborationService(currentUser.name, (p) => {
+           setPresences(p.filter(presence => presence.userId !== collabServiceRef.current?.['currentUser'].userId));
+        });
+     }
+     return () => {
+        collabServiceRef.current?.disconnect();
+        collabServiceRef.current = null;
+     };
+  }, [currentUser]);
+
+  useEffect(() => {
+    const hasSeenTour = localStorage.getItem('realsheet_tour_seen');
+    if (!hasSeenTour) {
+       setIsOnboardingOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    (window as any).openVisualBuilder = () => setIsVisualFormulaBuilderOpen(true);
+    (window as any).openBranchManager = () => setIsBranchManagerOpen(true);
+    (window as any).openRecordDetail = (index: number) => {
+       setActiveDetailRowIndex(index);
+       setIsRecordDetailOpen(true);
+    };
+  }, []);
+
   const [isGoalSeekModalOpen, setIsGoalSeekModalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
@@ -202,8 +272,14 @@ const App: React.FC = () => {
   const [isFormatPainterActive, setIsFormatPainterActive] = useState(false);
   const [formatPainterSource, setFormatPainterSource] = useState<{ rowIndex: number; colKey: string } | null>(null);
 
+  // Automation Suggestions
+  const [automationSuggestions, setAutomationSuggestions] = useState<AutomationSuggestion[]>([]);
+
   // Cell Styles State
   const [isCellStylesOpen, setIsCellStylesOpen] = useState(false);
+
+  // Developer Console State
+  const [isDevConsoleOpen, setIsDevConsoleOpen] = useState(false);
 
   const [smartFillSourceColumn, setSmartFillSourceColumn] = useState('');
 
@@ -240,15 +316,23 @@ const App: React.FC = () => {
   }, []);
 
   // --- Persistence (File Based) ---
-  // Autosave
+  // Autosave & Automation detection
   useEffect(() => {
     if (currentSheetData && view === 'editor') {
       const timer = setTimeout(() => {
         saveFile(currentSheetData);
+
+        // Check for automations
+        const suggestions = suggestAutomations(currentSheetData, history);
+        setAutomationSuggestions(suggestions);
+
+        if (suggestions.length > 0 && Math.random() > 0.7) { // Don't annoy the user
+           addToast('info', 'Smart Suggestion', suggestions[0].title);
+        }
       }, 1500); // Debounce save
       return () => clearTimeout(timer);
     }
-  }, [currentSheetData, view]);
+  }, [currentSheetData, view, history]);
 
   // --- History Management ---
   const handleUndo = useCallback(() => {
@@ -434,7 +518,7 @@ const App: React.FC = () => {
     }, 800);
   };
 
-  const handleTemplate = (type: 'budget' | 'invoice' | 'schedule') => {
+  const handleTemplate = (type: any) => {
     loadData(getTemplateData(type));
   };
 
@@ -1455,6 +1539,22 @@ const App: React.FC = () => {
     return '';
   };
 
+  const handleSwitchBranch = (branch: Branch) => {
+    setWorkbook(branch.workbook);
+    addToast('success', 'Branch Switched', `Now on branch: ${branch.name}`);
+  };
+
+  const handleSaveDetailRow = (rowIndex: number, updatedRow: Row) => {
+     if (!workbook || !currentSheetData) return;
+     const updatedSheets = [...workbook.sheets];
+     const currentSheet = updatedSheets[workbook.activeSheetIndex];
+     const newRows = [...currentSheet.rows];
+     newRows[rowIndex] = updatedRow;
+     const newSheetData = { ...currentSheet, rows: newRows };
+     pushToHistory(newSheetData);
+     addToast('success', 'Row Updated');
+  };
+
   if (!currentUser) {
     return <LoginView onLogin={setCurrentUser} />;
   }
@@ -1470,7 +1570,15 @@ const App: React.FC = () => {
       
       <UpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} />
       <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} fileName={currentSheetData?.name || 'Untitled'} onNotify={addToast} />
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSave={(settings) => {
+          localStorage.setItem('nexsheet_api_key', settings.apiKey);
+          addToast('success', 'Settings Saved');
+        }}
+        currentApiKey={localStorage.getItem('nexsheet_api_key') || ''}
+      />
       <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
       <NexusActionCenter
         isOpen={isNotificationCenterOpen}
@@ -1524,22 +1632,22 @@ const App: React.FC = () => {
               <span className="text-slate-400 text-xs hidden sm:block ml-0 sm:ml-1">Fast, keyboard-first spreadsheets</span>
             </div>
 
-            {/* Navigation Pills - Hide on mobile */}
-            {currentSheetData && view === 'editor' && !isMobile && (
-              <div className="hidden md:flex bg-slate-800/50 rounded-xl p-1 border border-slate-700/50 animate-in fade-in zoom-in shadow-inner">
+            {/* Navigation Pills */}
+            {currentSheetData && view === 'editor' && (
+              <div className={`${isMobile ? 'flex' : 'hidden md:flex'} bg-slate-800/50 rounded-lg p-1 border border-slate-700/50 animate-in fade-in zoom-in`}>
                 <button
                   onClick={() => setActiveTab('grid')}
                   className={`tab-pill px-4 py-1.5 rounded-lg transition-all ${activeTab === 'grid' ? 'active bg-cyan-500/10 text-cyan-400 shadow-[inset_0_0_10px_rgba(6,182,212,0.1)]' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                   <FileSpreadsheet className="w-4 h-4" />
-                  <span className="mobile-hidden font-bold tracking-tight">NexSheet</span>
+                  {!isMobile && <span className="mobile-hidden">Data</span>}
                 </button>
                 <button
                   onClick={() => setActiveTab('dashboard')}
                   className={`tab-pill px-4 py-1.5 rounded-lg transition-all ${activeTab === 'dashboard' ? 'active bg-purple-500/10 text-purple-400 shadow-[inset_0_0_10px_rgba(168,85,247,0.1)]' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                   <LayoutGrid className="w-4 h-4" />
-                  <span className="mobile-hidden font-bold tracking-tight">Dashboard</span>
+                  {!isMobile && <span className="mobile-hidden">Dashboard</span>}
                   {dashboardItems.length > 0 && (
                     <span className="ml-2 px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] border border-purple-500/30 mobile-hidden">
                       {dashboardItems.length}
@@ -1567,15 +1675,17 @@ const App: React.FC = () => {
 
             {/* Compact toolbar for mobile */}
             {view === 'editor' && (
-              <div className={`compact-toolbar ${isMobile ? 'bg-slate-800/50 rounded-lg p-1 border border-slate-700/50' : 'toolbar-group animate-in fade-in slide-in-from-top-1 bg-slate-900/40 px-3 py-1 rounded-xl border border-white/5 shadow-inner'}`}>
-                <div className="flex items-center gap-1">
-                  <button onClick={handleUndo} disabled={!currentSheetData || historyIndex <= 0} className="btn-icon hover:bg-white/5" title="Undo">
+              <div className={`compact-toolbar ${isMobile ? 'bg-slate-800/50 rounded-lg p-1 border border-slate-700/50' : 'toolbar-group animate-in fade-in slide-in-from-top-1'}`}>
+                <Tooltip content="Undo" shortcut="⌘Z">
+                  <button onClick={handleUndo} disabled={!currentSheetData || historyIndex <= 0} className="btn-icon">
                     <Undo2 className="w-4 h-4" />
                   </button>
-                  <button onClick={handleRedo} disabled={!currentSheetData || historyIndex >= history.length - 1} className="btn-icon hover:bg-white/5" title="Redo">
+                </Tooltip>
+                <Tooltip content="Redo" shortcut="⌘Y">
+                  <button onClick={handleRedo} disabled={!currentSheetData || historyIndex >= history.length - 1} className="btn-icon">
                     <Redo2 className="w-4 h-4" />
                   </button>
-                </div>
+                </Tooltip>
 
                 {!isMobile && (
                   <>
@@ -1667,16 +1777,31 @@ const App: React.FC = () => {
             <div className="h-6 w-px bg-slate-700/50 mobile-hidden"></div>
 
             {view === 'editor' && (
-              <button
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className={`btn-icon ${isSidebarOpen ? 'active' : ''}`}
-                title="Toggle Agent"
-              >
-                {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
+                <Tooltip content={isSidebarOpen ? "Close Agent" : "Open Agent"}>
+                  <button
+                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                    className={`btn-icon ${isSidebarOpen ? 'active' : ''}`}
+                  >
+                    {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                  </button>
+                </Tooltip>
             )}
 
-            <button onClick={() => setIsUpgradeModalOpen(true)} className="flex items-center justify-center p-1.5 rounded-full bg-gradient-to-r from-amber-200 to-yellow-400 text-slate-900 shadow-lg shadow-amber-500/20 hover:scale-105 transition-transform min-w-[32px] min-h-[32px]" title="Upgrade to Pro – see what's included" aria-label="Upgrade to Pro">
+            {/* Presence Indicators */}
+            <div className="flex -space-x-2 mr-2">
+              {presences.map((presence) => (
+                <div
+                  key={presence.userId}
+                  className="w-7 h-7 rounded-full border-2 border-slate-900 flex items-center justify-center text-[10px] font-bold text-white shadow-lg"
+                  style={{ backgroundColor: presence.color }}
+                  title={presence.userName}
+                >
+                  {presence.userName.charAt(0)}
+                </div>
+              ))}
+            </div>
+
+            <button onClick={() => setIsUpgradeModalOpen(true)} className="flex items-center justify-center p-1.5 rounded-full bg-gradient-to-r from-amber-200 to-yellow-400 text-slate-900 shadow-lg shadow-amber-500/20 hover:scale-105 transition-transform" title="Upgrade to Pro – see what's included">
               <Crown className="w-4 h-4" />
             </button>
 
@@ -1784,6 +1909,7 @@ const App: React.FC = () => {
                             hasPrintArea={!!(currentSheetData?.printArea)}
                             onExportExcel={handleExportExcel}
                             onPrint={handlePrint}
+                            onDevConsole={() => setIsDevConsoleOpen(true)}
                           />
                         </>
                       )}
@@ -1827,6 +1953,7 @@ const App: React.FC = () => {
                             onRedo={handleRedo}
                             isFormatPainterActive={isFormatPainterActive}
                             highlightedCells={highlightedCells}
+                            presences={presences}
                           />
                         </GridErrorBoundary>
                       </div>
@@ -1854,6 +1981,21 @@ const App: React.FC = () => {
                     <div className="flex items-center gap-4">
                       <div className="status-item">
                         <span className="text-[11px]" style={{ color: 'var(--nexus-text-muted)' }}>Ready</span>
+                      </div>
+                      <div className="separator" />
+                      <div className="status-item mobile-hidden">
+                        <Lightbulb className="w-3 h-3 text-amber-400" />
+                        <AnimatePresence mode="wait">
+                          <motion.span
+                            key={currentTipIndex}
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -5 }}
+                            className="text-[10px] font-medium italic text-slate-500"
+                          >
+                            {tips[currentTipIndex]}
+                          </motion.span>
+                        </AnimatePresence>
                       </div>
                       <div className="separator" />
                       <div className="status-item">
@@ -1908,7 +2050,13 @@ const App: React.FC = () => {
                 </div>
 
                 {/* Right Side: Agent Sidebar */}
-                <aside className={`saas-sidebar-panel ${!isSidebarOpen ? 'hidden-panel' : ''}`}>
+                <motion.aside
+                  className="saas-sidebar-panel overflow-hidden border-l border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-blur-xl"
+                  initial={false}
+                  animate={isSidebarOpen ? "open" : "closed"}
+                  variants={sidebarVariants}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                >
                   <Agent
                     sheetData={currentSheetData}
                     workbook={workbook}
@@ -1919,7 +2067,7 @@ const App: React.FC = () => {
                     promptOverride={agentPromptOverride}
                     onClearPromptOverride={() => setAgentPromptOverride(null)}
                   />
-                </aside>
+                </motion.aside>
               </div>
 
               {/* Watch Window - Floating overlay */}
@@ -1983,6 +2131,46 @@ const App: React.FC = () => {
             onApply={handleSmartFill}
           />
 
+          <VisualFormulaBuilder
+            isOpen={isVisualFormulaBuilderOpen}
+            onClose={() => setIsVisualFormulaBuilderOpen(false)}
+            columns={currentSheetData?.columns || []}
+            onApply={(formula) => {
+               if (selectedCell) handleCellEdit(selectedCell.rowIndex, selectedCell.colKey, formula);
+            }}
+          />
+
+          {workbook && (
+            <BranchManager
+              isOpen={isBranchManagerOpen}
+              onClose={() => setIsBranchManagerOpen(false)}
+              workbook={workbook}
+              onSwitchBranch={handleSwitchBranch}
+              onUpdateWorkbook={(wb) => setWorkbook(wb)}
+            />
+          )}
+
+          {isRecordDetailOpen && activeDetailRowIndex !== null && currentSheetData && (
+            <RecordDetailView
+              isOpen={isRecordDetailOpen}
+              onClose={() => setIsRecordDetailOpen(false)}
+              row={currentSheetData.rows[activeDetailRowIndex]}
+              columns={currentSheetData.columns}
+              rowIndex={activeDetailRowIndex}
+              onSave={handleSaveDetailRow}
+              onNext={activeDetailRowIndex < currentSheetData.rows.length - 1 ? () => setActiveDetailRowIndex(activeDetailRowIndex + 1) : undefined}
+              onPrev={activeDetailRowIndex > 0 ? () => setActiveDetailRowIndex(activeDetailRowIndex - 1) : undefined}
+            />
+          )}
+
+          <OnboardingTour
+             isOpen={isOnboardingOpen}
+             onClose={() => {
+                setIsOnboardingOpen(false);
+                localStorage.setItem('realsheet_tour_seen', 'true');
+             }}
+          />
+
           <CommandPalette
             isOpen={isCommandPaletteOpen}
             onClose={() => setIsCommandPaletteOpen(false)}
@@ -2000,6 +2188,16 @@ const App: React.FC = () => {
             onClose={() => setIsCellStylesOpen(false)}
             onSelectStyle={handleApplyCellStyle}
           />
+
+          {workbook && (
+            <DeveloperConsole
+              isOpen={isDevConsoleOpen}
+              onClose={() => setIsDevConsoleOpen(false)}
+              workbook={workbook}
+              onUpdateWorkbook={setWorkbook}
+              onUpdateData={pushToHistory}
+            />
+          )}
         </main>
       </div>
 

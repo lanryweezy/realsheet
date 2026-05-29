@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Phone, Mail, MessageSquare, Send, Users, Clock, Calendar,
   Plus, Search, Filter, MoreVertical, PhoneIncoming, PhoneOutgoing,
-  Video, Mic, MicOff, Volume2, VolumeX, Headphones, Call,
+  Video, Mic, MicOff, Volume2, VolumeX, Headphones,
   Inbox, Send as SendIcon, Archive, Trash2, Star, Tag,
   RefreshCw, Check, X, ChevronLeft, ChevronRight, Bell
 } from 'lucide-react';

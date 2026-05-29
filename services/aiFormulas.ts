@@ -3,7 +3,7 @@
  * Inspired by Numerous.ai, Julius AI, and other AI spreadsheet tools
  */
 
-import { generateContent as generateContentViaAPI } from './apiClient';
+import { generateContent as generateContentViaAPI, analyzeData as analyzeDataViaAPI } from './apiClient';
 import { SheetData, Row } from '../types';
 
 /**
@@ -42,9 +42,6 @@ export const evaluateINFER = async (
   predictionData: any[]
 ): Promise<number | string> => {
   try {
-    const genAI = getGeminiClient();
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    
     const prompt = `Given this data:
 ${JSON.stringify(dataRange, null, 2)}
 
@@ -53,9 +50,8 @@ ${JSON.stringify(predictionData)}
 
 Respond with ONLY the predicted value, no explanation.`;
     
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text().trim();
+    const response = await analyzeDataViaAPI({ prompt });
+    const text = response.data?.textResponse.trim() || '';
     
     // Try to parse as number
     const num = parseFloat(text);
@@ -73,18 +69,14 @@ Respond with ONLY the predicted value, no explanation.`;
  */
 export const evaluateCLASSIFY = async (text: string, categories: string): Promise<string> => {
   try {
-    const genAI = getGeminiClient();
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    
     const prompt = `Classify the following text into one of these categories: ${categories}
 
 Text: "${text}"
 
 Respond with ONLY the category name, nothing else.`;
     
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text().trim();
+    const response = await analyzeDataViaAPI({ prompt });
+    return response.data?.textResponse.trim() || '';
   } catch (error) {
     console.error('CLASSIFY function error:', error);
     return '#CLASSIFY_ERROR!';
@@ -99,16 +91,12 @@ Respond with ONLY the category name, nothing else.`;
  */
 export const evaluateSENTIMENT = async (text: string): Promise<string> => {
   try {
-    const genAI = getGeminiClient();
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    
     const prompt = `Analyze the sentiment of this text and respond with ONLY one word: Positive, Negative, or Neutral
 
 Text: "${text}"`;
     
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text().trim();
+    const response = await analyzeDataViaAPI({ prompt });
+    return response.data?.textResponse.trim() || '';
   } catch (error) {
     console.error('SENTIMENT function error:', error);
     return '#SENTIMENT_ERROR!';
@@ -123,18 +111,14 @@ Text: "${text}"`;
  */
 export const evaluateEXTRACT = async (text: string, whatToExtract: string): Promise<string> => {
   try {
-    const genAI = getGeminiClient();
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    
     const prompt = `Extract the ${whatToExtract} from this text. If not found, return "Not found".
 
 Text: "${text}"
 
 Respond with ONLY the extracted value, nothing else.`;
     
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text().trim();
+    const response = await analyzeDataViaAPI({ prompt });
+    return response.data?.textResponse.trim() || '';
   } catch (error) {
     console.error('EXTRACT function error:', error);
     return '#EXTRACT_ERROR!';
@@ -149,16 +133,12 @@ Respond with ONLY the extracted value, nothing else.`;
  */
 export const evaluateTRANSLATE = async (text: string, targetLanguage: string): Promise<string> => {
   try {
-    const genAI = getGeminiClient();
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    
     const prompt = `Translate this text to ${targetLanguage}. Respond with ONLY the translation, no explanation.
 
 Text: "${text}"`;
     
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text().trim();
+    const response = await analyzeDataViaAPI({ prompt });
+    return response.data?.textResponse.trim() || '';
   } catch (error) {
     console.error('TRANSLATE function error:', error);
     return '#TRANSLATE_ERROR!';
@@ -172,18 +152,14 @@ Text: "${text}"`;
  */
 export const evaluateSUMMARIZE = async (text: string, maxWords: number = 50): Promise<string> => {
   try {
-    const genAI = getGeminiClient();
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    
     const prompt = `Summarize this text in ${maxWords} words or less:
 
 "${text}"
 
 Respond with ONLY the summary, no preamble.`;
     
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text().trim();
+    const response = await analyzeDataViaAPI({ prompt });
+    return response.data?.textResponse.trim() || '';
   } catch (error) {
     console.error('SUMMARIZE function error:', error);
     return '#SUMMARIZE_ERROR!';
@@ -198,16 +174,12 @@ Respond with ONLY the summary, no preamble.`;
  */
 export const evaluateGENERATE = async (prompt: string, format: string = 'text'): Promise<string> => {
   try {
-    const genAI = getGeminiClient();
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    
     const fullPrompt = format === 'list'
       ? `${prompt}\n\nProvide the response as a numbered list.`
       : prompt;
     
-    const result = await model.generateContent(fullPrompt);
-    const response = await result.response;
-    return response.text().trim();
+    const response = await analyzeDataViaAPI({ prompt: fullPrompt });
+    return response.data?.textResponse.trim() || '';
   } catch (error) {
     console.error('GENERATE function error:', error);
     return '#GENERATE_ERROR!';
@@ -222,18 +194,14 @@ export const evaluateGENERATE = async (prompt: string, format: string = 'text'):
  */
 export const evaluateANALYZE = async (dataRange: any[][], analysisType: string): Promise<string> => {
   try {
-    const genAI = getGeminiClient();
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    
     const prompt = `Perform ${analysisType} analysis on this data and provide key insights:
 
 ${JSON.stringify(dataRange, null, 2)}
 
 Provide a concise summary of findings.`;
     
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text().trim();
+    const response = await analyzeDataViaAPI({ prompt });
+    return response.data?.textResponse.trim() || '';
   } catch (error) {
     console.error('ANALYZE function error:', error);
     return '#ANALYZE_ERROR!';
@@ -247,16 +215,12 @@ Provide a concise summary of findings.`;
  */
 export const evaluateFORECAST = async (historicalData: number[], periodsAhead: number): Promise<string> => {
   try {
-    const genAI = getGeminiClient();
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    
     const prompt = `Given this historical data: ${historicalData.join(', ')}
 
 Forecast the next ${periodsAhead} values. Respond with ONLY the forecasted values separated by commas, no explanation.`;
     
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text().trim();
+    const response = await analyzeDataViaAPI({ prompt });
+    return response.data?.textResponse.trim() || '';
   } catch (error) {
     console.error('FORECAST function error:', error);
     return '#FORECAST_ERROR!';
@@ -270,18 +234,14 @@ Forecast the next ${periodsAhead} values. Respond with ONLY the forecasted value
  */
 export const evaluateEXPLAIN = async (formula: string): Promise<string> => {
   try {
-    const genAI = getGeminiClient();
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    
     const prompt = `Explain this spreadsheet formula in simple terms:
 
 ${formula}
 
 Provide a clear, concise explanation that a non-technical person can understand.`;
     
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text().trim();
+    const response = await analyzeDataViaAPI({ prompt });
+    return response.data?.textResponse.trim() || '';
   } catch (error) {
     console.error('EXPLAIN function error:', error);
     return '#EXPLAIN_ERROR!';
@@ -295,17 +255,13 @@ Provide a clear, concise explanation that a non-technical person can understand.
  */
 export const evaluateSUGGEST_FORMULA = async (description: string, sampleData?: string): Promise<string> => {
   try {
-    const genAI = getGeminiClient();
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    
     const prompt = `Suggest an Excel/Google Sheets formula for this task: "${description}"
 ${sampleData ? `\nSample data range: ${sampleData}` : ''}
 
 Respond with ONLY the formula, starting with =, no explanation.`;
     
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text().trim();
+    const response = await analyzeDataViaAPI({ prompt });
+    return response.data?.textResponse.trim() || '';
   } catch (error) {
     console.error('SUGGEST_FORMULA function error:', error);
     return '#SUGGEST_ERROR!';
@@ -319,9 +275,6 @@ Respond with ONLY the formula, starting with =, no explanation.`;
  */
 export const evaluateFIX_FORMULA = async (brokenFormula: string, errorMessage: string): Promise<string> => {
   try {
-    const genAI = getGeminiClient();
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    
     const prompt = `Fix this broken formula:
 
 Formula: ${brokenFormula}
@@ -329,9 +282,8 @@ Error: ${errorMessage}
 
 Respond with ONLY the corrected formula, starting with =, no explanation.`;
     
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text().trim();
+    const response = await analyzeDataViaAPI({ prompt });
+    return response.data?.textResponse.trim() || '';
   } catch (error) {
     console.error('FIX_FORMULA function error:', error);
     return '#FIX_ERROR!';

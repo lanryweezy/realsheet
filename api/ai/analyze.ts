@@ -40,9 +40,14 @@ export default async function handler(
   request: VercelRequest,
   response: VercelResponse
 ) {
+  // Set CORS headers
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    response.setHeader(key, value);
+  });
+
   // Handle CORS preflight
   if (request.method === 'OPTIONS') {
-    return response.status(200).headers(corsHeaders).send();
+    return response.status(200).end();
   }
 
   // Only allow POST
@@ -51,7 +56,7 @@ export default async function handler(
   }
 
   // Rate limiting
-  const ip = request.ip || request.socket.remoteAddress || 'unknown';
+  const ip = (request.headers['x-forwarded-for'] as string) || request.socket.remoteAddress || 'unknown';
   if (!checkRateLimit(ip)) {
     return response.status(429).json({ 
       error: 'Rate limit exceeded',
@@ -162,7 +167,7 @@ Note: For tool calls involving ranges, use A1 notation (e.g., "A1:C5"). For dele
     }
 
     // Return successful response
-    return response.status(200).headers(corsHeaders).json({
+    return response.status(200).json({
       success: true,
       data: parsedResponse
     });
@@ -170,7 +175,7 @@ Note: For tool calls involving ranges, use A1 notation (e.g., "A1:C5"). For dele
   } catch (error: any) {
     console.error('AI Analysis Error:', error);
     
-    return response.status(500).headers(corsHeaders).json({
+    return response.status(500).json({
       success: false,
       error: 'Analysis failed',
       message: error.message || 'An unexpected error occurred'
