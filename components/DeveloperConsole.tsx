@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Terminal, Play, Trash2, Copy, Save, Code, Database,
   ChevronRight, AlertCircle, CheckCircle2, X, Maximize2,
-  Minimize2, History, Wand2
+  Minimize2, History, Wand2, Info
 } from 'lucide-react';
 import { Workbook, SheetData } from '../types';
 import alasql from 'alasql';
@@ -16,7 +16,7 @@ interface DeveloperConsoleProps {
   onUpdateData: (data: SheetData) => void;
 }
 
-type ConsoleMode = 'js' | 'sql';
+type ConsoleMode = 'js' | 'sql' | 'python';
 
 interface ConsoleLog {
   id: string;
@@ -37,6 +37,8 @@ const DeveloperConsole: React.FC<DeveloperConsoleProps> = ({
   const [input, setInput] = useState('');
   const [logs, setLogs] = useState<ConsoleLog[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [pyodide, setPyodide] = useState<any>(null);
+  const [isPythonLoading, setIsPythonLoading] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   const activeSheet = workbook.sheets[workbook.activeSheetIndex];
@@ -64,8 +66,10 @@ const DeveloperConsole: React.FC<DeveloperConsoleProps> = ({
 
     if (mode === 'js') {
       runJS(input);
-    } else {
+    } else if (mode === 'sql') {
       runSQL(input);
+    } else if (mode === 'python') {
+      runPython(input);
     }
   };
 
@@ -96,6 +100,64 @@ const DeveloperConsole: React.FC<DeveloperConsoleProps> = ({
       }
 
       addLog('output', 'Execution successful');
+    } catch (err: any) {
+      addLog('error', err.message);
+    }
+  };
+
+  const initPython = async () => {
+    if (pyodide) return pyodide;
+
+    setIsPythonLoading(true);
+    addLog('info', 'Initializing Python environment (Pyodide)...');
+
+    try {
+      const py = await (window as any).loadPyodide();
+      setPyodide(py);
+      setIsPythonLoading(false);
+      addLog('info', 'Python 3.11 engine ready');
+      return py;
+    } catch (err: any) {
+      setIsPythonLoading(false);
+      addLog('error', `Failed to load Python: ${err.message}`);
+      return null;
+    }
+  };
+
+  const runPython = async (code: string) => {
+    const py = await initPython();
+    if (!py) return;
+
+    try {
+      // Inject workbook data into Python
+      // We convert to JSON then parse in Python to avoid proxy issues
+      const dataJson = JSON.stringify(activeSheet.rows);
+      py.runPython(`
+import json
+rows = json.loads('${dataJson.replace(/'/g, "\\'")}')
+def get_rows():
+    return rows
+def set_cell(row_idx, col_name, value):
+    rows[row_idx][col_name] = value
+      `);
+
+      // Execute user code
+      const result = await py.runPythonAsync(code);
+
+      // Extract modified data
+      const modifiedData = py.runPython("json.dumps(rows)");
+      const newRows = JSON.parse(modifiedData);
+
+      if (JSON.stringify(newRows) !== JSON.stringify(activeSheet.rows)) {
+        onUpdateData({ ...activeSheet, rows: newRows });
+        addLog('info', 'Spreadsheet updated via Python script');
+      }
+
+      if (result !== undefined) {
+        addLog('output', String(result));
+      } else {
+        addLog('output', 'Python script completed');
+      }
     } catch (err: any) {
       addLog('error', err.message);
     }
@@ -173,7 +235,16 @@ const DeveloperConsole: React.FC<DeveloperConsoleProps> = ({
           }`}
         >
           <Database className="w-3 h-3" />
-          SQL (AlaSQL)
+          SQL
+        </button>
+        <button
+          onClick={() => setMode('python')}
+          className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            mode === 'python' ? 'bg-slate-700 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Terminal className="w-3 h-3 text-yellow-500" />
+          Python
         </button>
       </div>
 
@@ -185,6 +256,12 @@ const DeveloperConsole: React.FC<DeveloperConsoleProps> = ({
             <p>Ready for input...</p>
             {mode === 'sql' && <p className="text-[9px]">Example: SELECT * FROM ? WHERE Amount {'>'} 1000</p>}
             {mode === 'js' && <p className="text-[9px]">Example: sheet.rows[0].Status = 'Updated'</p>}
+            {mode === 'python' && (
+              <div className="text-center space-y-1">
+                <p className="text-[9px]">Example: rows[0]["Status"] = "Pythonic"</p>
+                <p className="text-[9px] text-slate-700 italic">Uses Pyodide v0.26.1</p>
+              </div>
+            )}
           </div>
         )}
         {logs.map(log => (
@@ -220,7 +297,11 @@ const DeveloperConsole: React.FC<DeveloperConsoleProps> = ({
                 handleRun();
               }
             }}
-            placeholder={mode === 'js' ? 'Write JavaScript code... (Ctrl+Enter to run)' : 'Write SQL query... (Ctrl+Enter to run)'}
+            placeholder={
+              mode === 'js' ? 'Write JavaScript code... (Ctrl+Enter to run)' :
+              mode === 'sql' ? 'Write SQL query... (Ctrl+Enter to run)' :
+              'Write Python code... (Ctrl+Enter to run)'
+            }
             className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-[11px] font-mono text-cyan-100 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500/50 focus:border-cyan-500/50 min-h-[80px] max-h-[200px] transition-all shadow-inner"
           />
           <div className="absolute bottom-3 right-3 flex items-center gap-2">
