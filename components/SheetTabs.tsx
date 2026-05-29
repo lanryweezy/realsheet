@@ -86,7 +86,7 @@ export const SheetTabs: React.FC<SheetTabsProps> = ({
   ];
 
   return (
-    <div className="flex items-center bg-[var(--nexus-bg)] border-t border-[var(--nexus-border)] h-9 select-none relative z-10 shadow-[0_-2px_6px_rgba(0,0,0,0.2)]">
+    <div className="flex items-center bg-slate-900 border-t border-white/10 h-10 select-none relative z-10 shadow-[0_-4px_20px_rgba(0,0,0,0.4)]">
       {/* Scroll Controls */}
       <button
         onClick={() => scroll('left')}
@@ -109,16 +109,13 @@ export const SheetTabs: React.FC<SheetTabsProps> = ({
               onClick={() => onActiveSheetChange(index)}
               onDoubleClick={() => handleStartRename(index, sheet.name)}
               className={`
-                group relative flex items-center h-[calc(100%-4px)] px-4 min-w-[100px] max-w-[200px] 
-                rounded-t-lg transition-all cursor-pointer border-t border-x
+                group relative flex items-center h-full px-4 min-w-[120px] max-w-[200px]
+                transition-all cursor-pointer border-r border-white/5
                 ${isActive
-                  ? 'bg-slate-800 border-white/10 text-white z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.3)]'
-                  : 'bg-slate-900 border-transparent text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+                  ? 'bg-slate-800 text-white z-20 shadow-[inset_0_-2px_0_var(--nexus-accent)]'
+                  : 'bg-slate-900/50 text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
                 }
               `}
-              style={{
-                borderBottom: isActive ? '2px solid transparent' : 'none',
-              } as any}
             >
               {/* Tab Color Indicator */}
               {sheet.tabColor && (
@@ -130,7 +127,7 @@ export const SheetTabs: React.FC<SheetTabsProps> = ({
 
               {/* Active Marker */}
               {isActive && !sheet.tabColor && (
-                <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-cyan-400 rounded-full shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.5)]" />
               )}
 
               {editingIndex === index ? (

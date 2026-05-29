@@ -52,7 +52,7 @@ const ChartWizardModal: React.FC<ChartWizardModalProps> = ({ isOpen, onClose, co
       <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg p-6 shadow-2xl animate-in fade-in zoom-in duration-200 m-4">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-white">Chart Builder</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button onClick={onClose} className="text-slate-400 hover:text-white" aria-label="Close">
             <X className="w-5 h-5" />
           </button>
         </div>
