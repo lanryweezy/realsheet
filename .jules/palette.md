@@ -1,3 +1,6 @@
+## 2024-05-18 - Adding ARIA labels to Toast notification close buttons
+**Learning:** When using generalized components like `Toast` or `EnhancedToast` that render icons for actions like "dismiss/close", developers often miss providing `aria-label` for screen readers since the visual representation is obvious to sighted users. This app frequently employs inline SVGs (Lucide icons) wrapped in a `button` tag. Standardizing ARIA labels across generic interactive components provides a significant accessibility lift with a low code footprint.
+**Action:** Routinely grep for `<button` that only wrap Lucide icons across shared `components/` to verify they all carry explicit `aria-label` tags for screen readers.
 ## 2025-02-28 - Missing Form Output Associations
 **Learning:** Found that multiple input fields within a dialog components like `GoalSeekModal` were lacking `id` attributes and their respective `<label>` elements were lacking `htmlFor` attributes, preventing proper screen reader label associations. Also discovered a lack of accessible focus states on icon-only close buttons.
 **Action:** When implementing forms and modal dialogs, ensure every label has an explicit `htmlFor` mapping to an input's `id`. For icon-only buttons, prioritize visible focus rings using `focus-visible` to support keyboard users.

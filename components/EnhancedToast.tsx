@@ -43,6 +43,7 @@ const EnhancedToast: React.FC<ToastProps> = ({ id, type, title, message, onDismi
       <button
         onClick={() => onDismiss(id)}
         className="text-slate-400 hover:text-white transition-colors hover:bg-white/10 rounded-lg p-1"
+        aria-label="Dismiss notification"
       >
         <X className="w-4 h-4" />
       </button>

@@ -13,6 +13,7 @@ const VISIBLE_ROWS_BUFFER = 5;
 const EXPANSION_THRESHOLD = 5;
 const EMPTY_STYLE = {};
 
+
 const COMMON_FUNCTIONS = [
   { name: 'SUM', description: 'Calculates the sum of a range of cells.', syntax: 'SUM(range)' },
   { name: 'AVERAGE', description: 'Calculates the average of a range of cells.', syntax: 'AVERAGE(range)' },
