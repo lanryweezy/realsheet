@@ -131,6 +131,16 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
   const [contextMenu, setContextMenu] = useState<any>(null);
   const gridContainerRef = useRef<HTMLDivElement>(null);
 
+  const selectedRangeRef = useRef(selectedRange);
+  useLayoutEffect(() => {
+    selectedRangeRef.current = selectedRange;
+  }, [selectedRange]);
+
+  const handleFillStart = useCallback((e: any) => {
+    e.preventDefault();
+    setIsFilling(true);
+    setFillRange(selectedRangeRef.current);
+  }, []);
 
   useEffect(() => { if (data) syncWorkbook(data); }, [data]);
 
@@ -166,13 +176,6 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
   useEffect(() => {
     if (data.rows.length - visibleRange.endRow <= EXPANSION_THRESHOLD && onSheetExpand) onSheetExpand(data.rows.length + 50, data.columns.length);
   }, [visibleRange.endRow, data.rows.length, onSheetExpand]);
-
-  // Performance: Extract inline function to stable reference to prevent EnhancedCell re-renders
-  const handleFillStart = useCallback((e: any) => {
-    e.preventDefault();
-    setIsFilling(true);
-    setFillRange(selectedRange);
-  }, [selectedRange]);
 
   const handleMouseDown = (r: number, c: number) => {
     if (isFormatPainterActive) { onFormatPainterApply(r, data.columns[c]); return; }
