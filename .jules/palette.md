@@ -1,0 +1,3 @@
+## 2025-02-28 - Missing Form Output Associations
+**Learning:** Found that multiple input fields within a dialog components like `GoalSeekModal` were lacking `id` attributes and their respective `<label>` elements were lacking `htmlFor` attributes, preventing proper screen reader label associations. Also discovered a lack of accessible focus states on icon-only close buttons.
+**Action:** When implementing forms and modal dialogs, ensure every label has an explicit `htmlFor` mapping to an input's `id`. For icon-only buttons, prioritize visible focus rings using `focus-visible` to support keyboard users.
