@@ -186,6 +186,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
               onClick={calculateMetrics}
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
               title="Refresh"
+              aria-label="Refresh metrics"
             >
               <RefreshCw className="w-5 h-5" />
             </button>
@@ -193,6 +194,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <button
               onClick={onClose}
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              aria-label="Close"
             >
               <X className="w-6 h-6" />
             </button>

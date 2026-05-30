@@ -38,7 +38,7 @@ const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose }) => {
              </div>
              <h2 className="text-xl font-bold text-white">Keyboard Shortcuts</h2>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button onClick={onClose} className="text-slate-400 hover:text-white" aria-label="Close">
             <X className="w-5 h-5" />
           </button>
         </div>
