@@ -151,6 +151,17 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
   const [contextMenu, setContextMenu] = useState<any>(null);
   const gridContainerRef = useRef<HTMLDivElement>(null);
 
+  const selectedRangeRef = useRef(selectedRange);
+  useLayoutEffect(() => {
+    selectedRangeRef.current = selectedRange;
+  }, [selectedRange]);
+
+  const handleFillStart = useCallback((e: any) => {
+    e.preventDefault();
+    setIsFilling(true);
+    setFillRange(selectedRangeRef.current);
+  }, []);
+
   useEffect(() => {
     if (!gridContainerRef.current) return;
     const observer = new ResizeObserver(entries => {
@@ -253,7 +264,7 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
                   {data.columns.map((col: any, ci: number) => {
                     const isSelected = selectedRange && rowIndex >= Math.min(selectedRange.start.rowIndex, selectedRange.end.rowIndex) && rowIndex <= Math.max(selectedRange.start.rowIndex, selectedRange.end.rowIndex) && ci >= Math.min(selectedRange.start.colIndex, selectedRange.end.colIndex) && ci <= Math.max(selectedRange.start.colIndex, selectedRange.end.colIndex);
                     const isPrecedent = precedents.has(`${rowIndex}-${ci}`);
-                    const cellStyle = data.cellStyles?.[`${rowIndex}-${col}`] || {};
+                    const cellStyle = data.cellStyles?.[`${rowIndex}-${col}`] || EMPTY_STYLE;
 
                     // Presence check
                     const remotePresence = presences.find((p: any) =>
@@ -274,7 +285,7 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
                         onMouseEnter={() => handleMouseEnter(rowIndex, ci)}
                         style={{ border: isPrecedent ? '1px solid var(--nexus-accent)' : remotePresence ? `1px solid ${remotePresence.color}` : undefined }}
                       >
-                        <EnhancedCell rowIndex={rowIndex} colIndex={ci} col={col} value={row[col]} displayValue={evaluateWithHF(row[col], rowIndex, col, data)} isSelected={isSelected} onCellEdit={onCellEdit} isInHoverRange={hoverCell?.rowIndex === rowIndex || hoverCell?.colIndex === ci} onFillStart={(e: any) => { e.preventDefault(); setIsFilling(true); setFillRange(selectedRange); }} style={cellStyle} />
+                        <EnhancedCell rowIndex={rowIndex} colIndex={ci} col={col} value={row[col]} displayValue={evaluateWithHF(row[col], rowIndex, col, data)} isSelected={isSelected} onCellEdit={onCellEdit} isInHoverRange={hoverCell?.rowIndex === rowIndex || hoverCell?.colIndex === ci} onFillStart={handleFillStart} style={cellStyle} />
                       </td>
                     );
                   })}
