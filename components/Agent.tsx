@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, StopCircle, Mic, Plus, Check, Zap, Calculator, PaintBucket, Filter, MessageSquare, Lightbulb, ListTodo, AlertCircle, ChevronRight, Code } from 'lucide-react';
+import { Send, Sparkles, StopCircle, Mic, Plus, Check, Zap, Calculator, PaintBucket, Filter, MessageSquare, Lightbulb, ListTodo, AlertCircle, ChevronRight, Code, Bot } from 'lucide-react';
 import { ChatMessage, SheetData, ChartConfig, EnhancedAnalysisResult } from '../types';
 import { analyzeDataWithGemini } from '../services/geminiService';
 import { transformData } from '../services/apiClient';
