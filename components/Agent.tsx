@@ -107,7 +107,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, workbook, onAddToDashboard, on
       return;
     }
 
-    // @ts-ignore
+    // @ts-expect-error Typescript doesn't know about SpeechRecognition on the window object yet
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
@@ -161,7 +161,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, workbook, onAddToDashboard, on
     setIsLoading(true);
 
     try {
-        let currentMessages = [...messages, userMsg];
+        const currentMessages = [...messages, userMsg];
         let turnCount = 0;
         const MAX_TURNS = 5;
         let finalSheetData = { ...sheetData } as SheetData;
@@ -185,7 +185,7 @@ const Agent: React.FC<AgentProps> = ({ sheetData, workbook, onAddToDashboard, on
 
             lastResult = result;
             let actionMessage = "";
-            let toolResults: string[] = [];
+            const toolResults: string[] = [];
 
             // 1. Log Chain of Thought internally to currentMessages for model context
             if (result.chainOfThought) {

@@ -104,7 +104,7 @@ const Timeline: React.FC<TimelineProps> = ({
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-400">{totalItems} items</span>
           {onClose && (
-            <button onClick={onClose} className="text-slate-400 hover:text-white">
+            <button onClick={onClose} className="text-slate-400 hover:text-white" aria-label="Close">
               <X className="w-3.5 h-3.5" />
             </button>
           )}
