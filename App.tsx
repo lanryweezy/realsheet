@@ -626,7 +626,10 @@ const App: React.FC = () => {
     return el.innerHTML;
   }
 
-  const addToDashboard = (config: ChartConfig) => {
+  // Performance Optimization: Wrapped addToDashboard in useCallback.
+  // This function is passed down to several heavy components (Agent, NLQueryPanel, PivotChartPanel, ChartWizardModal).
+  // Memoizing it prevents unnecessary re-renders of these components when App.tsx state changes.
+  const addToDashboard = useCallback((config: ChartConfig) => {
     const newItem: DashboardItem = {
       id: Date.now().toString(),
       chartConfig: config,
@@ -635,12 +638,16 @@ const App: React.FC = () => {
     setDashboardItems(prev => [newItem, ...prev]);
     setActiveTab('dashboard'); // Switch to dashboard to see new item
     addToast('success', 'Chart Pinned', 'Added to dashboard.');
-  };
+  }, [addToast]);
 
-  const removeFromDashboard = (id: string) => {
+  // Performance Optimization: Wrapped removeFromDashboard in useCallback.
+  // This function is passed as a prop to the Dashboard component, which is wrapped in React.memo.
+  // Ensuring referential stability here prevents the entire Dashboard (and its expensive Visualization children)
+  // from re-rendering whenever App.tsx re-renders (e.g., during cell edits or selection changes).
+  const removeFromDashboard = useCallback((id: string) => {
     setDashboardItems(prev => prev.filter(item => item.id !== id));
     addToast('info', 'Chart Removed');
-  };
+  }, [addToast]);
 
   const handleCellEdit = useCallback((rowIndex: number, colKey: string, value: string) => {
     if (!workbook || !currentSheetData) return;
