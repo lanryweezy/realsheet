@@ -151,6 +151,8 @@ const App: React.FC = () => {
     return rows;
   }, [currentSheetData, activeFilters]);
 
+  const gridData = useMemo(() => ({ ...(currentSheetData || {} as any), rows: displayRows }), [currentSheetData, displayRows]);
+
   // Map display index to absolute index
   const getAbsoluteRowIndex = (displayIndex: number) => {
     if (!currentSheetData) return displayIndex;
@@ -731,7 +733,7 @@ const App: React.FC = () => {
 
     pushToHistory(newSheetData);
     addToast('info', 'Smart Fill', 'Range populated automatically');
-  }, [workbook, currentSheetData, pushToHistory, addToast]);
+  }, [workbook, currentSheetData, pushToHistory, addToast, displayRows]);
 
   const handleInsertRow = useCallback((rowIndex: number) => {
     if (!workbook || !currentSheetData) return;
@@ -748,7 +750,7 @@ const App: React.FC = () => {
     setWorkbook({ ...workbook, sheets: updatedSheets, lastModified: new Date() });
     pushToHistory(newSheetData);
     addToast('success', 'Row Inserted');
-  }, [workbook, currentSheetData, pushToHistory, addToast]);
+  }, [workbook, currentSheetData, pushToHistory, addToast, displayRows]);
 
   const handleDeleteRow = useCallback((rowIndex: number) => {
     if (!workbook || !currentSheetData) return;
@@ -763,7 +765,7 @@ const App: React.FC = () => {
     setWorkbook({ ...workbook, sheets: updatedSheets, lastModified: new Date() });
     pushToHistory(newSheetData);
     addToast('info', 'Row Deleted');
-  }, [workbook, currentSheetData, pushToHistory, addToast]);
+  }, [workbook, currentSheetData, pushToHistory, addToast, displayRows]);
 
   const handleInsertColumn = useCallback((afterColKey: string) => {
     if (!workbook || !currentSheetData) return;
@@ -782,7 +784,7 @@ const App: React.FC = () => {
     setWorkbook({ ...workbook, sheets: updatedSheets, lastModified: new Date() });
     pushToHistory(newSheetData);
     addToast('success', 'Column Inserted');
-  }, [workbook, currentSheetData, pushToHistory, addToast]);
+  }, [workbook, currentSheetData, pushToHistory, addToast, displayRows]);
 
   const handleDeleteColumn = useCallback((colKey: string) => {
     if (!workbook || !currentSheetData) return;
@@ -799,7 +801,7 @@ const App: React.FC = () => {
     setWorkbook({ ...workbook, sheets: updatedSheets, lastModified: new Date() });
     pushToHistory(newSheetData);
     addToast('info', 'Column Deleted');
-  }, [workbook, currentSheetData, pushToHistory, addToast]);
+  }, [workbook, currentSheetData, pushToHistory, addToast, displayRows]);
 
   const handleRenameColumn = useCallback((oldKey: string, newKey: string) => {
     if (!workbook || !currentSheetData) return;
@@ -822,7 +824,7 @@ const App: React.FC = () => {
     setWorkbook({ ...workbook, sheets: updatedSheets, lastModified: new Date() });
     pushToHistory(newSheetData);
     addToast('success', 'Column Renamed');
-  }, [workbook, currentSheetData, pushToHistory, addToast]);
+  }, [workbook, currentSheetData, pushToHistory, addToast, displayRows]);
 
   const handleSortColumn = useCallback((colKey: string, direction: 'asc' | 'desc') => {
     if (!workbook || !currentSheetData) return;
@@ -861,7 +863,7 @@ const App: React.FC = () => {
 
     pushToHistory(newSheetData);
     addToast('success', `Excel Sort`, `Column ${colKey} sorted ${direction}`);
-  }, [workbook, currentSheetData, pushToHistory, addToast]);
+  }, [workbook, currentSheetData, pushToHistory, addToast, displayRows]);
 
   const handleFilterChange = useCallback((colKey: string, selectedValues: any[] | null) => {
     setActiveFilters(prev => {
@@ -1142,7 +1144,7 @@ const App: React.FC = () => {
     addToast('success', 'Pivot Table Created');
   };
 
-  const handleClearRange = (range: SelectionRange) => {
+  const handleClearRange = useCallback((range: SelectionRange) => {
     if (!workbook || !currentSheetData) return;
     const { start, end } = range;
     const minRow = Math.min(start.rowIndex, end.rowIndex);
@@ -1167,7 +1169,7 @@ const App: React.FC = () => {
     updatedSheets[workbook.activeSheetIndex] = newSheetData;
     setWorkbook({ ...workbook, sheets: updatedSheets, lastModified: new Date() });
     pushToHistory(newSheetData);
-  };
+  }, [workbook, currentSheetData, pushToHistory]);
 
   const handleSmartFill = async (targetColumn: string, prompt: string) => {
     if (!workbook || !currentSheetData) return;
@@ -1193,12 +1195,12 @@ const App: React.FC = () => {
     addToast('success', 'Smart Fill Complete', 'New column generated.');
   };
 
-  const handleSmartFillTrigger = (colKey: string) => {
+  const handleSmartFillTrigger = useCallback((colKey: string) => {
     setSmartFillSourceColumn(colKey);
     setIsSmartFillModalOpen(true);
-  };
+  }, []);
 
-  const handleAddComment = (rowIndex: number, colIndex: number, text: string) => {
+  const handleAddComment = useCallback((rowIndex: number, colIndex: number, text: string) => {
     if (!workbook || !currentSheetData) return;
     const absoluteRowIndex = getAbsoluteRowIndex(rowIndex);
     const updatedSheets = [...workbook.sheets];
@@ -1212,7 +1214,7 @@ const App: React.FC = () => {
     setWorkbook({ ...workbook, sheets: updatedSheets });
     pushToHistory(newSheetData);
     addToast('success', 'Comment Added');
-  };
+  }, [workbook, currentSheetData, pushToHistory, addToast, displayRows]);
 
   const handleClearFilter = () => {
     setActiveFilters({});
@@ -1242,7 +1244,7 @@ const App: React.FC = () => {
   };
 
   // Watch Window Handlers
-  const handleAddWatch = (cellRef: string) => {
+  const handleAddWatch = useCallback((cellRef: string) => {
     if (!workbook || !currentSheetData) return;
     const currentWatches = currentSheetData.watchedCells || [];
     if (!currentWatches.includes(cellRef)) {
@@ -1263,7 +1265,7 @@ const App: React.FC = () => {
     } else {
       setIsWatchWindowOpen(true);
     }
-  };
+  }, [workbook, currentSheetData, pushToHistory, addToast, displayRows]);
 
   const handleRemoveWatch = (cellRef: string) => {
     if (!workbook || !currentSheetData || !currentSheetData.watchedCells) return;
@@ -1339,19 +1341,19 @@ const App: React.FC = () => {
     };
   }, [currentSheetData, selectedRange]);
 
-  const handleAnalyzeRange = (range: SelectionRange) => {
+  const handleAnalyzeRange = useCallback((range: SelectionRange) => {
     if (!currentSheetData) return;
     // Construct prompt context
     setIsSidebarOpen(true);
     const context = `I have selected a range of cells from ${indexToExcelCol(range.start.colIndex)}${range.start.rowIndex + 1} to ${indexToExcelCol(range.end.colIndex)}${range.end.rowIndex + 1}. Analyze this specific data.`;
     setAgentPromptOverride(context);
-  };
+  }, [workbook, currentSheetData]);
 
-  const handleOpenDataTool = (mode: 'duplicates' | 'split' | 'find' | 'clean', colKey?: string) => {
+  const handleOpenDataTool = useCallback((mode: 'duplicates' | 'split' | 'find' | 'clean', colKey?: string) => {
     setDataToolsState({ isOpen: true, mode, initialColumn: colKey });
-  };
+  }, []);
 
-  const handleColumnResize = (colKey: string, width: number) => {
+  const handleColumnResize = useCallback((colKey: string, width: number) => {
     if (!workbook) return;
     const currentSheet = workbook.sheets[workbook.activeSheetIndex];
 
@@ -1365,9 +1367,9 @@ const App: React.FC = () => {
       sheets: updatedSheets,
       lastModified: new Date()
     });
-  };
+  }, [workbook]);
 
-  const handleSheetExpand = (targetRows: number, targetCols: number) => {
+  const handleSheetExpand = useCallback((targetRows: number, targetCols: number) => {
     if (!currentSheetData) return;
 
     // Only expand if we're actually increasing size
@@ -1376,7 +1378,7 @@ const App: React.FC = () => {
       pushToHistory(expandedSheet);
       addToast('info', 'Sheet Expanded', `Expanded to ${targetRows} rows and ${expandedSheet.columns.length} columns`);
     }
-  };
+  }, [workbook, currentSheetData, pushToHistory]);
 
   // Sheet management functions
   const handleAddSheet = () => {
@@ -1933,7 +1935,7 @@ const App: React.FC = () => {
                       <div className={`flex-1 min-h-0 data-grid-container ${pageLayoutView ? 'page-layout-view' : ''}`}>
                         <GridErrorBoundary>
                           <Grid
-                            data={{ ...currentSheetData, rows: displayRows }}
+                            data={gridData}
                             selectedRange={selectedRange}
                             onRangeSelect={setSelectedRange}
                             onCellEdit={handleCellEdit}

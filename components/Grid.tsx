@@ -59,7 +59,7 @@ const interpolateColor = (color1: string, color2: string, factor: number) => {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-const EnhancedCell = memo(({ rowIndex, colIndex, col, value, displayValue, isSelected, columnType, onCellEdit, onContextMenu, isInHoverRange, highlightedCells = new Set(), onFillStart, style = {} }: any) => {
+const EnhancedCell = memo(({ rowIndex, colIndex, col, value, displayValue, isSelected, columnType, onCellEdit, onContextMenu, highlightedCells = new Set(), onFillStart, style = {} }: any) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const [isHovered, setIsHovered] = useState(false);
@@ -95,14 +95,7 @@ const EnhancedCell = memo(({ rowIndex, colIndex, col, value, displayValue, isSel
 
   useEffect(() => { if (isEditing && inputRef.current) { inputRef.current.focus(); inputRef.current.select(); } }, [isEditing]);
 
-  if (isEditing) {
-    return (
-      <div className="w-full h-full relative z-20">
-        <input ref={inputRef} type="text" value={editValue} onChange={(e) => { setEditValue(e.target.value); setSelectedIndex(0); }} onBlur={() => { setTimeout(() => { onCellEdit(rowIndex, col, editValue); setIsEditing(false); }, 150); }} onKeyDown={handleKeyDown} className="w-full h-full p-1 border-none outline-none bg-slate-800 text-white" />
-        {editValue.startsWith('=') && <FormulaCopilot query={editValue} onSelect={handleSelectSuggestion} selectedIndex={selectedIndex} />}
-      </div>
-    );
-  }
+
 
   const isFormula = typeof value === 'string' && value.startsWith('=');
 
@@ -118,9 +111,18 @@ const EnhancedCell = memo(({ rowIndex, colIndex, col, value, displayValue, isSel
     } catch { return null; }
   }, [value, isSparkline]);
 
+  if (isEditing) {
+    return (
+      <div className="w-full h-full relative z-20">
+        <input ref={inputRef} type="text" value={editValue} onChange={(e) => { setEditValue(e.target.value); setSelectedIndex(0); }} onBlur={() => { setTimeout(() => { onCellEdit(rowIndex, col, editValue); setIsEditing(false); }, 150); }} onKeyDown={handleKeyDown} className="w-full h-full p-1 border-none outline-none bg-slate-800 text-white" />
+        {editValue.startsWith('=') && <FormulaCopilot query={editValue} onSelect={handleSelectSuggestion} selectedIndex={selectedIndex} />}
+      </div>
+    );
+  }
+
   return (
     <div
-      className={`w-full h-full flex flex-col justify-center px-1 text-xs relative ${isSelected ? 'ring-2 ring-cyan-400 bg-cyan-400/10' : ''} ${isHovered || isInHoverRange ? 'bg-white/5' : ''} ${isFormula ? 'formula-glow' : ''}`}
+      className={`w-full h-full flex flex-col justify-center px-1 text-xs relative ${isSelected ? 'ring-2 ring-cyan-400 bg-cyan-400/10' : ''} ${isHovered ? 'bg-white/5' : ''} ${isFormula ? 'formula-glow' : ''}`}
       style={combinedStyle}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -144,7 +146,7 @@ EnhancedCell.displayName = 'EnhancedCell';
 const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, onSheetExpand, onFillRange, onSortColumn, onFilterChange, activeFilters, highlightedCells, isFormatPainterActive, onFormatPainterApply, presences = [] }: any) => {
   const [scrollTop, setScrollTop] = useState(0), [scrollLeft, setScrollLeft] = useState(0);
   const [containerHeight, setContainerHeight] = useState(800), [containerWidth, setContainerWidth] = useState(1200);
-  const [hoverCell, setHoverCell] = useState<any>(null), [isDragging, setIsDragging] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [isFilling, setIsFilling] = useState(false), [fillRange, setFillRange] = useState<any>(null);
   const [precedents, setPrecedents] = useState<Set<string>>(new Set());
   const [neuralPoints, setNeuralPoints] = useState<any>({ source: null, targets: [] });
@@ -219,8 +221,7 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
         const s = selectedRange.start, e = selectedRange.end;
         setFillRange({ start: { rowIndex: Math.min(s.rowIndex, e.rowIndex, r), colIndex: Math.min(s.colIndex, e.colIndex, c) }, end: { rowIndex: Math.max(s.rowIndex, e.rowIndex, r), colIndex: Math.max(s.colIndex, e.colIndex, c) } });
     }
-    setHoverCell({ rowIndex: r, colIndex: c });
-  };
+    };
   const handleMouseUp = () => {
     if (isFilling && fillRange) onFillRange(selectedRange, fillRange);
     setIsDragging(false); setIsFilling(false); setFillRange(null);
@@ -285,7 +286,7 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
                         onMouseEnter={() => handleMouseEnter(rowIndex, ci)}
                         style={{ border: isPrecedent ? '1px solid var(--nexus-accent)' : remotePresence ? `1px solid ${remotePresence.color}` : undefined }}
                       >
-                        <EnhancedCell rowIndex={rowIndex} colIndex={ci} col={col} value={row[col]} displayValue={evaluateWithHF(row[col], rowIndex, col, data)} isSelected={isSelected} onCellEdit={onCellEdit} isInHoverRange={hoverCell?.rowIndex === rowIndex || hoverCell?.colIndex === ci} onFillStart={handleFillStart} style={cellStyle} />
+                        <EnhancedCell rowIndex={rowIndex} colIndex={ci} col={col} value={row[col]} displayValue={evaluateWithHF(row[col], rowIndex, col, data)} isSelected={isSelected} onCellEdit={onCellEdit} onFillStart={handleFillStart} style={cellStyle} />
                       </td>
                     );
                   })}
@@ -301,4 +302,4 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
   );
 };
 
-export default Grid;
+export default memo(Grid);
