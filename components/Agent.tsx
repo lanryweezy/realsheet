@@ -779,4 +779,4 @@ const Agent: React.FC<AgentProps> = ({ sheetData, workbook, onAddToDashboard, on
   );
 };
 
-export default Agent;
+export default React.memo(Agent);
