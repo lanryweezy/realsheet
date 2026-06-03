@@ -112,7 +112,7 @@ const CellStylesGallery: React.FC<CellStylesGalleryProps> = ({
             <h3 className="text-sm font-semibold text-white">Cell Styles</h3>
             <p className="text-xs text-slate-400 mt-0.5">Apply preset formatting to selected cells</p>
           </div>
-          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none" aria-label="Close">
             <X className="w-4 h-4" />
           </button>
         </div>

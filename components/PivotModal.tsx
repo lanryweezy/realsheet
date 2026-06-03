@@ -115,7 +115,7 @@ const PivotModal: React.FC<PivotModalProps> = ({ isOpen, onClose, columns, onCre
             </div>
             <h2 className="text-xl font-bold text-white">Pivot Table Builder</h2>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button onClick={onClose} className="text-slate-400 hover:text-white focus-visible:ring-2 focus-visible:outline-none rounded-lg" aria-label="Close">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -167,7 +167,7 @@ const PivotModal: React.FC<PivotModalProps> = ({ isOpen, onClose, columns, onCre
                   >
                     <GripVertical className="w-3.5 h-3.5" />
                     {f}
-                    <button type="button" onClick={() => removeFromWell('rows', f)} className="text-slate-400 hover:text-white ml-0.5">×</button>
+                    <button type="button" onClick={() => removeFromWell('rows', f)} className="text-slate-400 hover:text-white ml-0.5 focus-visible:ring-2 focus-visible:outline-none rounded" aria-label={`Remove ${f} from rows`}>×</button>
                   </span>
                 ))}
               </div>
@@ -193,7 +193,7 @@ const PivotModal: React.FC<PivotModalProps> = ({ isOpen, onClose, columns, onCre
                   >
                     <GripVertical className="w-3.5 h-3.5" />
                     {f}
-                    <button type="button" onClick={() => removeFromWell('columns', f)} className="text-slate-400 hover:text-white ml-0.5">×</button>
+                    <button type="button" onClick={() => removeFromWell('columns', f)} className="text-slate-400 hover:text-white ml-0.5 focus-visible:ring-2 focus-visible:outline-none rounded" aria-label={`Remove ${f} from columns`}>×</button>
                   </span>
                 ))}
               </div>
@@ -231,7 +231,7 @@ const PivotModal: React.FC<PivotModalProps> = ({ isOpen, onClose, columns, onCre
                       <option value="min">Min</option>
                       <option value="max">Max</option>
                     </select>
-                    <button type="button" onClick={() => removeFromWell('values', v.field)} className="text-slate-400 hover:text-white ml-0.5">×</button>
+                    <button type="button" onClick={() => removeFromWell('values', v.field)} className="text-slate-400 hover:text-white ml-0.5 focus-visible:ring-2 focus-visible:outline-none rounded" aria-label={`Remove ${v.field} from values`}>×</button>
                   </span>
                 ))}
               </div>
