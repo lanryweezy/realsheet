@@ -23,7 +23,7 @@ interface SheetTabsProps {
   onSetColor: (index: number, color?: string) => void;
 }
 
-export const SheetTabs: React.FC<SheetTabsProps> = ({
+export const SheetTabs: React.FC<SheetTabsProps> = React.memo(function SheetTabs({
   workbook,
   onActiveSheetChange,
   onAddSheet,
@@ -32,7 +32,7 @@ export const SheetTabs: React.FC<SheetTabsProps> = ({
   onDuplicateSheet,
   onMoveSheet,
   onSetColor,
-}) => {
+}) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState('');
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; index: number } | null>(
@@ -281,4 +281,4 @@ export const SheetTabs: React.FC<SheetTabsProps> = ({
       )}
     </div>
   );
-};
+});

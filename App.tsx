@@ -1369,6 +1369,10 @@ const App: React.FC = () => {
     });
   }, [workbook]);
 
+  const handleClearPromptOverride = useCallback(() => setAgentPromptOverride(null), []);
+  const handleCloseBranchManager = useCallback(() => setIsBranchManagerOpen(false), []);
+  const handleCloseRecordDetail = useCallback(() => setIsRecordDetailOpen(false), []);
+
   const handleSheetExpand = useCallback((targetRows: number, targetCols: number) => {
     if (!currentSheetData) return;
 
@@ -1381,7 +1385,7 @@ const App: React.FC = () => {
   }, [workbook, currentSheetData, pushToHistory]);
 
   // Sheet management functions
-  const handleAddSheet = () => {
+  const handleAddSheet = useCallback(() => {
     if (!workbook) return;
 
     const newSheet = createBlankSheet();
@@ -1404,9 +1408,9 @@ const App: React.FC = () => {
 
     setWorkbook(newWorkbook);
     addToast('success', 'Sheet Added', `Added ${newName}`);
-  };
+  }, [workbook, addToast]);
 
-  const handleDuplicateSheet = (index: number) => {
+  const handleDuplicateSheet = useCallback((index: number) => {
     if (!workbook) return;
     const sheetToDuplicate = workbook.sheets[index];
     // Create a robust copy of the sheet data
@@ -1432,9 +1436,9 @@ const App: React.FC = () => {
       lastModified: new Date()
     });
     addToast('success', 'Sheet Duplicated', `Created ${newName}`);
-  };
+  }, [workbook, addToast]);
 
-  const handleRenameSheet = (index: number, newName: string) => {
+  const handleRenameSheet = useCallback((index: number, newName: string) => {
     if (!workbook || !newName.trim()) return;
 
     // Check if name already exists (other than the current sheet)
@@ -1451,9 +1455,9 @@ const App: React.FC = () => {
       sheets: updatedSheets,
       lastModified: new Date()
     });
-  };
+  }, [workbook, addToast]);
 
-  const handleCloseSheet = (index: number) => {
+  const handleCloseSheet = useCallback((index: number) => {
     if (!workbook || workbook.sheets.length <= 1) {
       addToast('warning', 'Action Blocked', 'A workbook must contain at least one visible sheet.');
       return;
@@ -1474,9 +1478,9 @@ const App: React.FC = () => {
     });
 
     addToast('info', 'Sheet Removed', 'The sheet has been deleted.');
-  };
+  }, [workbook, addToast]);
 
-  const handleActiveSheetChange = (index: number) => {
+  const handleActiveSheetChange = useCallback((index: number) => {
     if (!workbook || index >= workbook.sheets.length) return;
 
     setWorkbook({
@@ -1484,9 +1488,9 @@ const App: React.FC = () => {
       activeSheetIndex: index,
       lastModified: new Date()
     });
-  };
+  }, [workbook]);
 
-  const handleMoveSheet = (fromIndex: number, toIndex: number) => {
+  const handleMoveSheet = useCallback((fromIndex: number, toIndex: number) => {
     if (!workbook || fromIndex === toIndex) return;
     const updatedSheets = [...workbook.sheets];
     const [movedSheet] = updatedSheets.splice(fromIndex, 1);
@@ -1508,9 +1512,9 @@ const App: React.FC = () => {
       activeSheetIndex: newActiveIndex,
       lastModified: new Date()
     });
-  };
+  }, [workbook]);
 
-  const handleSetSheetColor = (index: number, color?: string) => {
+  const handleSetSheetColor = useCallback((index: number, color?: string) => {
     if (!workbook) return;
     const updatedSheets = [...workbook.sheets];
     updatedSheets[index] = { ...updatedSheets[index], tabColor: color };
@@ -1519,7 +1523,7 @@ const App: React.FC = () => {
       sheets: updatedSheets,
       lastModified: new Date()
     });
-  };
+  }, [workbook]);
 
   // Command Palette Actions
   const commandActions = [
@@ -2071,10 +2075,10 @@ const App: React.FC = () => {
                     workbook={workbook}
                     onAddToDashboard={addToDashboard}
                     onUpdateData={pushToHistory}
-                    onUpdateWorkbook={(wb) => setWorkbook(wb)}
+                    onUpdateWorkbook={setWorkbook}
                     onSwitchSheet={handleActiveSheetChange}
                     promptOverride={agentPromptOverride}
-                    onClearPromptOverride={() => setAgentPromptOverride(null)}
+                    onClearPromptOverride={handleClearPromptOverride}
                   />
                 </motion.aside>
               </div>
@@ -2152,17 +2156,17 @@ const App: React.FC = () => {
           {workbook && (
             <BranchManager
               isOpen={isBranchManagerOpen}
-              onClose={() => setIsBranchManagerOpen(false)}
+              onClose={handleCloseBranchManager}
               workbook={workbook}
               onSwitchBranch={handleSwitchBranch}
-              onUpdateWorkbook={(wb) => setWorkbook(wb)}
+              onUpdateWorkbook={setWorkbook}
             />
           )}
 
           {isRecordDetailOpen && activeDetailRowIndex !== null && currentSheetData && (
             <RecordDetailView
               isOpen={isRecordDetailOpen}
-              onClose={() => setIsRecordDetailOpen(false)}
+              onClose={handleCloseRecordDetail}
               row={currentSheetData.rows[activeDetailRowIndex]}
               columns={currentSheetData.columns}
               rowIndex={activeDetailRowIndex}
