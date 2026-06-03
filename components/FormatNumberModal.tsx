@@ -61,7 +61,7 @@ const FormatNumberModal: React.FC<FormatNumberModalProps> = ({ isOpen, onClose, 
       <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl p-6 shadow-2xl animate-in fade-in zoom-in duration-200 m-4">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-white">Format Numbers</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button onClick={onClose} className="text-slate-400 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded" aria-label="Close Format Numbers">
             <X className="w-5 h-5" />
           </button>
         </div>

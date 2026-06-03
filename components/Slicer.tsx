@@ -68,7 +68,7 @@ const Slicer: React.FC<SlicerProps> = ({
         <div className="flex items-center gap-1">
           <span className="text-xs text-slate-400">{selectedCount}/{totalCount}</span>
           {onClose && (
-            <button onClick={onClose} className="text-slate-400 hover:text-white">
+            <button onClick={onClose} className="text-slate-400 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded" aria-label="Close Slicer">
               <X className="w-3.5 h-3.5" />
             </button>
           )}

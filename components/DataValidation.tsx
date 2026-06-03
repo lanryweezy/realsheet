@@ -53,7 +53,7 @@ export const DataValidationModal: React.FC<DataValidationModalProps> = ({
       <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-md p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-white">Data Validation</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button onClick={onClose} className="text-slate-400 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded" aria-label="Close Data Validation">
             <X className="w-5 h-5" />
           </button>
         </div>

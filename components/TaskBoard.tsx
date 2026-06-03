@@ -222,19 +222,21 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
             <div className="flex items-center gap-1 bg-slate-800 rounded-lg p-1">
               <button
                 onClick={() => setView('board')}
-                className={`p-2 rounded transition-colors ${
+                className={`p-2 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
                   view === 'board' ? 'bg-nexus-accent text-white' : 'text-slate-400 hover:text-white'
                 }`}
                 title="Board view"
+                aria-label="Switch to board view"
               >
                 <Grid3x3 className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setView('list')}
-                className={`p-2 rounded transition-colors ${
+                className={`p-2 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
                   view === 'list' ? 'bg-nexus-accent text-white' : 'text-slate-400 hover:text-white'
                 }`}
                 title="List view"
+                aria-label="Switch to list view"
               >
                 <List className="w-4 h-4" />
               </button>
@@ -242,7 +244,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
             
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
@@ -312,7 +314,8 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
                   setIsCreatingTask(false);
                   setNewTaskTitle('');
                 }}
-                className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+                aria-label="Cancel creating task"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -397,7 +400,8 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
                     <Flag className={`w-4 h-4 ${getPriorityColor(task.priority)}`} />
                     <button
                       onClick={() => setSelectedTask(task)}
-                      className="p-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                      className="p-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+                      aria-label="Task options"
                     >
                       <MoreVertical className="w-4 h-4" />
                     </button>
@@ -523,7 +527,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
       >
         <div className="sticky top-0 flex items-center justify-between p-4 border-b border-slate-700 bg-slate-900">
           <h3 className="text-lg font-bold text-white">{task.title}</h3>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors" aria-label="Close">
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500" aria-label="Close task details">
             <X className="w-5 h-5" />
           </button>
         </div>

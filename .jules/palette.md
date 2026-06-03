@@ -4,3 +4,6 @@
 ## 2025-02-28 - Missing Form Output Associations
 **Learning:** Found that multiple input fields within a dialog components like `GoalSeekModal` were lacking `id` attributes and their respective `<label>` elements were lacking `htmlFor` attributes, preventing proper screen reader label associations. Also discovered a lack of accessible focus states on icon-only close buttons.
 **Action:** When implementing forms and modal dialogs, ensure every label has an explicit `htmlFor` mapping to an input's `id`. For icon-only buttons, prioritize visible focus rings using `focus-visible` to support keyboard users.
+## 2025-06-03 - Icon-only buttons lacking ARIA labels
+**Learning:** Found multiple instances where icon-only buttons (like Close, Expand/Collapse, Settings) lacked `aria-label` attributes. This is common when refactoring or adding quick modals (like `WatchWindow`, `VisualFormulaBuilder`, `DeveloperConsole`).
+**Action:** When creating or modifying modals or complex panels with icon-only actions (using Lucide icons), always add a descriptive `aria-label` and consider appending `focus-visible:ring-2` to improve keyboard navigation visibility.
