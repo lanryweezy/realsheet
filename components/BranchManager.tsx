@@ -64,7 +64,7 @@ const BranchManager: React.FC<BranchManagerProps> = ({
             {activeTab === 'merge' ? <GitMerge className="w-5 h-5 text-purple-400" /> : <GitBranch className="w-5 h-5 text-purple-400" />}
             {activeTab === 'merge' ? 'Resolve Conflicts' : 'Version Control'}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button onClick={onClose} className="text-slate-400 hover:text-white focus-visible:ring-2 focus-visible:outline-none rounded-lg" aria-label="Close">
             <X className="w-5 h-5" />
           </button>
         </div>
