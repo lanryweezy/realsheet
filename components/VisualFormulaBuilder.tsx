@@ -59,7 +59,7 @@ const VisualFormulaBuilder: React.FC<VisualFormulaBuilderProps> = ({
             <Play className="w-5 h-5 text-cyan-400" />
             Visual Formula Builder
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded p-1" aria-label="Close Visual Formula Builder">
+          <button onClick={onClose} className="text-slate-400 hover:text-white focus-visible:ring-2 focus-visible:outline-none rounded-lg" aria-label="Close">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -78,7 +78,7 @@ const VisualFormulaBuilder: React.FC<VisualFormulaBuilderProps> = ({
                 }`}
               >
                 <span className="text-sm font-mono font-bold">{block.value}</span>
-                <button onClick={() => removeBlock(block.id)} className="text-white/40 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded-sm p-0.5" aria-label={`Remove block ${block.value}`}>
+                <button onClick={() => removeBlock(block.id)} className="text-white/40 hover:text-white focus-visible:ring-2 focus-visible:outline-none rounded" aria-label={`Remove ${block.value} block`}>
                   <Trash2 className="w-3 h-3" />
                 </button>
               </div>

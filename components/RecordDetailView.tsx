@@ -40,7 +40,7 @@ const RecordDetailView: React.FC<RecordDetailViewProps> = ({
     <div className="fixed inset-0 z-[250] flex flex-col bg-slate-950 animate-in slide-in-from-bottom duration-300">
       <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500" aria-label="Back to grid">
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-lg focus-visible:ring-2 focus-visible:outline-none" aria-label="Close">
             <ArrowLeft className="w-6 h-6" />
           </button>
           <div>

@@ -110,7 +110,7 @@ export const FindReplaceModal: React.FC<FindReplaceModalProps> = ({
               Replace
             </button>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white" aria-label="Close">
+          <button onClick={onClose} className="text-slate-400 hover:text-white focus-visible:ring-2 focus-visible:outline-none rounded-lg" aria-label="Close">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -208,13 +208,15 @@ export const FindReplaceModal: React.FC<FindReplaceModalProps> = ({
                 <div className="flex gap-1">
                   <button
                     onClick={goToPrevResult}
-                    className="p-1.5 bg-slate-700 hover:bg-slate-600 rounded"
+                    className="p-1.5 bg-slate-700 hover:bg-slate-600 rounded focus-visible:ring-2 focus-visible:outline-none"
+                    aria-label="Previous result"
                   >
                     <ChevronUp className="w-4 h-4" />
                   </button>
                   <button
                     onClick={goToNextResult}
-                    className="p-1.5 bg-slate-700 hover:bg-slate-600 rounded"
+                    className="p-1.5 bg-slate-700 hover:bg-slate-600 rounded focus-visible:ring-2 focus-visible:outline-none"
+                    aria-label="Next result"
                   >
                     <ChevronDown className="w-4 h-4" />
                   </button>

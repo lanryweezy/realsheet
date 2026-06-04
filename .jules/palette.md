@@ -7,3 +7,6 @@
 ## 2025-06-03 - Icon-only buttons lacking ARIA labels
 **Learning:** Found multiple instances where icon-only buttons (like Close, Expand/Collapse, Settings) lacked `aria-label` attributes. This is common when refactoring or adding quick modals (like `WatchWindow`, `VisualFormulaBuilder`, `DeveloperConsole`).
 **Action:** When creating or modifying modals or complex panels with icon-only actions (using Lucide icons), always add a descriptive `aria-label` and consider appending `focus-visible:ring-2` to improve keyboard navigation visibility.
+## 2025-03-02 - Missing aria-labels and focus rings on modal close buttons
+**Learning:** Generic icon-only `<button>` tags within complex modal components (e.g., `PivotModal`, `BranchManager`, `VisualFormulaBuilder`) are frequently missing both `aria-label`s and `focus-visible` styling, hindering screen reader users and those navigating exclusively via keyboard.
+**Action:** When creating new modals, dialogs, or dropdowns, strictly enforce the inclusion of `aria-label` attributes and focus classes like `focus-visible:ring-2` on interactive elements lacking visible text.

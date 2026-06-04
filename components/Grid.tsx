@@ -154,9 +154,19 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
   const gridContainerRef = useRef<HTMLDivElement>(null);
 
   const selectedRangeRef = useRef(selectedRange);
+  const onCellEditRef = useRef(onCellEdit);
+
   useLayoutEffect(() => {
     selectedRangeRef.current = selectedRange;
   }, [selectedRange]);
+
+  useLayoutEffect(() => {
+    onCellEditRef.current = onCellEdit;
+  }, [onCellEdit]);
+
+  const handleCellEditStable = useCallback((rowIndex: number, colKey: string, value: string) => {
+    onCellEditRef.current(rowIndex, colKey, value);
+  }, []);
 
   const handleFillStart = useCallback((e: any) => {
     e.preventDefault();
@@ -286,7 +296,7 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
                         onMouseEnter={() => handleMouseEnter(rowIndex, ci)}
                         style={{ border: isPrecedent ? '1px solid var(--nexus-accent)' : remotePresence ? `1px solid ${remotePresence.color}` : undefined }}
                       >
-                        <EnhancedCell rowIndex={rowIndex} colIndex={ci} col={col} value={row[col]} displayValue={evaluateWithHF(row[col], rowIndex, col, data)} isSelected={isSelected} onCellEdit={onCellEdit} onFillStart={handleFillStart} style={cellStyle} />
+                        <EnhancedCell rowIndex={rowIndex} colIndex={ci} col={col} value={row[col]} displayValue={evaluateWithHF(row[col], rowIndex, col, data)} isSelected={isSelected} onCellEdit={handleCellEditStable} onFillStart={handleFillStart} style={cellStyle} />
                       </td>
                     );
                   })}
