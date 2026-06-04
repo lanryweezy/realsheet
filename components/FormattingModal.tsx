@@ -83,7 +83,7 @@ const FormattingModal: React.FC<FormattingModalProps> = ({ columns, isOpen, onCl
       <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg p-6 shadow-2xl animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-white">Conditional Formatting</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button onClick={onClose} className="text-slate-400 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded" aria-label="Close Conditional Formatting">
             <X className="w-5 h-5" />
           </button>
         </div>

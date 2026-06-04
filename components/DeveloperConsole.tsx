@@ -207,11 +207,12 @@ def set_cell(row_idx, col_name, value):
         <div className="flex items-center gap-1">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1 hover:bg-slate-700 rounded transition-colors"
+            className="p-1 hover:bg-slate-700 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+            aria-label={isExpanded ? "Collapse Developer Console" : "Expand Developer Console"}
           >
             {isExpanded ? <Minimize2 className="w-3.5 h-3.5 text-slate-400" /> : <Maximize2 className="w-3.5 h-3.5 text-slate-400" />}
           </button>
-          <button onClick={onClose} className="p-1 hover:bg-slate-700 rounded transition-colors">
+          <button onClick={onClose} className="p-1 hover:bg-slate-700 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500" aria-label="Close Developer Console">
             <X className="w-3.5 h-3.5 text-slate-400" />
           </button>
         </div>
@@ -255,10 +256,10 @@ def set_cell(row_idx, col_name, value):
             <Terminal className="w-8 h-8" />
             <p>Ready for input...</p>
             {mode === 'sql' && <p className="text-[9px]">Example: SELECT * FROM ? WHERE Amount {'>'} 1000</p>}
-            {mode === 'js' && <p className="text-[9px]">Example: sheet.rows[0].Status = 'Updated'</p>}
+            {mode === 'js' && <p className="text-[9px]">Example: sheet.rows[0].Status = &apos;Updated&apos;</p>}
             {mode === 'python' && (
               <div className="text-center space-y-1">
-                <p className="text-[9px]">Example: rows[0]["Status"] = "Pythonic"</p>
+                <p className="text-[9px]">Example: rows[0][&quot;Status&quot;] = &quot;Pythonic&quot;</p>
                 <p className="text-[9px] text-slate-700 italic">Uses Pyodide v0.26.1</p>
               </div>
             )}
@@ -307,8 +308,9 @@ def set_cell(row_idx, col_name, value):
           <div className="absolute bottom-3 right-3 flex items-center gap-2">
             <button
               onClick={clearLogs}
-              className="p-1.5 text-slate-500 hover:text-red-400 transition-colors"
+              className="p-1.5 text-slate-500 hover:text-red-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
               title="Clear Logs"
+              aria-label="Clear Logs"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>

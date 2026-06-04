@@ -57,7 +57,7 @@ const SmartFillModal: React.FC<SmartFillModalProps> = ({ isOpen, onClose, onAppl
                         <p className="text-indigo-200 text-sm">Generate data using artificial intelligence</p>
                     </div>
                 </div>
-                <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+                <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded" aria-label="Close Smart Fill Modal">
                     <X className="w-5 h-5" />
                 </button>
             </div>

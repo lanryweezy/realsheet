@@ -35,7 +35,7 @@ const WatchWindow: React.FC<WatchWindowProps> = ({ isOpen, onClose, data, onRemo
           <Eye className="w-4 h-4 text-nexus-accent" />
           Watch Window
         </div>
-        <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+        <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded" aria-label="Close Watch Window">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -81,7 +81,8 @@ const WatchWindow: React.FC<WatchWindowProps> = ({ isOpen, onClose, data, onRemo
                     <td className="p-2 text-right">
                       <button 
                         onClick={() => onRemoveWatch(cellRef)}
-                        className="text-slate-600 hover:text-red-400 transition-colors"
+                        className="text-slate-600 hover:text-red-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded p-1"
+                        aria-label={`Remove watch for ${cellRef}`}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -107,7 +108,8 @@ const WatchWindow: React.FC<WatchWindowProps> = ({ isOpen, onClose, data, onRemo
             <button 
                 type="submit"
                 disabled={!newCellInput}
-                className="p-1.5 bg-slate-700 text-slate-300 rounded hover:bg-nexus-accent hover:text-white transition-colors disabled:opacity-50"
+                className="p-1.5 bg-slate-700 text-slate-300 rounded hover:bg-nexus-accent hover:text-white transition-colors disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+                aria-label="Add cell to watch"
             >
                 <Plus className="w-3.5 h-3.5" />
             </button>
