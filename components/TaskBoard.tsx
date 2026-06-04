@@ -372,7 +372,8 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
                   <div className="flex items-center gap-3 flex-1">
                     <button
                       onClick={() => updateTaskStatus(task.id, task.status === 'done' ? 'todo' : 'done')}
-                      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                      aria-label={task.status === 'done' ? 'Mark task as todo' : 'Mark task as done'}
+                      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
                         task.status === 'done'
                           ? 'bg-green-500 border-green-500'
                           : 'border-slate-600 hover:border-nexus-accent'
@@ -449,7 +450,16 @@ const TaskCard: React.FC<TaskCardProps> = ({
   return (
     <div
       onClick={onSelect}
-      className="p-3 bg-slate-800 border border-slate-700 rounded-lg hover:border-slate-600 cursor-pointer transition-all"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      tabIndex={0}
+      role="button"
+      aria-label={`View details for task: ${task.title}`}
+      className="p-3 bg-slate-800 border border-slate-700 rounded-lg hover:border-slate-600 cursor-pointer transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <h4 className="text-sm font-medium text-white flex-1">{task.title}</h4>
@@ -611,13 +621,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                 onDelete(task.id);
                 onClose();
               }}
-              className="px-4 py-2 text-red-400 hover:bg-red-500/10 rounded-lg text-sm font-medium transition-colors"
+              className="px-4 py-2 text-red-400 hover:bg-red-500/10 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
             >
               Delete Task
             </button>
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-nexus-accent hover:bg-cyan-600 text-white rounded-lg text-sm font-medium transition-colors"
+              className="px-4 py-2 bg-nexus-accent hover:bg-cyan-600 text-white rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
             >
               Close
             </button>

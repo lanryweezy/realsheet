@@ -10,3 +10,6 @@
 ## 2025-03-02 - Missing aria-labels and focus rings on modal close buttons
 **Learning:** Generic icon-only `<button>` tags within complex modal components (e.g., `PivotModal`, `BranchManager`, `VisualFormulaBuilder`) are frequently missing both `aria-label`s and `focus-visible` styling, hindering screen reader users and those navigating exclusively via keyboard.
 **Action:** When creating new modals, dialogs, or dropdowns, strictly enforce the inclusion of `aria-label` attributes and focus classes like `focus-visible:ring-2` on interactive elements lacking visible text.
+## 2023-10-27 - TaskBoard List Item and TaskCard Keyboard Accessibility
+**Learning:** In list and board interfaces with clickable card elements, simple `onClick` handlers exclude keyboard navigation. Components like `TaskCard` acting as list items need `tabIndex={0}`, `role="button"`, `onKeyDown` handlers explicitly checking for 'Enter'/'Space', and `focus-visible` styling to be natively accessible. Similarly, interactive icon-only elements like status toggles need explicit `aria-label`s and `focus-visible` outlines.
+**Action:** Always wrap interactive list cards with keyboard event listeners and `tabIndex={0}`, and ensure all interactive non-text elements have explicit `aria-label` and `focus-visible` styles.
