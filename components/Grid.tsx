@@ -239,6 +239,30 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
 
   const totalWidth = useMemo(() => data.columns.reduce((a: any, c: any) => a + getCellWidth(c), 0) + 50, [data.columns, getCellWidth]);
 
+  // Pre-calculate selection bounds to avoid O(N*M) Math.min/max calls during render
+  const selectionBounds = useMemo(() => {
+    if (!selectedRange) return null;
+    return {
+      minRow: Math.min(selectedRange.start.rowIndex, selectedRange.end.rowIndex),
+      maxRow: Math.max(selectedRange.start.rowIndex, selectedRange.end.rowIndex),
+      minCol: Math.min(selectedRange.start.colIndex, selectedRange.end.colIndex),
+      maxCol: Math.max(selectedRange.start.colIndex, selectedRange.end.colIndex)
+    };
+  }, [selectedRange]);
+
+  // Pre-calculate presence bounds
+  const presenceBounds = useMemo(() => {
+    return presences.filter((p: any) => p.selection).map((p: any) => ({
+      ...p,
+      bounds: {
+        minRow: Math.min(p.selection.start.rowIndex, p.selection.end.rowIndex),
+        maxRow: Math.max(p.selection.start.rowIndex, p.selection.end.rowIndex),
+        minCol: Math.min(p.selection.start.colIndex, p.selection.end.colIndex),
+        maxCol: Math.max(p.selection.start.colIndex, p.selection.end.colIndex)
+      }
+    }));
+  }, [presences]);
+
   return (
     <div ref={gridContainerRef} className={`w-full h-full overflow-auto relative grid-container bg-slate-950 ${isFormatPainterActive ? 'cursor-cell' : ''}`} onScroll={(e) => { setScrollTop(e.currentTarget.scrollTop); setScrollLeft(e.currentTarget.scrollLeft); }} onMouseUp={handleMouseUp}>
       <div style={{ height: data.rows.length * ROW_HEIGHT + HEADER_HEIGHT, width: totalWidth, position: 'relative' }}>
@@ -249,7 +273,7 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
             <tr style={{ height: HEADER_HEIGHT }}>
               <th className="bg-slate-900 border-b border-r border-slate-700 text-center"><Hash className="w-3 h-3 mx-auto text-slate-500" /></th>
               {data.columns.map((col: any, i: number) => {
-                const isActive = selectedRange && i >= Math.min(selectedRange.start.colIndex, selectedRange.end.colIndex) && i <= Math.max(selectedRange.start.colIndex, selectedRange.end.colIndex);
+                const isActive = selectionBounds && i >= selectionBounds.minCol && i <= selectionBounds.maxCol;
                 return (
                   <th key={col} className={`border-b border-r border-slate-700 text-left px-2 text-xs font-bold transition-colors overflow-hidden truncate ${isActive ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-900 text-slate-400'}`}>{col}</th>
                 );
@@ -264,7 +288,7 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
                 <tr key={rowIndex} style={{ height: ROW_HEIGHT }}>
                   <td
                     className={`border-b border-r border-slate-700 text-center text-[10px] font-bold sticky left-0 z-10 cursor-pointer transition-colors ${
-                      selectedRange && rowIndex >= Math.min(selectedRange.start.rowIndex, selectedRange.end.rowIndex) && rowIndex <= Math.max(selectedRange.start.rowIndex, selectedRange.end.rowIndex)
+                      selectionBounds && rowIndex >= selectionBounds.minRow && rowIndex <= selectionBounds.maxRow
                         ? 'bg-cyan-500/20 text-cyan-400'
                         : 'bg-slate-900 text-slate-500 hover:text-cyan-400'
                     }`}
@@ -273,17 +297,16 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
                     {rowIndex + 1}
                   </td>
                   {data.columns.map((col: any, ci: number) => {
-                    const isSelected = selectedRange && rowIndex >= Math.min(selectedRange.start.rowIndex, selectedRange.end.rowIndex) && rowIndex <= Math.max(selectedRange.start.rowIndex, selectedRange.end.rowIndex) && ci >= Math.min(selectedRange.start.colIndex, selectedRange.end.colIndex) && ci <= Math.max(selectedRange.start.colIndex, selectedRange.end.colIndex);
+                    const isSelected = selectionBounds && rowIndex >= selectionBounds.minRow && rowIndex <= selectionBounds.maxRow && ci >= selectionBounds.minCol && ci <= selectionBounds.maxCol;
                     const isPrecedent = precedents.has(`${rowIndex}-${ci}`);
                     const cellStyle = data.cellStyles?.[`${rowIndex}-${col}`] || EMPTY_STYLE;
 
                     // Presence check
-                    const remotePresence = presences.find((p: any) =>
-                      p.selection &&
-                      rowIndex >= Math.min(p.selection.start.rowIndex, p.selection.end.rowIndex) &&
-                      rowIndex <= Math.max(p.selection.start.rowIndex, p.selection.end.rowIndex) &&
-                      ci >= Math.min(p.selection.start.colIndex, p.selection.end.colIndex) &&
-                      ci <= Math.max(p.selection.start.colIndex, p.selection.end.colIndex)
+                    const remotePresence = presenceBounds.find((p: any) =>
+                      rowIndex >= p.bounds.minRow &&
+                      rowIndex <= p.bounds.maxRow &&
+                      ci >= p.bounds.minCol &&
+                      ci <= p.bounds.maxCol
                     );
 
                     return (

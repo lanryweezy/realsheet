@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, DragEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -420,6 +420,32 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleUndo, handleRedo]);
 
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounter = useRef(0);
+
+  const handleDragEnter = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current += 1;
+    if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDragLeave = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current -= 1;
+    if (dragCounter.current === 0) {
+      setIsDragging(false);
+    }
+  }, []);
+
   const handleFile = async (file: File) => {
     try {
       // Show loading state
@@ -450,6 +476,20 @@ const App: React.FC = () => {
       addToast('error', 'Upload Failed', errorMessage);
     }
   };
+
+  const handleDrop = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounter.current = 0;
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleFile(files[0]);
+    }
+  }, [handleFile]);
+
+
 
   const loadData = (data: SheetData) => {
     const updatedSheets = [...(workbook?.sheets || [])];
@@ -1573,7 +1613,22 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="saas-layout">
+    <div
+      className={`saas-layout relative transition-all duration-300 ${isDragging ? 'ring-4 ring-cyan-500 bg-cyan-500/10' : ''}`}
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {isDragging && (
+        <div className="absolute inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm rounded-xl pointer-events-none">
+          <div className="flex flex-col items-center justify-center p-12 border-4 border-dashed border-cyan-500 rounded-3xl bg-slate-900 shadow-2xl shadow-cyan-500/20">
+            <Upload className="w-20 h-20 text-cyan-400 mb-6 animate-bounce" />
+            <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">Drop File Here</h2>
+            <p className="text-slate-400 text-lg">Release to instantly open your spreadsheet</p>
+          </div>
+        </div>
+      )}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       
       {/* Gamification Overlays */}
