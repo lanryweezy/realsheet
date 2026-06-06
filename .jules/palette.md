@@ -16,3 +16,6 @@
 ## 2024-05-18 - Accessibility: Form Labelling in Modals
 **Learning:** React components acting as complex forms in modals often lack proper form association for accessibility (missing `htmlFor` and `id` linking), particularly when using custom or unstyled input elements. Without this, screen readers cannot properly announce the form field's purpose, and users cannot click the label to focus the input.
 **Action:** When auditing or implementing modals that collect user input (e.g. DataValidationModal), explicitly assign unique `id` attributes to inputs, selects, and textareas, and ensure their corresponding `<label>` tags use the `htmlFor` attribute linking to that `id`.
+## 2024-05-18 - Added ARIA Label and Loading State to Chat Button
+**Learning:** Found that the main agent chat input button in `components/Agent.tsx` was missing an `aria-label` despite being an icon-only button, and lacked visual feedback when waiting for the AI response.
+**Action:** Always verify icon-only buttons have an `aria-label` and consider adding visual loading indicators (like `Loader2` from `lucide-react`) for better UX when the button is disabled during an async operation.
