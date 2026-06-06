@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, StopCircle, Mic, Plus, Check, Zap, Calculator, PaintBucket, Filter, MessageSquare, Lightbulb, ListTodo, AlertCircle, ChevronRight, Code, Bot } from 'lucide-react';
+import { Send, Sparkles, StopCircle, Mic, Plus, Check, Zap, Calculator, PaintBucket, Filter, MessageSquare, Lightbulb, ListTodo, AlertCircle, ChevronRight, Code, Bot, Loader2 } from 'lucide-react';
 import { ChatMessage, SheetData, ChartConfig, EnhancedAnalysisResult } from '../types';
 import { analyzeDataWithGemini } from '../services/geminiService';
 import { transformData } from '../services/apiClient';
@@ -761,9 +761,10 @@ const Agent: React.FC<AgentProps> = ({ sheetData, workbook, onAddToDashboard, on
             <button
                 type="submit"
                 disabled={isLoading || !input.trim()}
+                aria-label="Send message"
                 className="p-2.5 bg-cyan-500 hover:bg-cyan-400 text-white rounded-lg transition-all shadow-[0_4px_12px_rgba(6,182,212,0.3)] hover:shadow-[0_4px_20px_rgba(6,182,212,0.5)] disabled:opacity-30 disabled:shadow-none transform active:scale-95"
             >
-                <Send className="w-4 h-4" />
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </button>
           </div>
           <div className="flex items-center justify-between mt-3 px-1">
