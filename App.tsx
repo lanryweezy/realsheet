@@ -551,7 +551,7 @@ const App: React.FC = () => {
     addToast('success', 'Download Complete', `${fileName} downloaded.`);
   };
 
-  const handleDownload = () => {
+  const handleDownload = useCallback(() => {
     if (!currentSheetData) return;
     const csvContent = exportToCSV(currentSheetData);
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -565,9 +565,9 @@ const App: React.FC = () => {
     link.click();
     document.body.removeChild(link);
     addToast('success', 'Export Complete', 'File downloaded successfully.');
-  };
+  }, [currentSheetData, addToast]);
 
-  const handleSetPrintArea = () => {
+  const handleSetPrintArea = useCallback(() => {
     if (!workbook || !currentSheetData || !selectedRange) {
       addToast('info', 'Select a range', 'Select cells first, then choose Set print area.');
       return;
@@ -583,23 +583,23 @@ const App: React.FC = () => {
     updatedSheets[workbook.activeSheetIndex] = sheet;
     setWorkbook({ ...workbook, sheets: updatedSheets });
     addToast('success', 'Print area set', 'Only the selected range will be printed or exported.');
-  };
+  }, [workbook, currentSheetData, selectedRange, addToast]);
 
-  const handleClearPrintArea = () => {
+  const handleClearPrintArea = useCallback(() => {
     if (!workbook || !currentSheetData) return;
     const updatedSheets = [...workbook.sheets];
     updatedSheets[workbook.activeSheetIndex] = { ...currentSheetData, printArea: undefined };
     setWorkbook({ ...workbook, sheets: updatedSheets });
     addToast('info', 'Print area cleared');
-  };
+  }, [workbook, currentSheetData, addToast]);
 
-  const handleExportExcel = () => {
+  const handleExportExcel = useCallback(() => {
     if (!currentSheetData) return;
     exportToExcel(currentSheetData);
     addToast('success', 'Export Complete', 'Excel file downloaded.');
-  };
+  }, [currentSheetData, addToast]);
 
-  const handlePrint = () => {
+  const handlePrint = useCallback(() => {
     if (!currentSheetData) return;
     const pa = currentSheetData.printArea;
     const startRow = pa ? pa.start.row : 0;
@@ -619,7 +619,7 @@ const App: React.FC = () => {
     w.document.write(html);
     w.document.close();
     w.onload = () => { w.focus(); w.print(); w.close(); };
-  };
+  }, [currentSheetData, addToast]);
 
   function escapeHtml(s: string): string {
     const div = { innerHTML: '' };
@@ -969,14 +969,14 @@ const App: React.FC = () => {
     addToast('success', 'Style Applied', `${style.name} style applied to selection`);
   }, [selectedRange, currentSheetData, pushToHistory, addToast]);
 
-  const handleFormatPainterClick = () => {
+  const handleFormatPainterClick = useCallback(() => {
     if (selectedRange && currentSheetData) {
       setIsFormatPainterActive(true);
       const colKey = currentSheetData.columns[selectedRange.start.colIndex];
       setFormatPainterSource({ rowIndex: selectedRange.start.rowIndex, colKey });
       addToast('info', 'Format Painter Active', 'Click a cell to apply formatting');
     }
-  };
+  }, [selectedRange, currentSheetData, addToast]);
 
   const handleFormatPainterApply = useCallback((rowIndex: number, colKey: string) => {
     const currentWorkbook = workbookRef.current;
