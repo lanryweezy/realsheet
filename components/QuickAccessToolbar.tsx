@@ -47,9 +47,10 @@ const QuickAccessToolbar: React.FC<QuickAccessToolbarProps> = ({
           type="button"
           onClick={onClick}
           disabled={disabled}
-          className="p-1 rounded hover:bg-black/10 transition-colors disabled:opacity-50 disabled:cursor-default"
+          className="p-1 rounded hover:bg-black/10 transition-colors disabled:opacity-50 disabled:cursor-default focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500"
           style={{ color: 'var(--nexus-text-main)' }}
           title={label}
+          aria-label={label}
         >
           <Icon className="w-3.5 h-3.5" />
         </button>
