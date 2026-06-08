@@ -59,10 +59,10 @@ const interpolateColor = (color1: string, color2: string, factor: number) => {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
+// ⚡ Bolt: Removed isHovered state to prevent O(N*M) re-renders during mouse movement. Using CSS hover instead.
 const EnhancedCell = memo(({ rowIndex, colIndex, col, value, displayValue, isSelected, columnType, onCellEdit, onContextMenu, highlightedCells = new Set(), onFillStart, style = {} }: any) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
-  const [isHovered, setIsHovered] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -122,10 +122,8 @@ const EnhancedCell = memo(({ rowIndex, colIndex, col, value, displayValue, isSel
 
   return (
     <div
-      className={`w-full h-full flex flex-col justify-center px-1 text-xs relative ${isSelected ? 'ring-2 ring-cyan-400 bg-cyan-400/10' : ''} ${isHovered ? 'bg-white/5' : ''} ${isFormula ? 'formula-glow' : ''}`}
+      className={`w-full h-full flex flex-col justify-center px-1 text-xs relative hover:bg-white/5 ${isSelected ? 'ring-2 ring-cyan-400 bg-cyan-400/10' : ''} ${isFormula ? 'formula-glow' : ''}`}
       style={combinedStyle}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       onDoubleClick={handleDoubleClick}
       onContextMenu={onContextMenu}
     >
