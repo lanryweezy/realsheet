@@ -221,17 +221,36 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
     if (data.rows.length - visibleRange.endRow <= EXPANSION_THRESHOLD && onSheetExpand) onSheetExpand(data.rows.length + 50, data.columns.length);
   }, [visibleRange.endRow, data.rows.length, onSheetExpand]);
 
-  const handleMouseDown = (r: number, c: number) => {
+  const handleTableMouseDown = useCallback((e: React.MouseEvent) => {
+    const td = (e.target as HTMLElement).closest('td[data-row][data-col]');
+    if (!td) return;
+    const r = parseInt(td.getAttribute('data-row') || '-1', 10);
+    const c = parseInt(td.getAttribute('data-col') || '-1', 10);
+    if (r === -1 || c === -1) return;
+
+    // Performance optimization: Event delegation for cell interaction
     if (isFormatPainterActive) { onFormatPainterApply(r, data.columns[c]); return; }
     setIsDragging(true); onRangeSelect({ start: { rowIndex: r, colIndex: c }, end: { rowIndex: r, colIndex: c } });
-  };
-  const handleMouseEnter = (r: number, c: number) => {
-    if (isDragging) onRangeSelect({ ...selectedRange, end: { rowIndex: r, colIndex: c } });
-    else if (isFilling) {
-        const s = selectedRange.start, e = selectedRange.end;
-        setFillRange({ start: { rowIndex: Math.min(s.rowIndex, e.rowIndex, r), colIndex: Math.min(s.colIndex, e.colIndex, c) }, end: { rowIndex: Math.max(s.rowIndex, e.rowIndex, r), colIndex: Math.max(s.colIndex, e.colIndex, c) } });
+  }, [isFormatPainterActive, onFormatPainterApply, data.columns, onRangeSelect]);
+
+  const handleTableMouseOver = useCallback((e: React.MouseEvent) => {
+    const td = (e.target as HTMLElement).closest('td[data-row][data-col]');
+    if (!td) return;
+    const r = parseInt(td.getAttribute('data-row') || '-1', 10);
+    const c = parseInt(td.getAttribute('data-col') || '-1', 10);
+    if (r === -1 || c === -1) return;
+
+    if (isDragging && selectedRange) {
+      onRangeSelect({ ...selectedRange, end: { rowIndex: r, colIndex: c } });
+    } else if (isFilling && selectedRange) {
+      const s = selectedRange.start, e2 = selectedRange.end;
+      setFillRange({
+        start: { rowIndex: Math.min(s.rowIndex, e2.rowIndex, r), colIndex: Math.min(s.colIndex, e2.colIndex, c) },
+        end: { rowIndex: Math.max(s.rowIndex, e2.rowIndex, r), colIndex: Math.max(s.colIndex, e2.colIndex, c) }
+      });
     }
-    };
+  }, [isDragging, isFilling, selectedRange, onRangeSelect]);
+
   const handleMouseUp = () => {
     if (isFilling && fillRange) onFillRange(selectedRange, fillRange);
     setIsDragging(false); setIsFilling(false); setFillRange(null);
@@ -267,7 +286,7 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
     <div ref={gridContainerRef} className={`w-full h-full overflow-auto relative grid-container bg-slate-950 ${isFormatPainterActive ? 'cursor-cell' : ''}`} onScroll={(e) => { setScrollTop(e.currentTarget.scrollTop); setScrollLeft(e.currentTarget.scrollLeft); }} onMouseUp={handleMouseUp}>
       <div style={{ height: data.rows.length * ROW_HEIGHT + HEADER_HEIGHT, width: totalWidth, position: 'relative' }}>
         <NeuralLines source={neuralPoints.source} targets={neuralPoints.targets} />
-        <table className="data-grid-table border-collapse" style={{ tableLayout: 'fixed', width: totalWidth, position: 'sticky', top: 0 }}>
+        <table className="data-grid-table border-collapse" style={{ tableLayout: 'fixed', width: totalWidth, position: 'sticky', top: 0 }} onMouseDown={handleTableMouseDown} onMouseOver={handleTableMouseOver}>
           <colgroup><col style={{ width: '50px' }} />{data.columns.map((c: any) => <col key={c} style={{ width: `${getCellWidth(c)}px` }} />)}</colgroup>
           <thead>
             <tr style={{ height: HEADER_HEIGHT }}>
@@ -315,8 +334,6 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
                         data-row={rowIndex}
                         data-col={ci}
                         className="p-0 border-b border-r border-slate-800 relative"
-                        onMouseDown={() => handleMouseDown(rowIndex, ci)}
-                        onMouseEnter={() => handleMouseEnter(rowIndex, ci)}
                         style={{ border: isPrecedent ? '1px solid var(--nexus-accent)' : remotePresence ? `1px solid ${remotePresence.color}` : undefined }}
                       >
                         <EnhancedCell rowIndex={rowIndex} colIndex={ci} col={col} value={row[col]} displayValue={evaluateWithHF(row[col], rowIndex, col, data)} isSelected={isSelected} onCellEdit={handleCellEditStable} onFillStart={handleFillStart} style={cellStyle} />
