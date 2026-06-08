@@ -50,7 +50,7 @@ const RecordDetailView: React.FC<RecordDetailViewProps> = ({
         </div>
         <button
           onClick={() => { onSave(rowIndex, editRow); onClose(); }}
-          className="flex items-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl shadow-lg shadow-cyan-500/20 transition-all active:scale-95"
+          className="flex items-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl shadow-lg shadow-cyan-500/20 transition-all active:scale-95 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500"
         >
           <Save className="w-4 h-4" />
           Save
@@ -77,14 +77,14 @@ const RecordDetailView: React.FC<RecordDetailViewProps> = ({
         <button
           onClick={onPrev}
           disabled={!onPrev}
-          className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-800 text-slate-300 rounded-xl font-bold disabled:opacity-30"
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-800 text-slate-300 rounded-xl font-bold disabled:opacity-30 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500"
         >
           <ArrowLeft className="w-4 h-4" /> Previous
         </button>
         <button
           onClick={onNext}
           disabled={!onNext}
-          className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-800 text-slate-300 rounded-xl font-bold disabled:opacity-30"
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-800 text-slate-300 rounded-xl font-bold disabled:opacity-30 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500"
         >
           Next <ArrowRight className="w-4 h-4" />
         </button>
