@@ -282,7 +282,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
             
             <button
               onClick={() => setIsCreatingTask(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-nexus-accent hover:bg-cyan-600 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-nexus-accent hover:bg-cyan-600 text-white rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
             >
               <Plus className="w-4 h-4" />
               New Task
@@ -305,7 +305,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
               />
               <button
                 onClick={addTask}
-                className="px-4 py-2 bg-nexus-accent hover:bg-cyan-600 text-white rounded-lg text-sm font-medium transition-colors"
+                className="px-4 py-2 bg-nexus-accent hover:bg-cyan-600 text-white rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
               >
                 Add
               </button>

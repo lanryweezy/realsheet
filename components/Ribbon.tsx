@@ -70,7 +70,7 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex flex-col items-center justify-center min-w-[48px] py-1 px-1 rounded-xl transition-all duration-200 disabled:opacity-20 group"
+      className="flex flex-col items-center justify-center min-w-[48px] py-1 px-1 rounded-xl transition-all duration-200 disabled:opacity-20 group focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500" aria-label={label}
       title={label}
     >
       <div className="mb-1 text-slate-400 group-hover:text-cyan-400 transition-colors">{icon}</div>
@@ -85,7 +85,7 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="p-2 rounded-xl text-slate-400 transition-all duration-200 disabled:opacity-20"
+      className="p-2 rounded-xl text-slate-400 transition-all duration-200 disabled:opacity-20 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500" aria-label={title}
       title={title}
     >
       {icon}
@@ -108,7 +108,7 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
             key={id}
             type="button"
             onClick={() => p.onTabChange(id)}
-            className={`px-5 py-1.5 text-[12px] font-bold transition-all duration-200 relative ${p.activeTab === id
+            className={`px-5 py-1.5 text-[12px] font-bold transition-all duration-200 relative focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500 ${p.activeTab === id
               ? 'text-cyan-400'
               : id === 'file' ? 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30' : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
@@ -150,7 +150,7 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
             {/* Clipboard Group */}
             <div className="flex items-center gap-1 pr-6 border-r border-white/5 relative group mr-4 py-1">
               <div className="flex flex-col gap-0.5">
-                <button className="flex items-center gap-2 px-2 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 rounded-lg transition-all border border-cyan-500/20">
+                <button className="flex items-center gap-2 px-2 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 rounded-lg transition-all border border-cyan-500/20 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500" aria-label="Paste">
                   <Copy className="w-4 h-4" />
                   <span className="text-[10px] font-bold">Paste</span>
                 </button>
@@ -161,7 +161,7 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
                     type="button"
                     onClick={p.onFormatPainter}
                     disabled={!p.sheetData}
-                    className={`p-2 rounded-xl transition-all duration-200 disabled:opacity-20 ${p.isFormatPainterActive ? 'bg-cyan-500 text-slate-900 shadow-[0_0_15px_rgba(6,182,212,0.5)]' : 'hover:bg-cyan-500/10 hover:text-cyan-400 text-slate-400'}`}
+                    className={`p-2 rounded-xl transition-all duration-200 disabled:opacity-20 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500 ${p.isFormatPainterActive ? 'bg-cyan-500 text-slate-900 shadow-[0_0_15px_rgba(6,182,212,0.5)]' : 'hover:bg-cyan-500/10 hover:text-cyan-400 text-slate-400'}`} aria-label="Format Painter"
                     title="Format Painter"
                   >
                     <PaintBucket className="w-3.5 h-3.5" />
@@ -196,7 +196,7 @@ const Ribbon: React.FC<RibbonProps> = (p) => {
                 {iconBtn(<AlignLeft className="w-3.5 h-3.5" />, 'Align Left', () => { })}
                 {iconBtn(<AlignCenter className="w-3.5 h-3.5" />, 'Align Center', () => { })}
                 {iconBtn(<AlignRight className="w-3.5 h-3.5" />, 'Align Right', () => { })}
-                <button className="col-span-3 mt-0.5 py-0.5 px-1.5 hover:bg-white/5 rounded text-[9px] text-slate-400 font-bold border border-white/5 uppercase tracking-tighter transition-colors">Merge & Center</button>
+                <button className="col-span-3 mt-0.5 py-0.5 px-1.5 hover:bg-white/5 rounded text-[9px] text-slate-400 font-bold border border-white/5 uppercase tracking-tighter transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500" aria-label="Merge and Center">Merge & Center</button>
               </div>
               {groupLabel('Alignment')}
             </div>

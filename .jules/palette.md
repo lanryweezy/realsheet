@@ -19,3 +19,6 @@
 ## 2024-05-18 - Added ARIA Label and Loading State to Chat Button
 **Learning:** Found that the main agent chat input button in `components/Agent.tsx` was missing an `aria-label` despite being an icon-only button, and lacked visual feedback when waiting for the AI response.
 **Action:** Always verify icon-only buttons have an `aria-label` and consider adding visual loading indicators (like `Loader2` from `lucide-react`) for better UX when the button is disabled during an async operation.
+## 2024-05-24 - Interactive Element Accessibility
+**Learning:** Many icon-only buttons across complex dashboard components (e.g., Ribbon, Notification Center, Dashboard) lack both visual keyboard focus indicators (`focus-visible`) and screen-reader accessible names (`aria-label`). Relying purely on visual layout (like placing an `X` icon) fails to convey intent to assistive technologies, and missing focus rings prevent keyboard navigation.
+**Action:** Ensure all interactive elements, especially those lacking visible text, explicitly define an `aria-label` and include focus ring styling (`focus-visible:ring-2 focus-visible:outline-none`) to maintain a fully accessible and navigable interface.

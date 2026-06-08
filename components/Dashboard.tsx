@@ -35,7 +35,7 @@ const Dashboard: React.FC<DashboardProps> = ({ items, sheetData, onRemoveItem })
             <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
                 onClick={() => onRemoveItem(item.id)}
-                className="p-1.5 bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg border border-slate-600/50"
+                className="p-1.5 bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg border border-slate-600/50 focus-visible:ring-2 focus-visible:outline-none" aria-label="Remove from Dashboard"
                 title="Remove from Dashboard"
               >
                 <X className="w-4 h-4" />

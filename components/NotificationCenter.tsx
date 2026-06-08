@@ -197,14 +197,14 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={clearAllRead}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none" aria-label="Clear all read"
               title="Clear all read"
             >
               <Trash2 className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none" aria-label="Close"
             >
               <X className="w-5 h-5" />
             </button>
@@ -343,7 +343,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
                   e.stopPropagation();
                   setShowActions(!showActions);
                 }}
-                className="p-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                className="p-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors focus-visible:ring-2 focus-visible:outline-none" aria-label="Toggle actions"
               >
                 <ChevronRight className={`w-3 h-3 transition-transform ${showActions ? 'rotate-90' : ''}`} />
               </button>
@@ -352,7 +352,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
                   e.stopPropagation();
                   onDismiss();
                 }}
-                className="p-1 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition-colors"
+                className="p-1 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition-colors focus-visible:ring-2 focus-visible:outline-none" aria-label="Dismiss notification"
               >
                 <X className="w-3 h-3" />
               </button>
