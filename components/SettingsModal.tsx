@@ -29,7 +29,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Settings</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-blue-500 rounded" aria-label="Close settings">
             <X size={24} />
           </button>
         </div>
@@ -41,11 +41,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 mb-2">
               <Key className="inline mr-2" size={16} />
               Gemini API Key (Optional)
             </label>
             <input
+              id="apiKey"
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
@@ -61,13 +62,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-blue-500 rounded"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             >
               <Save className="mr-2" size={16} />
               Save
