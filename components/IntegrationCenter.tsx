@@ -307,7 +307,8 @@ const IntegrationCenter: React.FC<IntegrationCenterProps> = ({
             
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-orange-500"
+              aria-label="Close Integration Center"
             >
               <X className="w-6 h-6" />
             </button>
@@ -381,8 +382,9 @@ const IntegrationCenter: React.FC<IntegrationCenterProps> = ({
                                 e.stopPropagation();
                                 syncIntegration(integration.id);
                               }}
-                              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-orange-500"
                               title="Sync"
+                              aria-label={`Sync ${integration.name}`}
                             >
                               <RefreshCw className="w-4 h-4" />
                             </button>
@@ -391,8 +393,9 @@ const IntegrationCenter: React.FC<IntegrationCenterProps> = ({
                                 e.stopPropagation();
                                 disconnectIntegration(integration.id);
                               }}
-                              className="p-1.5 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                              className="p-1.5 text-red-400 hover:bg-red-500/20 rounded transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-red-500"
                               title="Disconnect"
+                              aria-label={`Disconnect ${integration.name}`}
                             >
                               <Power className="w-4 h-4" />
                             </button>
@@ -464,13 +467,15 @@ const IntegrationCenter: React.FC<IntegrationCenterProps> = ({
                           </div>
                           <button
                             onClick={() => toggleWebhook(webhook.id)}
-                            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-orange-500"
+                            aria-label={`${webhook.isActive ? 'Disable' : 'Enable'} webhook ${webhook.name}`}
                           >
                             <Power className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => deleteWebhook(webhook.id)}
-                            className="p-1.5 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                            className="p-1.5 text-red-400 hover:bg-red-500/20 rounded transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-red-500"
+                            aria-label={`Delete webhook ${webhook.name}`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -600,7 +605,8 @@ const IntegrationCenter: React.FC<IntegrationCenterProps> = ({
               <h3 className="text-lg font-bold text-white">{selectedIntegration.name}</h3>
               <button
                 onClick={() => setSelectedIntegration(null)}
-                className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors"
+                className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-orange-500"
+                aria-label="Close integration details"
               >
                 <X className="w-5 h-5" />
               </button>
