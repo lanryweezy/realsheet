@@ -1690,12 +1690,12 @@ const App: React.FC = () => {
             {view === 'editor' && (
               <div className={`compact-toolbar ${isMobile ? 'bg-slate-800/50 rounded-lg p-1 border border-slate-700/50' : 'toolbar-group animate-in fade-in slide-in-from-top-1'}`}>
                 <Tooltip content="Undo" shortcut="⌘Z">
-                  <button onClick={handleUndo} disabled={!currentSheetData || historyIndex <= 0} className="btn-icon">
+                  <button onClick={handleUndo} disabled={!currentSheetData || historyIndex <= 0} className="btn-icon" aria-label="Undo">
                     <Undo2 className="w-4 h-4" />
                   </button>
                 </Tooltip>
                 <Tooltip content="Redo" shortcut="⌘Y">
-                  <button onClick={handleRedo} disabled={!currentSheetData || historyIndex >= history.length - 1} className="btn-icon">
+                  <button onClick={handleRedo} disabled={!currentSheetData || historyIndex >= history.length - 1} className="btn-icon" aria-label="Redo">
                     <Redo2 className="w-4 h-4" />
                   </button>
                 </Tooltip>
@@ -1709,6 +1709,7 @@ const App: React.FC = () => {
                         disabled={!currentSheetData}
                         className="btn-icon hover:bg-cyan-500/10 hover:text-cyan-400"
                         title="Conditional Formatting"
+                        aria-label="Conditional Formatting"
                       >
                         <PaintBucket className="w-4 h-4" />
                       </button>
@@ -1717,6 +1718,7 @@ const App: React.FC = () => {
                         disabled={!currentSheetData}
                         className="btn-icon hover:bg-emerald-500/10 hover:text-emerald-400"
                         title="Data Tools"
+                        aria-label="Data Tools"
                       >
                         <DatabaseZap className="w-4 h-4" />
                       </button>
@@ -1731,6 +1733,7 @@ const App: React.FC = () => {
                     disabled={!currentSheetData}
                     className={`btn-icon ${isWatchWindowOpen ? 'active text-cyan-400 bg-cyan-500/10' : 'hover:bg-white/5'} mobile-hidden`}
                     title="Watch Window"
+                    aria-label="Watch Window"
                   >
                     <Eye className="w-4 h-4" />
                   </button>
@@ -1739,6 +1742,7 @@ const App: React.FC = () => {
                     disabled={!currentSheetData}
                     className="btn-icon text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
                     title="AI Smart Fill"
+                    aria-label="AI Smart Fill"
                   >
                     <Wand2 className="w-4 h-4" />
                   </button>
@@ -1752,6 +1756,7 @@ const App: React.FC = () => {
                         disabled={!currentSheetData}
                         className="btn-icon hover:bg-amber-500/10 hover:text-amber-400"
                         title="Pivot Table"
+                        aria-label="Pivot Table"
                       >
                         <Table className="w-4 h-4" />
                       </button>
@@ -1760,6 +1765,7 @@ const App: React.FC = () => {
                         disabled={!currentSheetData}
                         className="btn-icon hover:bg-pink-500/10 hover:text-pink-400"
                         title="Create Chart"
+                        aria-label="Create Chart"
                       >
                         <BarChart3 className="w-4 h-4" />
                       </button>
@@ -1774,12 +1780,13 @@ const App: React.FC = () => {
                     disabled={!currentSheetData}
                     className="btn-icon text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
                     title="Share"
+                    aria-label="Share"
                   >
                     <Share2 className="w-4 h-4" />
                   </button>
 
                   {!isMobile && (
-                    <button onClick={handleDownload} disabled={!currentSheetData} className="btn-icon hover:bg-white/5" title="Export">
+                    <button onClick={handleDownload} disabled={!currentSheetData} className="btn-icon hover:bg-white/5" title="Export" aria-label="Export">
                       <Download className="w-4 h-4" />
                     </button>
                   )}
@@ -1794,6 +1801,7 @@ const App: React.FC = () => {
                   <button
                     onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                     className={`btn-icon ${isSidebarOpen ? 'active' : ''}`}
+                    aria-label={isSidebarOpen ? "Close Agent" : "Open Agent"}
                   >
                     {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                   </button>
@@ -1814,7 +1822,7 @@ const App: React.FC = () => {
               ))}
             </div>
 
-            <button onClick={() => setIsUpgradeModalOpen(true)} className="flex items-center justify-center p-1.5 rounded-full bg-gradient-to-r from-amber-200 to-yellow-400 text-slate-900 shadow-lg shadow-amber-500/20 hover:scale-105 transition-transform" title="Upgrade to Pro – see what's included">
+            <button onClick={() => setIsUpgradeModalOpen(true)} className="flex items-center justify-center p-1.5 rounded-full bg-gradient-to-r from-amber-200 to-yellow-400 text-slate-900 shadow-lg shadow-amber-500/20 hover:scale-105 transition-transform" title="Upgrade to Pro – see what's included" aria-label="Upgrade to Pro">
               <Crown className="w-4 h-4" />
             </button>
 
@@ -1829,7 +1837,7 @@ const App: React.FC = () => {
             </button>
 
             <div className="relative group mobile-hidden">
-              <button className="btn-icon flex items-center gap-1 hover:bg-black/10 transition-colors" title="Workspace Apps">
+              <button className="btn-icon flex items-center gap-1 hover:bg-black/10 transition-colors" title="Workspace Apps" aria-label="Workspace Apps">
                 <LayoutGrid className="w-4 h-4" />
               </button>
               <div className="absolute top-full right-0 mt-2 w-48 py-2 bg-[var(--nexus-surface)] border border-[var(--nexus-border)] rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
