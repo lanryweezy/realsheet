@@ -210,9 +210,35 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
   const visibleRange = useMemo(() => {
     const startRow = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - VISIBLE_ROWS_BUFFER);
     const endRow = Math.min(data.rows.length, startRow + Math.ceil(containerHeight / ROW_HEIGHT) + VISIBLE_ROWS_BUFFER * 2);
-    let startCol = 0, acc = 0;
-    for (let i = 0; i < data.columns.length; i++) { if (acc + getCellWidth(data.columns[i]) > scrollLeft) { startCol = Math.max(0, i - 1); break; } acc += getCellWidth(data.columns[i]); }
-    return { startRow, endRow, startCol };
+
+    let startCol = 0, acc = 0, leftSpacerWidth = 0;
+    for (let i = 0; i < data.columns.length; i++) {
+      const w = getCellWidth(data.columns[i]);
+      if (acc + w > scrollLeft) {
+        startCol = Math.max(0, i - 2);
+        leftSpacerWidth = 0;
+        for (let j = 0; j < startCol; j++) leftSpacerWidth += getCellWidth(data.columns[j]);
+        break;
+      }
+      acc += w;
+    }
+
+    let endCol = data.columns.length;
+    let widthAcc = 0;
+    for (let i = startCol; i < data.columns.length; i++) {
+      widthAcc += getCellWidth(data.columns[i]);
+      if (widthAcc > containerWidth) {
+        endCol = Math.min(data.columns.length, i + 3);
+        break;
+      }
+    }
+
+    let rightSpacerWidth = 0;
+    for (let i = endCol; i < data.columns.length; i++) {
+      rightSpacerWidth += getCellWidth(data.columns[i]);
+    }
+
+    return { startRow, endRow, startCol, endCol, leftSpacerWidth, rightSpacerWidth };
   }, [scrollTop, scrollLeft, containerHeight, containerWidth, data.rows.length, data.columns, getCellWidth]);
 
   useEffect(() => {
@@ -285,20 +311,33 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
       <div style={{ height: data.rows.length * ROW_HEIGHT + HEADER_HEIGHT, width: totalWidth, position: 'relative' }}>
         <NeuralLines source={neuralPoints.source} targets={neuralPoints.targets} />
         <table className="data-grid-table border-collapse" style={{ tableLayout: 'fixed', width: totalWidth, position: 'sticky', top: 0 }} onMouseDown={handleTableMouseDown} onMouseOver={handleTableMouseOver}>
-          <colgroup><col style={{ width: '50px' }} />{data.columns.map((c: any) => <col key={c} style={{ width: `${getCellWidth(c)}px` }} />)}</colgroup>
+          <colgroup>
+            <col style={{ width: '50px' }} />
+            {visibleRange.leftSpacerWidth > 0 && <col style={{ width: `${visibleRange.leftSpacerWidth}px` }} />}
+            {data.columns.slice(visibleRange.startCol, visibleRange.endCol).map((c: any) => <col key={c} style={{ width: `${getCellWidth(c)}px` }} />)}
+            {visibleRange.rightSpacerWidth > 0 && <col style={{ width: `${visibleRange.rightSpacerWidth}px` }} />}
+          </colgroup>
           <thead>
             <tr style={{ height: HEADER_HEIGHT }}>
               <th className="bg-slate-900 border-b border-r border-slate-700 text-center"><Hash className="w-3 h-3 mx-auto text-slate-500" /></th>
-              {data.columns.map((col: any, i: number) => {
+              {visibleRange.leftSpacerWidth > 0 && <th className="bg-slate-900 border-b border-slate-700" />}
+              {data.columns.slice(visibleRange.startCol, visibleRange.endCol).map((col: any, sliceIndex: number) => {
+                const i = visibleRange.startCol + sliceIndex;
                 const isActive = selectionBounds && i >= selectionBounds.minCol && i <= selectionBounds.maxCol;
                 return (
                   <th key={col} className={`border-b border-r border-slate-700 text-left px-2 text-xs font-bold transition-colors overflow-hidden truncate ${isActive ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-900 text-slate-400'}`}>{col}</th>
                 );
               })}
+              {visibleRange.rightSpacerWidth > 0 && <th className="bg-slate-900 border-b border-slate-700" />}
             </tr>
           </thead>
           <tbody>
-            <tr style={{ height: visibleRange.startRow * ROW_HEIGHT }}><td colSpan={data.columns.length + 1} /></tr>
+            <tr style={{ height: visibleRange.startRow * ROW_HEIGHT }}>
+              <td />
+              {visibleRange.leftSpacerWidth > 0 && <td />}
+              {data.columns.slice(visibleRange.startCol, visibleRange.endCol).map((c: any, i: number) => <td key={`spacer-${i}`} />)}
+              {visibleRange.rightSpacerWidth > 0 && <td />}
+            </tr>
             {data.rows.slice(visibleRange.startRow, visibleRange.endRow).map((row: any, ri: number) => {
               const rowIndex = visibleRange.startRow + ri;
               return (
@@ -313,7 +352,9 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
                   >
                     {rowIndex + 1}
                   </td>
-                  {data.columns.map((col: any, ci: number) => {
+                  {visibleRange.leftSpacerWidth > 0 && <td className="p-0 border-b border-slate-800" />}
+                  {data.columns.slice(visibleRange.startCol, visibleRange.endCol).map((col: any, sliceIndex: number) => {
+                    const ci = visibleRange.startCol + sliceIndex;
                     const isSelected = selectionBounds && rowIndex >= selectionBounds.minRow && rowIndex <= selectionBounds.maxRow && ci >= selectionBounds.minCol && ci <= selectionBounds.maxCol;
                     const isPrecedent = precedents.has(`${rowIndex}-${ci}`);
                     const cellStyle = data.cellStyles?.[`${rowIndex}-${col}`] || EMPTY_STYLE;
@@ -338,10 +379,16 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
                       </td>
                     );
                   })}
+                  {visibleRange.rightSpacerWidth > 0 && <td className="p-0 border-b border-slate-800" />}
                 </tr>
               );
             })}
-            <tr style={{ height: Math.max(0, (data.rows.length - visibleRange.endRow) * ROW_HEIGHT) }}><td colSpan={data.columns.length + 1} /></tr>
+            <tr style={{ height: Math.max(0, (data.rows.length - visibleRange.endRow) * ROW_HEIGHT) }}>
+              <td />
+              {visibleRange.leftSpacerWidth > 0 && <td />}
+              {data.columns.slice(visibleRange.startCol, visibleRange.endCol).map((c: any, i: number) => <td key={`spacer-bottom-${i}`} />)}
+              {visibleRange.rightSpacerWidth > 0 && <td />}
+            </tr>
           </tbody>
         </table>
       </div>

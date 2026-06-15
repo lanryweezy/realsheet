@@ -7,3 +7,9 @@
 ## 2026-06-04 - Grid Re-renders on Hover
 **Learning:** Using React state (`isHovered`) combined with `onMouseEnter`/`onMouseLeave` in a dense grid element (`EnhancedCell`) causes massive O(N*M) React re-renders when simply moving the mouse across the spreadsheet, severely tanking performance.
 **Action:** Offload transient visual interactions like hover styling completely to the browser's CSS engine using Tailwind's `hover:` pseudo-classes (e.g., `hover:bg-white/5`) rather than managing them via React state.
+## 2026-06-15 - O(N*M) Rendering Bottlenecks in Grid columns
+**Learning:** Calculating  but failing to use  to slice the columns mapped in the Grid's rows leads to all columns rendering regardless of the horizontal scroll position, resulting in an O(N*M) DOM footprint and lag. When implementing column virtualization in a `table-layout: fixed` HTML structure, using `colSpan` on spacer cells breaks the horizontal scrolling width.
+**Action:** Always fully virtualize columns by mapping over a slice of `data.columns`. Instead of `colSpan`, calculate aggregate hidden pixel widths (`leftSpacerWidth`, `rightSpacerWidth`) and insert a single empty `<col>` element with matching empty `<th>`/`<td>` cells.
+## 2026-06-04 - O(N*M) Rendering Bottlenecks in Grid columns
+**Learning:** Calculating `startCol` but failing to use `endCol` to slice the columns mapped in the Grid's rows leads to all columns rendering regardless of the horizontal scroll position, resulting in an O(N*M) DOM footprint and lag. When implementing column virtualization in a `table-layout: fixed` HTML structure, using `colSpan` on spacer cells breaks the horizontal scrolling width.
+**Action:** Always fully virtualize columns by mapping over a slice of `data.columns`. Instead of `colSpan`, calculate aggregate hidden pixel widths (`leftSpacerWidth`, `rightSpacerWidth`) and insert a single empty `<col>` element with matching empty `<th>`/`<td>` cells.
