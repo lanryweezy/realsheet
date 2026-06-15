@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 
 export type Theme = 'dark' | 'light';
 
@@ -23,11 +23,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(STORAGE_KEY, theme);
   }, [theme]);
 
-  const setTheme = (t: Theme) => setThemeState(t);
-  const toggleTheme = () => setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  const setTheme = useCallback((t: Theme) => setThemeState(t), []);
+  const toggleTheme = useCallback(() => setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark')), []);
+
+  // ⚡ Bolt Performance Optimization:
+  // Memoize the context value to prevent cascading re-renders across all consumers
+  // when the ThemeProvider's parent re-renders but the theme hasn't actually changed.
+  const contextValue = useMemo(() => ({
+    theme,
+    setTheme,
+    toggleTheme
+  }), [theme, setTheme, toggleTheme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

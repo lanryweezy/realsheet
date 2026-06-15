@@ -452,14 +452,26 @@ const App: React.FC = () => {
   };
 
   const loadData = (data: SheetData) => {
-    const updatedSheets = [...(workbook?.sheets || [])];
-    updatedSheets[workbook?.activeSheetIndex || 0] = data;
-
-    setWorkbook(prev => prev ? {
-      ...prev,
-      sheets: updatedSheets,
-      lastModified: new Date()
-    } : null);
+    setWorkbook(prev => {
+      if (prev) {
+        const updatedSheets = [...prev.sheets];
+        updatedSheets[prev.activeSheetIndex] = data;
+        return {
+          ...prev,
+          sheets: updatedSheets,
+          lastModified: new Date()
+        };
+      } else {
+        return {
+          id: data.id || generateId(),
+          name: data.name || 'Workbook',
+          sheets: [data],
+          activeSheetIndex: 0,
+          createdAt: new Date(),
+          lastModified: new Date()
+        };
+      }
+    });
 
     setHistory([data]);
     setHistoryIndex(0);

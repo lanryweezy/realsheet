@@ -306,6 +306,15 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
     }));
   }, [presences]);
 
+  // Calculate spacer widths for virtualization
+  const hiddenLeftWidth = useMemo(() => {
+    return data.columns.slice(0, visibleRange.startCol).reduce((sum: number, c: string) => sum + getCellWidth(c), 0);
+  }, [data.columns, visibleRange.startCol, getCellWidth]);
+
+  const hiddenRightWidth = useMemo(() => {
+    return data.columns.slice(visibleRange.endCol).reduce((sum: number, c: string) => sum + getCellWidth(c), 0);
+  }, [data.columns, visibleRange.endCol, getCellWidth]);
+
   return (
     <div ref={gridContainerRef} className={`w-full h-full overflow-auto relative grid-container bg-slate-950 ${isFormatPainterActive ? 'cursor-cell' : ''}`} onScroll={(e) => { setScrollTop(e.currentTarget.scrollTop); setScrollLeft(e.currentTarget.scrollLeft); }} onMouseUp={handleMouseUp}>
       <div style={{ height: data.rows.length * ROW_HEIGHT + HEADER_HEIGHT, width: totalWidth, position: 'relative' }}>
