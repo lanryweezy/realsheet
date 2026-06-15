@@ -115,7 +115,11 @@ const PivotChartPanel: React.FC<PivotChartPanelProps> = ({
             >
               <Plus className="w-4 h-4" /> Add to Dashboard
             </button>
-            <button onClick={onClose} className="text-slate-400 hover:text-white">
+            <button
+              onClick={onClose}
+              aria-label="Close panel"
+              className="text-slate-400 hover:text-white focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500 rounded"
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -145,7 +149,13 @@ const PivotChartPanel: React.FC<PivotChartPanelProps> = ({
                   className="px-2 py-1 bg-purple-500/20 border border-purple-400 rounded text-xs text-purple-400 flex items-center gap-1"
                 >
                   {field}
-                  <button onClick={() => handleRemoveRowField(field)} className="hover:text-white">×</button>
+                  <button
+                    onClick={() => handleRemoveRowField(field)}
+                    aria-label={`Remove row field ${field}`}
+                    className="hover:text-white focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-purple-400 rounded"
+                  >
+                    ×
+                  </button>
                 </span>
               ))}
             </div>
@@ -173,7 +183,13 @@ const PivotChartPanel: React.FC<PivotChartPanelProps> = ({
                   className="px-2 py-1 bg-cyan-500/20 border border-cyan-400 rounded text-xs text-cyan-400 flex items-center gap-1"
                 >
                   {v.operation}({v.field})
-                  <button onClick={() => handleRemoveValueField(v.field)} className="hover:text-white">×</button>
+                  <button
+                    onClick={() => handleRemoveValueField(v.field)}
+                    aria-label={`Remove value field ${v.field}`}
+                    className="hover:text-white focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-400 rounded"
+                  >
+                    ×
+                  </button>
                 </span>
               ))}
             </div>
@@ -237,7 +253,11 @@ const PivotChartPanel: React.FC<PivotChartPanelProps> = ({
           <div className="bg-slate-800 border border-slate-600 rounded-lg p-2">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-slate-300">Select field for slicer:</span>
-              <button onClick={() => setShowSlicerFor(null)} className="text-slate-400 hover:text-white">
+              <button
+                onClick={() => setShowSlicerFor(null)}
+                aria-label="Close slicer selection"
+                className="text-slate-400 hover:text-white focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500 rounded"
+              >
                 <X className="w-3 h-3" />
               </button>
             </div>
@@ -278,7 +298,11 @@ const PivotChartPanel: React.FC<PivotChartPanelProps> = ({
           <div className="bg-slate-800 border border-slate-600 rounded-lg p-2">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-slate-300">Select date field:</span>
-              <button onClick={() => setShowTimeline(false)} className="text-slate-400 hover:text-white">
+              <button
+                onClick={() => setShowTimeline(false)}
+                aria-label="Close timeline selection"
+                className="text-slate-400 hover:text-white focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500 rounded"
+              >
                 <X className="w-3 h-3" />
               </button>
             </div>
