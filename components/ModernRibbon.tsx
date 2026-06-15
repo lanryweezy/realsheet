@@ -56,8 +56,9 @@ const ModernRibbon: React.FC<ModernRibbonProps> = (props) => {
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`modern-ribbon-button ${variant} ${disabled ? 'disabled' : ''}`}
+      className={`modern-ribbon-button ${variant} ${disabled ? 'disabled' : ''} focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500`}
       title={label}
+      aria-label={label}
     >
       <div className="modern-ribbon-button-icon">{icon}</div>
       <span className="modern-ribbon-button-label">{label}</span>
@@ -79,7 +80,9 @@ const ModernRibbon: React.FC<ModernRibbonProps> = (props) => {
           <button
             key={tab.id}
             onClick={() => props.onTabChange(tab.id)}
-            className={`modern-ribbon-tab ${props.activeTab === tab.id ? 'active' : ''}`}
+            className={`modern-ribbon-tab ${props.activeTab === tab.id ? 'active' : ''} focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500`}
+            aria-label={`Switch to ${tab.label} tab`}
+            aria-current={props.activeTab === tab.id ? "page" : undefined}
           >
             {tab.icon}
             <span>{tab.label}</span>
@@ -87,8 +90,10 @@ const ModernRibbon: React.FC<ModernRibbonProps> = (props) => {
         ))}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="modern-ribbon-collapse"
+          className="modern-ribbon-collapse focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500"
           title={isCollapsed ? 'Expand Ribbon' : 'Collapse Ribbon'}
+          aria-label={isCollapsed ? 'Expand Ribbon' : 'Collapse Ribbon'}
+          aria-expanded={!isCollapsed}
         >
           <ChevronDown className={`w-4 h-4 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
         </button>

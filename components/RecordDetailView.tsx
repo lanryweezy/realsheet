@@ -77,6 +77,7 @@ const RecordDetailView: React.FC<RecordDetailViewProps> = ({
         <button
           onClick={onPrev}
           disabled={!onPrev}
+          aria-label="Previous Record"
           className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-800 text-slate-300 rounded-xl font-bold disabled:opacity-30 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500"
         >
           <ArrowLeft className="w-4 h-4" /> Previous
@@ -84,6 +85,7 @@ const RecordDetailView: React.FC<RecordDetailViewProps> = ({
         <button
           onClick={onNext}
           disabled={!onNext}
+          aria-label="Next Record"
           className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-800 text-slate-300 rounded-xl font-bold disabled:opacity-30 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500"
         >
           Next <ArrowRight className="w-4 h-4" />

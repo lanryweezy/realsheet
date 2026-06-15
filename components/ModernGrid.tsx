@@ -86,8 +86,9 @@ const ModernGrid: React.FC<ModernGridProps> = ({
                     <span className="modern-grid-header-text">{col}</span>
                     <button
                       onClick={() => onSmartFillTrigger(col)}
-                      className="modern-grid-header-action"
+                      className="modern-grid-header-action focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500"
                       title="Smart Fill"
+                      aria-label={`Smart Fill for column ${col}`}
                     >
                       <Sparkles className="w-3 h-3" />
                     </button>
@@ -141,6 +142,8 @@ const ModernGrid: React.FC<ModernGridProps> = ({
                                   onAddWatch(cellRef);
                                 }}
                                 title="Add to Watch"
+                                aria-label={`Add cell ${indexToExcelCol(colIndex)}${rowIndex + 1} to Watch list`}
+                                className="focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500 rounded"
                               >
                                 <Eye className="w-3 h-3" />
                               </button>
@@ -151,6 +154,8 @@ const ModernGrid: React.FC<ModernGridProps> = ({
                                   if (comment) onAddComment(rowIndex, colIndex, comment);
                                 }}
                                 title="Add Comment"
+                                aria-label={`Add comment to cell ${indexToExcelCol(colIndex)}${rowIndex + 1}`}
+                                className="focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-cyan-500 rounded"
                               >
                                 <MessageSquare className="w-3 h-3" />
                               </button>
