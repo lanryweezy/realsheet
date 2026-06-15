@@ -210,9 +210,17 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
   const visibleRange = useMemo(() => {
     const startRow = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - VISIBLE_ROWS_BUFFER);
     const endRow = Math.min(data.rows.length, startRow + Math.ceil(containerHeight / ROW_HEIGHT) + VISIBLE_ROWS_BUFFER * 2);
-    let startCol = 0, acc = 0;
-    for (let i = 0; i < data.columns.length; i++) { if (acc + getCellWidth(data.columns[i]) > scrollLeft) { startCol = Math.max(0, i - 1); break; } acc += getCellWidth(data.columns[i]); }
-    return { startRow, endRow, startCol };
+    let startCol = 0, endCol = data.columns.length, acc = 0;
+    for (let i = 0; i < data.columns.length; i++) {
+      const w = getCellWidth(data.columns[i]);
+      if (acc + w < scrollLeft) { startCol = i; }
+      if (acc > scrollLeft + containerWidth) { endCol = i + 1; break; }
+      acc += w;
+    }
+    const VISIBLE_COLS_BUFFER = 3;
+    startCol = Math.max(0, startCol - VISIBLE_COLS_BUFFER);
+    endCol = Math.min(data.columns.length, endCol + VISIBLE_COLS_BUFFER);
+    return { startRow, endRow, startCol, endCol };
   }, [scrollTop, scrollLeft, containerHeight, containerWidth, data.rows.length, data.columns, getCellWidth]);
 
   useEffect(() => {
@@ -289,12 +297,15 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
           <thead>
             <tr style={{ height: HEADER_HEIGHT }}>
               <th className="bg-slate-900 border-b border-r border-slate-700 text-center"><Hash className="w-3 h-3 mx-auto text-slate-500" /></th>
-              {data.columns.map((col: any, i: number) => {
-                const isActive = selectionBounds && i >= selectionBounds.minCol && i <= selectionBounds.maxCol;
+              {visibleRange.startCol > 0 && <th colSpan={visibleRange.startCol} />}
+              {data.columns.slice(visibleRange.startCol, visibleRange.endCol).map((col: any, i: number) => {
+                const ci = visibleRange.startCol + i;
+                const isActive = selectionBounds && ci >= selectionBounds.minCol && ci <= selectionBounds.maxCol;
                 return (
                   <th key={col} className={`border-b border-r border-slate-700 text-left px-2 text-xs font-bold transition-colors overflow-hidden truncate ${isActive ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-900 text-slate-400'}`}>{col}</th>
                 );
               })}
+              {visibleRange.endCol < data.columns.length && <th colSpan={data.columns.length - visibleRange.endCol} />}
             </tr>
           </thead>
           <tbody>
@@ -313,7 +324,9 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
                   >
                     {rowIndex + 1}
                   </td>
-                  {data.columns.map((col: any, ci: number) => {
+                  {visibleRange.startCol > 0 && <td colSpan={visibleRange.startCol} />}
+                  {data.columns.slice(visibleRange.startCol, visibleRange.endCol).map((col: any, i: number) => {
+                    const ci = visibleRange.startCol + i;
                     const isSelected = selectionBounds && rowIndex >= selectionBounds.minRow && rowIndex <= selectionBounds.maxRow && ci >= selectionBounds.minCol && ci <= selectionBounds.maxCol;
                     const isPrecedent = precedents.has(`${rowIndex}-${ci}`);
                     const cellStyle = data.cellStyles?.[`${rowIndex}-${col}`] || EMPTY_STYLE;
@@ -338,6 +351,7 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
                       </td>
                     );
                   })}
+                  {visibleRange.endCol < data.columns.length && <td colSpan={data.columns.length - visibleRange.endCol} />}
                 </tr>
               );
             })}

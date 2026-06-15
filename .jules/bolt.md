@@ -7,3 +7,6 @@
 ## 2026-06-04 - Grid Re-renders on Hover
 **Learning:** Using React state (`isHovered`) combined with `onMouseEnter`/`onMouseLeave` in a dense grid element (`EnhancedCell`) causes massive O(N*M) React re-renders when simply moving the mouse across the spreadsheet, severely tanking performance.
 **Action:** Offload transient visual interactions like hover styling completely to the browser's CSS engine using Tailwind's `hover:` pseudo-classes (e.g., `hover:bg-white/5`) rather than managing them via React state.
+## 2026-06-05 - Missing Column Virtualization in Grid
+**Learning:** Virtualizing rows (`visibleRange.startRow`, `endRow`) without also virtualizing columns causes `O(V_N * M)` renders, where `M` is the total number of columns. When total columns are large (e.g. 26 or more), this introduces a major rendering bottleneck for every scroll event.
+**Action:** When implementing list/grid virtualization, always ensure both dimensions (Rows * Columns) are virtualized (`O(V_N * V_M)`). Use empty spacer elements (e.g. `colSpan`) to maintain fixed layouts when slicing grid data.
