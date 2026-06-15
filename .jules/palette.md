@@ -4,3 +4,6 @@
 ## 2024-05-18 - Added ARIA labels to main toolbar icon buttons
 **Learning:** Toolbars full of icon-only buttons (common in spreadsheet UIs) need to be explicitly labeled to be accessible, as screen readers will otherwise just announce generic "button" elements without conveying their purpose. Additionally, dynamically setting the `aria-label` based on state (e.g., whether a sidebar is open or closed) significantly improves usability for screen reader users by indicating the action that will happen when pressed.
 **Action:** Always verify that every icon-only button uses `aria-label`, and if the button toggles state, ensure the label reflects the action of toggling (like "Open Agent" vs "Close Agent").
+## 2024-06-15 - Playwright Element Interception by Global Overlays
+**Learning:** Global transition overlays (like `<div class="fixed inset-0 z-[300] bg-slate-950/80 backdrop-blur-xl...">`) block standard Playwright `.click()` actions, causing tests to fail with `ElementClickInterceptedException` or `TimeoutError`.
+**Action:** When writing Playwright UI verification scripts, use `page.evaluate()` to trigger native DOM `.click()` events on target elements if standard `.click(force=True)` fails due to an overlay.
