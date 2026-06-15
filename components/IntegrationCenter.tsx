@@ -307,7 +307,8 @@ const IntegrationCenter: React.FC<IntegrationCenterProps> = ({
             
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-orange-500"
+              aria-label="Close Integration Center"
             >
               <X className="w-6 h-6" />
             </button>
@@ -381,8 +382,9 @@ const IntegrationCenter: React.FC<IntegrationCenterProps> = ({
                                 e.stopPropagation();
                                 syncIntegration(integration.id);
                               }}
-                              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-orange-500"
                               title="Sync"
+                              aria-label={`Sync ${integration.name}`}
                             >
                               <RefreshCw className="w-4 h-4" />
                             </button>
@@ -391,8 +393,9 @@ const IntegrationCenter: React.FC<IntegrationCenterProps> = ({
                                 e.stopPropagation();
                                 disconnectIntegration(integration.id);
                               }}
-                              className="p-1.5 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                              className="p-1.5 text-red-400 hover:bg-red-500/20 rounded transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-red-500"
                               title="Disconnect"
+                              aria-label={`Disconnect ${integration.name}`}
                             >
                               <Power className="w-4 h-4" />
                             </button>
@@ -464,13 +467,15 @@ const IntegrationCenter: React.FC<IntegrationCenterProps> = ({
                           </div>
                           <button
                             onClick={() => toggleWebhook(webhook.id)}
-                            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-orange-500"
+                            aria-label={`${webhook.isActive ? 'Disable' : 'Enable'} webhook ${webhook.name}`}
                           >
                             <Power className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => deleteWebhook(webhook.id)}
-                            className="p-1.5 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                            className="p-1.5 text-red-400 hover:bg-red-500/20 rounded transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-red-500"
+                            aria-label={`Delete webhook ${webhook.name}`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -520,10 +525,10 @@ const IntegrationCenter: React.FC<IntegrationCenterProps> = ({
                           readOnly
                           className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm font-mono"
                         />
-                        <button className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-medium transition-colors">
+                        <button className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-orange-500" aria-label="Copy API Key">
                           Copy
                         </button>
-                        <button className="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors">
+                        <button className="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-orange-500" aria-label="Regenerate API Key">
                           Regenerate
                         </button>
                       </div>
@@ -543,7 +548,7 @@ const IntegrationCenter: React.FC<IntegrationCenterProps> = ({
                           readOnly
                           className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm font-mono"
                         />
-                        <button className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-medium transition-colors">
+                        <button className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-orange-500" aria-label="Copy Webhook Secret">
                           Copy
                         </button>
                       </div>
@@ -583,7 +588,7 @@ const IntegrationCenter: React.FC<IntegrationCenterProps> = ({
                       <code className="text-xs text-orange-400 font-mono">Bearer Token</code>
                     </div>
                   </div>
-                  <button className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-medium transition-colors">
+                  <button className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-orange-500" aria-label="View Full Documentation">
                     <ExternalLink className="w-4 h-4" />
                     View Full Documentation
                   </button>
@@ -600,7 +605,8 @@ const IntegrationCenter: React.FC<IntegrationCenterProps> = ({
               <h3 className="text-lg font-bold text-white">{selectedIntegration.name}</h3>
               <button
                 onClick={() => setSelectedIntegration(null)}
-                className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors"
+                className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-orange-500"
+                aria-label="Close integration details"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -639,19 +645,21 @@ const IntegrationCenter: React.FC<IntegrationCenterProps> = ({
               <div className="space-y-2">
                 <button
                   onClick={() => syncIntegration(selectedIntegration.id)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-green-500"
+                  aria-label={`Sync ${selectedIntegration.name} now`}
                 >
                   <RefreshCw className="w-4 h-4" />
                   Sync Now
                 </button>
                 <button
                   onClick={() => disconnectIntegration(selectedIntegration.id)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-red-500"
+                  aria-label={`Disconnect ${selectedIntegration.name}`}
                 >
                   <Power className="w-4 h-4" />
                   Disconnect
                 </button>
-                <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-medium transition-colors">
+                <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-orange-500" aria-label={`Configure ${selectedIntegration.name}`}>
                   <Settings className="w-4 h-4" />
                   Configure
                 </button>
