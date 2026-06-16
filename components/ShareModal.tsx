@@ -37,9 +37,9 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, fileName, onNo
                 <div className="p-1.5 bg-blue-500/20 rounded-md text-blue-400">
                     <Users className="w-5 h-5" />
                 </div>
-                Share "{fileName}"
+                Share &quot;{fileName}&quot;
             </h2>
-            <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors" aria-label="Close">
+            <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-blue-500 rounded" aria-label="Close">
                 <X className="w-5 h-5" />
             </button>
         </div>
@@ -66,7 +66,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, fileName, onNo
                 <button 
                     type="submit"
                     disabled={!email}
-                    className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                 >
                     Send
                 </button>
