@@ -22,3 +22,10 @@
 ## 2026-06-04 - O(N*M) Rendering Bottlenecks in Grid columns
 **Learning:** Calculating `startCol` but failing to use `endCol` to slice the columns mapped in the Grid's rows leads to all columns rendering regardless of the horizontal scroll position, resulting in an O(N*M) DOM footprint and lag. When implementing column virtualization in a `table-layout: fixed` HTML structure, using `colSpan` on spacer cells breaks the horizontal scrolling width.
 **Action:** Always fully virtualize columns by mapping over a slice of `data.columns`. Instead of `colSpan`, calculate aggregate hidden pixel widths (`leftSpacerWidth`, `rightSpacerWidth`) and insert a single empty `<col>` element with matching empty `<th>`/`<td>` cells.
+## 2026-06-16 - O(N*M) bottlenecks in isAIFormula
+**Learning:** `isAIFormula` was using `.some()` and array instantiations inside `evaluateWithHF` which is called per cell in `Grid.tsx`, creating an O(N*M) rendering bottleneck.
+**Action:** Always precompile regular expressions and declare them at the module level when performing string validation inside high-frequency render paths.
+
+## 2026-06-16 - File Parsing Row Length Calculation
+**Learning:** Initializing header widths purely based on `data[0]` during Excel parsing truncates columns if subsequent data rows have more items than the first header row.
+**Action:** Always scan all rows during parsing to determine the true `maxRowLength` and dynamically generate additional column headers using base-26 numbering (e.g. A, B... AA) to accommodate maximum width.

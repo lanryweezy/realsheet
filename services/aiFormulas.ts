@@ -327,10 +327,10 @@ export const evaluateAIFormula = async (
       case 'TRANSLATE':
         return await evaluateTRANSLATE(args[0], args[1]);
       
-      case 'SUMMARIZE':
+      case 'SUMMARIZE': {
         const maxWords = args[1] ? parseInt(args[1]) : 50;
         return await evaluateSUMMARIZE(args[0], maxWords);
-      
+      }
       case 'GENERATE':
         return await evaluateGENERATE(args[0], args[1]);
       
@@ -355,13 +355,9 @@ export const evaluateAIFormula = async (
 /**
  * Check if a formula is an AI formula
  */
+// Precompiled regex for performance in hot rendering loops
+const AI_FORMULA_REGEX = /^=(AI|INFER|CLASSIFY|SENTIMENT|EXTRACT|TRANSLATE|SUMMARIZE|GENERATE|ANALYZE|FORECAST|EXPLAIN|SUGGEST_FORMULA|FIX_FORMULA)\(/i;
+
 export const isAIFormula = (formula: string): boolean => {
-  const aiFormulas = [
-    'AI', 'INFER', 'CLASSIFY', 'SENTIMENT', 'EXTRACT',
-    'TRANSLATE', 'SUMMARIZE', 'GENERATE', 'ANALYZE',
-    'FORECAST', 'EXPLAIN', 'SUGGEST_FORMULA', 'FIX_FORMULA'
-  ];
-  
-  const upperFormula = formula.toUpperCase();
-  return aiFormulas.some(func => upperFormula.startsWith(`=${func}(`));
+  return typeof formula === 'string' && formula.length > 3 && formula[0] === '=' && AI_FORMULA_REGEX.test(formula);
 };

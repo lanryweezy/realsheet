@@ -242,8 +242,15 @@ const Grid = ({ data, selectedRange, onRangeSelect, onCellEdit, onColumnResize, 
   }, [scrollTop, scrollLeft, containerHeight, containerWidth, data.rows.length, data.columns, getCellWidth]);
 
   useEffect(() => {
-    if (data.rows.length - visibleRange.endRow <= EXPANSION_THRESHOLD && onSheetExpand) onSheetExpand(data.rows.length + 50, data.columns.length);
-  }, [visibleRange.endRow, data.rows.length, onSheetExpand]);
+    const expandRows = data.rows.length - visibleRange.endRow <= EXPANSION_THRESHOLD;
+    const expandCols = data.columns.length - visibleRange.endCol <= EXPANSION_THRESHOLD;
+    if ((expandRows || expandCols) && onSheetExpand) {
+      onSheetExpand(
+        expandRows ? data.rows.length + 50 : data.rows.length,
+        expandCols ? data.columns.length + 10 : data.columns.length
+      );
+    }
+  }, [visibleRange.endRow, visibleRange.endCol, data.rows.length, data.columns.length, onSheetExpand]);
 
   const handleTableMouseDown = useCallback((e: React.MouseEvent) => {
     const td = (e.target as HTMLElement).closest('td[data-row][data-col]');
