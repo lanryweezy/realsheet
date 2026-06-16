@@ -64,19 +64,44 @@ export const parseExcelFile = async (file: File): Promise<SheetData> => {
             return;
         }
 
+        const rawRows = jsonData.slice(1) as any[];
+        let maxRowLength = headers.length;
+        for (const row of rawRows) {
+            if (row && Array.isArray(row) && row.length > maxRowLength) {
+                maxRowLength = row.length;
+            }
+        }
+
         // Sanitize headers
-        const sanitizedHeaders = headers.map(header => {
+        let sanitizedHeaders = headers.map(header => {
             if (typeof header === 'string') {
                 return header.trim() || `Column_${Math.random().toString(36).substr(2, 5)}`;
             }
             return `Column_${header || Math.random().toString(36).substr(2, 5)}`;
         });
 
-        const rawRows = jsonData.slice(1) as any[];
+        if (maxRowLength > sanitizedHeaders.length) {
+            const getColName = (idx: number) => {
+                let name = '';
+                let temp = idx;
+                while (temp >= 0) {
+                    name = String.fromCharCode(65 + (temp % 26)) + name;
+                    temp = Math.floor(temp / 26) - 1;
+                }
+                return name;
+            };
+            const additionalCols = [];
+            for (let i = sanitizedHeaders.length; i < maxRowLength; i++) {
+                additionalCols.push(getColName(i));
+            }
+            sanitizedHeaders = [...sanitizedHeaders, ...additionalCols];
+        }
+
         const rows: Row[] = rawRows.map((rowArray: any) => {
           const rowObject: Row = {};
+          const rowValues = Array.isArray(rowArray) ? rowArray : [];
           sanitizedHeaders.forEach((header, index) => {
-            let value = rowArray[index];
+            let value = rowValues[index];
             if (value === undefined || value === null) value = "";
             // Convert numbers and handle special values
             if (typeof value === 'number' && !isNaN(value)) {

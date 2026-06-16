@@ -25,3 +25,7 @@
 ## 2026-06-16 - O(N*M) bottlenecks in isAIFormula
 **Learning:** `isAIFormula` was using `.some()` and array instantiations inside `evaluateWithHF` which is called per cell in `Grid.tsx`, creating an O(N*M) rendering bottleneck.
 **Action:** Always precompile regular expressions and declare them at the module level when performing string validation inside high-frequency render paths.
+
+## 2026-06-16 - File Parsing Row Length Calculation
+**Learning:** Initializing header widths purely based on `data[0]` during Excel parsing truncates columns if subsequent data rows have more items than the first header row.
+**Action:** Always scan all rows during parsing to determine the true `maxRowLength` and dynamically generate additional column headers using base-26 numbering (e.g. A, B... AA) to accommodate maximum width.
