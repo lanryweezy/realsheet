@@ -54,15 +54,15 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
 
         {/* Right Side - Pricing */}
         <div className="flex-1 p-8 bg-slate-900 relative">
-            <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
+            <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-blue-500 rounded" aria-label="Close">
                 <X className="w-6 h-6" />
             </button>
 
             <div className="text-center mb-8">
                 <h3 className="text-xl font-bold text-white mb-2">Choose your plan</h3>
                 <div className="inline-flex bg-slate-800 p-1 rounded-lg border border-slate-700">
-                    <button className="px-4 py-1.5 rounded-md bg-nexus-accent text-white text-sm font-medium shadow-lg">Monthly</button>
-                    <button className="px-4 py-1.5 rounded-md text-slate-400 text-sm font-medium hover:text-white">Yearly (-20%)</button>
+                    <button className="px-4 py-1.5 rounded-md bg-nexus-accent text-white text-sm font-medium shadow-lg focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-blue-500">Monthly</button>
+                    <button className="px-4 py-1.5 rounded-md text-slate-400 text-sm font-medium hover:text-white focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-blue-500 rounded">Yearly (-20%)</button>
                 </div>
             </div>
 

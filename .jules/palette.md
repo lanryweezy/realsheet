@@ -7,3 +7,6 @@
 ## 2024-06-15 - Playwright Element Interception by Global Overlays
 **Learning:** Global transition overlays (like `<div class="fixed inset-0 z-[300] bg-slate-950/80 backdrop-blur-xl...">`) block standard Playwright `.click()` actions, causing tests to fail with `ElementClickInterceptedException` or `TimeoutError`.
 **Action:** When writing Playwright UI verification scripts, use `page.evaluate()` to trigger native DOM `.click()` events on target elements if standard `.click(force=True)` fails due to an overlay.
+## 2024-08-16 - Modal Button Focus States and Missing ARIA Labels
+**Learning:** Discovered that newly added modals (ShareModal, UpgradeModal) had custom buttons that lacked `focus-visible` utility classes, making keyboard navigation difficult. Furthermore, icon-only 'Close' buttons lacked `aria-label` attributes, violating WCAG principles.
+**Action:** Always ensure that all interactive elements in modals, especially custom-styled ones, explicitly declare focus states (e.g. `focus-visible:ring-2 focus-visible:outline-none`) and that all icon-only buttons have descriptive `aria-label` attributes.
