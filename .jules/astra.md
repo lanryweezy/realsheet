@@ -1,0 +1,3 @@
+## 2024-06-16 - Safe Parsing and Output Validation
+**Learning:** Raw `JSON.parse` operations on LLM outputs pose a silent failure risk if the parsed JSON does not match the expected structural contract. Even if `catch` blocks exist for `JSON.parse` failures, they often do not capture logic errors caused by successfully parsed but architecturally invalid structures.
+**Action:** Always validate the structure of the parsed object (e.g., verifying `typeof` and checking for expected fields like `textResponse` or `fields`) immediately following `JSON.parse` to ensure fallback mechanisms trigger reliably.

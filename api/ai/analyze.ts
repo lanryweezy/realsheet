@@ -158,6 +158,12 @@ Note: For tool calls involving ranges, use A1 notation (e.g., "A1:C5"). For dele
         responseText = jsonMatch[0];
       }
       parsedResponse = JSON.parse(responseText);
+
+      // ✅ GOOD: Output validation before use
+      // Validate that the parsed output actually conforms to the expected contract
+      if (!parsedResponse || typeof parsedResponse !== 'object' || (!('textResponse' in parsedResponse) && !('toolCalls' in parsedResponse))) {
+        throw new Error('Unexpected model response shape: missing required fields');
+      }
     } catch {
       // If parsing fails, return as text response
       parsedResponse = {
