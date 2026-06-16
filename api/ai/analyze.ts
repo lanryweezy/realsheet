@@ -170,9 +170,10 @@ Note: For tool calls involving ranges, use A1 notation (e.g., "A1:C5"). For dele
       }
       parsedResponse = JSON.parse(responseText);
 
-      // Validate expected structure
-      if (!parsedResponse || typeof parsedResponse !== 'object' || !('textResponse' in parsedResponse)) {
-        throw new Error('AI Output validation failed: Missing textResponse in parsed JSON');
+      // ✅ GOOD: Output validation before use
+      // Validate that the parsed output actually conforms to the expected contract
+      if (!parsedResponse || typeof parsedResponse !== 'object' || (!('textResponse' in parsedResponse) && !('toolCalls' in parsedResponse))) {
+        throw new Error('Unexpected model response shape: missing required fields');
       }
     } catch {
       // If parsing fails, return as text response
