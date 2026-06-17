@@ -158,6 +158,11 @@ Note: For tool calls involving ranges, use A1 notation (e.g., "A1:C5"). For dele
         responseText = jsonMatch[0];
       }
       parsedResponse = JSON.parse(responseText);
+
+      // Validate expected structure
+      if (!parsedResponse || typeof parsedResponse !== 'object' || !('textResponse' in parsedResponse)) {
+        throw new Error('AI Output validation failed: Missing textResponse in parsed JSON');
+      }
     } catch {
       // If parsing fails, return as text response
       parsedResponse = {
