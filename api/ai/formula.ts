@@ -66,7 +66,6 @@ ${context}
 Generate an Excel/Google Sheets formula for: "${description}"
 
 Respond with ONLY the formula starting with =, no explanation.
-If multiple formulas are needed, provide them as a JSON array.
 
 Example responses:
 - "=SUM(A1:A10)"
@@ -74,7 +73,13 @@ Example responses:
 - "=XLOOKUP(A1, B:B, C:C, "Not found")"
 `;
 
-    const result = await model.generateContent(prompt);
+    const timeoutMs = 15000;
+    const generatePromise = model.generateContent(prompt);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('AI generation timed out')), timeoutMs)
+    );
+
+    const result = await Promise.race([generatePromise, timeoutPromise]) as any;
     const aiResponse = await result.response;
     let formula = aiResponse.text().trim();
 
@@ -83,6 +88,11 @@ Example responses:
     
     // Remove markdown code blocks if present
     formula = formula.replace(/```(?:excel)?\n?/g, '').trim();
+
+    // Validate output
+    if (!formula.startsWith('=')) {
+      throw new Error(`Invalid formula format generated: ${formula}`);
+    }
 
     return response.status(200).json({
       success: true,
