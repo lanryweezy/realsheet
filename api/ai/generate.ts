@@ -94,7 +94,16 @@ Request: ${prompt}
 ${formatInstruction}
 `;
 
-    const result = await model.generateContent(fullPrompt);
+    const timeoutMs = 15000;
+    let timeoutId: NodeJS.Timeout;
+
+    const generatePromise = model.generateContent(fullPrompt);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('AI generation timed out')), timeoutMs);
+    });
+
+    // AI Quality Concern: Resilience - Enforce timeout to prevent indefinite hanging on slow LLM responses
+    const result = await Promise.race([generatePromise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
     const aiResponse = await result.response;
     const generatedContent = aiResponse.text().trim();
 
