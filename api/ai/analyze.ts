@@ -144,8 +144,19 @@ Respond in strict JSON format:
 Note: For tool calls involving ranges, use A1 notation (e.g., "A1:C5"). For delete_rows, provide "startIndex" and "count". For delete_columns, provide an array of column headers in "columns".
 `;
 
-    // Generate response
-    const result = await model.generateContent(enhancedPrompt);
+    // Generate response with timeout and cleanup
+    const timeoutMs = 15000;
+    let timeoutId: NodeJS.Timeout;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('AI generation timed out')), timeoutMs);
+    });
+
+    let result;
+    try {
+      result = await Promise.race([model.generateContent(enhancedPrompt), timeoutPromise]) as any;
+    } finally {
+      clearTimeout(timeoutId!);
+    }
     const aiResponse = await result.response;
     let responseText = aiResponse.text();
 
