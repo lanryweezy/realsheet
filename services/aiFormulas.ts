@@ -174,7 +174,11 @@ Respond with ONLY the summary, no preamble.`;
  */
 export const evaluateGENERATE = async (prompt: string, format: string = 'text'): Promise<string> => {
   try {
-    const response = await generateContentViaAPI({ prompt, format: format as 'text' | 'list' | 'table' });
+    const fullPrompt = format === 'list'
+      ? `${prompt}\n\nProvide the response as a numbered list.`
+      : prompt;
+    
+    const response = await generateContentViaAPI({ prompt: fullPrompt });
     return response.content?.trim() || '';
   } catch (error) {
     console.error('GENERATE function error:', error);
