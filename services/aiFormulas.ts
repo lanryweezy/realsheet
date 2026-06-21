@@ -3,7 +3,7 @@
  * Inspired by Numerous.ai, Julius AI, and other AI spreadsheet tools
  */
 
-import { generateContent as generateContentViaAPI, analyzeData as analyzeDataViaAPI } from './apiClient';
+import { generateContent as generateContentViaAPI } from './apiClient';
 import { SheetData, Row } from '../types';
 
 /**
@@ -50,8 +50,8 @@ ${JSON.stringify(predictionData)}
 
 Respond with ONLY the predicted value, no explanation.`;
     
-    const response = await analyzeDataViaAPI({ prompt });
-    const text = response.data?.textResponse.trim() || '';
+    const response = await generateContentViaAPI({ prompt });
+    const text = response.content?.trim() || '';
     
     // Try to parse as number
     const num = parseFloat(text);
@@ -75,8 +75,8 @@ Text: "${text}"
 
 Respond with ONLY the category name, nothing else.`;
     
-    const response = await analyzeDataViaAPI({ prompt });
-    return response.data?.textResponse.trim() || '';
+    const response = await generateContentViaAPI({ prompt });
+    return response.content?.trim() || '';
   } catch (error) {
     console.error('CLASSIFY function error:', error);
     return '#CLASSIFY_ERROR!';
@@ -95,8 +95,8 @@ export const evaluateSENTIMENT = async (text: string): Promise<string> => {
 
 Text: "${text}"`;
     
-    const response = await analyzeDataViaAPI({ prompt });
-    return response.data?.textResponse.trim() || '';
+    const response = await generateContentViaAPI({ prompt });
+    return response.content?.trim() || '';
   } catch (error) {
     console.error('SENTIMENT function error:', error);
     return '#SENTIMENT_ERROR!';
@@ -117,8 +117,8 @@ Text: "${text}"
 
 Respond with ONLY the extracted value, nothing else.`;
     
-    const response = await analyzeDataViaAPI({ prompt });
-    return response.data?.textResponse.trim() || '';
+    const response = await generateContentViaAPI({ prompt });
+    return response.content?.trim() || '';
   } catch (error) {
     console.error('EXTRACT function error:', error);
     return '#EXTRACT_ERROR!';
@@ -137,8 +137,8 @@ export const evaluateTRANSLATE = async (text: string, targetLanguage: string): P
 
 Text: "${text}"`;
     
-    const response = await analyzeDataViaAPI({ prompt });
-    return response.data?.textResponse.trim() || '';
+    const response = await generateContentViaAPI({ prompt });
+    return response.content?.trim() || '';
   } catch (error) {
     console.error('TRANSLATE function error:', error);
     return '#TRANSLATE_ERROR!';
@@ -158,8 +158,8 @@ export const evaluateSUMMARIZE = async (text: string, maxWords: number = 50): Pr
 
 Respond with ONLY the summary, no preamble.`;
     
-    const response = await analyzeDataViaAPI({ prompt });
-    return response.data?.textResponse.trim() || '';
+    const response = await generateContentViaAPI({ prompt });
+    return response.content?.trim() || '';
   } catch (error) {
     console.error('SUMMARIZE function error:', error);
     return '#SUMMARIZE_ERROR!';
@@ -178,8 +178,8 @@ export const evaluateGENERATE = async (prompt: string, format: string = 'text'):
       ? `${prompt}\n\nProvide the response as a numbered list.`
       : prompt;
     
-    const response = await analyzeDataViaAPI({ prompt: fullPrompt });
-    return response.data?.textResponse.trim() || '';
+    const response = await generateContentViaAPI({ prompt: fullPrompt });
+    return response.content?.trim() || '';
   } catch (error) {
     console.error('GENERATE function error:', error);
     return '#GENERATE_ERROR!';
@@ -200,8 +200,8 @@ ${JSON.stringify(dataRange, null, 2)}
 
 Provide a concise summary of findings.`;
     
-    const response = await analyzeDataViaAPI({ prompt });
-    return response.data?.textResponse.trim() || '';
+    const response = await generateContentViaAPI({ prompt });
+    return response.content?.trim() || '';
   } catch (error) {
     console.error('ANALYZE function error:', error);
     return '#ANALYZE_ERROR!';
@@ -219,8 +219,8 @@ export const evaluateFORECAST = async (historicalData: number[], periodsAhead: n
 
 Forecast the next ${periodsAhead} values. Respond with ONLY the forecasted values separated by commas, no explanation.`;
     
-    const response = await analyzeDataViaAPI({ prompt });
-    return response.data?.textResponse.trim() || '';
+    const response = await generateContentViaAPI({ prompt });
+    return response.content?.trim() || '';
   } catch (error) {
     console.error('FORECAST function error:', error);
     return '#FORECAST_ERROR!';
@@ -240,8 +240,8 @@ ${formula}
 
 Provide a clear, concise explanation that a non-technical person can understand.`;
     
-    const response = await analyzeDataViaAPI({ prompt });
-    return response.data?.textResponse.trim() || '';
+    const response = await generateContentViaAPI({ prompt });
+    return response.content?.trim() || '';
   } catch (error) {
     console.error('EXPLAIN function error:', error);
     return '#EXPLAIN_ERROR!';
@@ -260,8 +260,8 @@ ${sampleData ? `\nSample data range: ${sampleData}` : ''}
 
 Respond with ONLY the formula, starting with =, no explanation.`;
     
-    const response = await analyzeDataViaAPI({ prompt });
-    return response.data?.textResponse.trim() || '';
+    const response = await generateContentViaAPI({ prompt });
+    return response.content?.trim() || '';
   } catch (error) {
     console.error('SUGGEST_FORMULA function error:', error);
     return '#SUGGEST_ERROR!';
@@ -282,8 +282,8 @@ Error: ${errorMessage}
 
 Respond with ONLY the corrected formula, starting with =, no explanation.`;
     
-    const response = await analyzeDataViaAPI({ prompt });
-    return response.data?.textResponse.trim() || '';
+    const response = await generateContentViaAPI({ prompt });
+    return response.content?.trim() || '';
   } catch (error) {
     console.error('FIX_FORMULA function error:', error);
     return '#FIX_ERROR!';
