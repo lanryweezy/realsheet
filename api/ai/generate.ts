@@ -94,7 +94,18 @@ Request: ${prompt}
 ${formatInstruction}
 `;
 
-    const result = await model.generateContent(fullPrompt);
+    const timeoutMs = 15000;
+    let timeoutId: NodeJS.Timeout;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('AI generation timed out')), timeoutMs);
+    });
+
+    let result;
+    try {
+      result = await Promise.race([model.generateContent(fullPrompt), timeoutPromise]) as any;
+    } finally {
+      clearTimeout(timeoutId!);
+    }
     const aiResponse = await result.response;
     const generatedContent = aiResponse.text().trim();
 
