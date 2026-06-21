@@ -75,11 +75,18 @@ Example responses:
 
     const timeoutMs = 15000;
     const generatePromise = model.generateContent(prompt);
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('AI generation timed out')), timeoutMs)
-    );
 
-    const result = await Promise.race([generatePromise, timeoutPromise]) as any;
+    let timeoutId: NodeJS.Timeout;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('AI generation timed out')), timeoutMs);
+    });
+
+    let result;
+    try {
+      result = await Promise.race([generatePromise, timeoutPromise]) as any;
+    } finally {
+      clearTimeout(timeoutId!);
+    }
     const aiResponse = await result.response;
     let formula = aiResponse.text().trim();
 
