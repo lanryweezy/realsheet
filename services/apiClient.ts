@@ -54,11 +54,54 @@ export interface AIGenerateResponse {
 /**
  * Call AI analysis endpoint
  */
-export const analyzeData = async (
-  request: AIAnalysisRequest
-): Promise<AIAnalysisResponse> => {
+
+/**
+ * Enhanced fetch with retry logic for AI services.
+ * Retries on transient errors (429, 5xx) with exponential backoff.
+ */
+const fetchWithRetry = async (
+  url: string,
+  options: RequestInit,
+  retries = 3
+): Promise<Response> => {
+  let lastError: Error | null = null;
+  let delay = 1000; // 1 second initial delay
+
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      // If successful, return the response
+      if (response.ok) {
+        return response;
+      }
+
+      // Check for transient errors (Rate limit or Server errors)
+      if (response.status === 429 || response.status >= 500) {
+        throw new Error(`Transient error: ${response.status}`);
+      }
+
+      // If it's a non-transient error (e.g. 400 Bad Request), return immediately without retrying
+      return response;
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`AI API call failed (attempt ${attempt + 1}/${retries}):`, error.message);
+
+      // Don't wait after the last attempt
+      if (attempt < retries - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay *= 2; // Exponential backoff (1s, 2s, 4s...)
+      }
+    }
+  }
+
+  // If all retries fail, throw the last error
+  throw lastError || new Error('API request failed after retries');
+};
+
+export const analyzeData = async (request: AIAnalysisRequest): Promise<AIAnalysisResponse> => {
   try {
-    const response = await fetch(`${API_BASE}/analyze`, {
+    const response = await fetchWithRetry(`${API_BASE}/analyze`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -86,11 +129,9 @@ export const analyzeData = async (
 /**
  * Get AI formula suggestion
  */
-export const suggestFormula = async (
-  request: AIFormulaRequest
-): Promise<AIFormulaResponse> => {
+export const suggestFormula = async (request: AIFormulaRequest): Promise<AIFormulaResponse> => {
   try {
-    const response = await fetch(`${API_BASE}/formula`, {
+    const response = await fetchWithRetry(`${API_BASE}/formula`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -134,11 +175,9 @@ export interface AITransformResponse {
 /**
  * Execute safe code transformation
  */
-export const transformData = async (
-  request: AITransformRequest
-): Promise<AITransformResponse> => {
+export const transformData = async (request: AITransformRequest): Promise<AITransformResponse> => {
   try {
-    const response = await fetch(`${API_BASE}/transform`, {
+    const response = await fetchWithRetry(`${API_BASE}/transform`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -163,11 +202,9 @@ export const transformData = async (
   }
 };
 
-export const generateContent = async (
-  request: AIGenerateRequest
-): Promise<AIGenerateResponse> => {
+export const generateContent = async (request: AIGenerateRequest): Promise<AIGenerateResponse> => {
   try {
-    const response = await fetch(`${API_BASE}/generate`, {
+    const response = await fetchWithRetry(`${API_BASE}/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
