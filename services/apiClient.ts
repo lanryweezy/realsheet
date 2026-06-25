@@ -6,35 +6,33 @@
 const API_BASE = '/api/ai';
 
 /**
- * Helper function to fetch with retry and exponential backoff
+ * AI Quality: Resilience & Reliability
+ * Helper function to perform fetch with exponential backoff retry for transient errors
+ * (429 Too Many Requests, 5xx Server Errors, and Network Errors)
  */
-const fetchWithRetry = async (
-  url: string,
-  options: RequestInit,
-  retries = 3,
-  backoff = 1000
-): Promise<Response> => {
+const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, backoff = 1000): Promise<Response> => {
   try {
     const response = await fetch(url, options);
 
-    // Retry on rate limit (429) or server errors (5xx)
+    // Retry on 429 Too Many Requests or 5xx Server Errors
     if (!response.ok && (response.status === 429 || response.status >= 500) && retries > 0) {
-      console.warn(`[AI API] Transient error ${response.status} fetching ${url}. Retrying in ${backoff}ms...`);
+      console.warn(`API ${response.status} Error. Retrying in ${backoff}ms... (${retries} retries left)`);
       await new Promise((resolve) => setTimeout(resolve, backoff));
       return fetchWithRetry(url, options, retries - 1, backoff * 2);
     }
 
     return response;
   } catch (error) {
-    // Retry on network errors
+    // Retry on network errors (fetch throws TypeError on network failure)
     if (retries > 0) {
-      console.warn(`[AI API] Network error fetching ${url}. Retrying in ${backoff}ms...`, error);
+      console.warn(`API Network Error: ${error}. Retrying in ${backoff}ms... (${retries} retries left)`);
       await new Promise((resolve) => setTimeout(resolve, backoff));
       return fetchWithRetry(url, options, retries - 1, backoff * 2);
     }
     throw error;
   }
 };
+
 
 export interface AIAnalysisRequest {
   prompt: string;
