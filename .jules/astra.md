@@ -16,3 +16,8 @@
 ## 2024-07-25 - Context Bloat from Reusing Complex Agent Endpoints for Simple Text Tasks
 **Learning:** Reusing the primary `analyzeDataViaAPI` endpoint (which injects the heavy "NexAgent" multi-tool system prompt) for simple AI functions like `=CLASSIFY()` or `=EXTRACT()` leads to massive context bloat and token waste. This also creates instructional conflicts because the model is primed for complex workbook edits rather than simple text classification or generation.
 **Action:** Always route simple, single-turn text generation tasks to a lightweight, targeted endpoint like `generateContentViaAPI`. Reserve heavy, tool-enabled endpoints solely for tasks requiring reasoning or data manipulation.
+
+## 2026-06-27 - Client-side AI Request Resilience
+
+**Learning:** Client-side AI API requests are susceptible to transient network issues, API rate limiting (429), and temporary server unresponsiveness (5xx). Without retry logic, these transient failures immediately bubble up to the user, resulting in a poor user experience and forcing manual retries. Standard `fetch` calls do not inherently handle these scenarios.
+**Action:** Always implement and use a `fetchWithRetry` wrapper for client-side AI API requests (e.g., in `services/apiClient.ts`). This wrapper should catch network errors and specific HTTP status codes (429, 500, 502, 503, 504) and automatically retry the request using exponential backoff (e.g., up to 3 retries starting at 1000ms with jitter). This ensures failure resilience and prevents transient errors from disrupting the user workflow.
