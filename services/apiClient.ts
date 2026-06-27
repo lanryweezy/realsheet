@@ -83,6 +83,55 @@ export interface AIGenerateResponse {
 }
 
 /**
+ * Helper to fetch with exponential backoff for transient errors
+ */
+const fetchWithRetry = async (
+  url: string,
+  options: RequestInit,
+  maxRetries = 3,
+  baseDelay = 1000
+): Promise<Response> => {
+  let lastError: Error | null = null;
+  let response: Response | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      response = await fetch(url, options);
+
+      // Stop retrying if request was successful
+      if (response.ok) {
+        return response;
+      }
+
+      // Retry on 429 (Rate Limit) or 5xx (Server Errors)
+      if (response.status !== 429 && !(response.status >= 500 && response.status < 600)) {
+        return response;
+      }
+
+    } catch (error: any) {
+      lastError = error;
+    }
+
+    // If we've hit max retries, don't wait
+    if (attempt === maxRetries) {
+      break;
+    }
+
+    // Exponential backoff
+    const delay = baseDelay * Math.pow(2, attempt);
+    // Add jitter
+    const jitter = Math.random() * 200;
+    await new Promise(resolve => setTimeout(resolve, delay + jitter));
+  }
+
+  if (response) {
+    return response;
+  }
+
+  throw lastError || new Error('Request failed after retries');
+};
+
+/**
  * Call AI analysis endpoint
  */
 export const analyzeData = async (
