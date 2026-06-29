@@ -6,35 +6,47 @@
 const API_BASE = '/api/ai';
 
 /**
- * Helper function to fetch with retry and exponential backoff
+ * Helper to fetch with exponential backoff for transient errors (429, 5xx)
  */
-const fetchWithRetry = async (
-  url: string,
-  options: RequestInit,
-  retries = 3,
-  backoff = 1000
-): Promise<Response> => {
-  try {
-    const response = await fetch(url, options);
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
+  let attempt = 0;
 
-    // Retry on rate limit (429) or server errors (5xx)
-    if (!response.ok && (response.status === 429 || response.status >= 500) && retries > 0) {
-      console.warn(`[AI API] Transient error ${response.status} fetching ${url}. Retrying in ${backoff}ms...`);
-      await new Promise((resolve) => setTimeout(resolve, backoff));
-      return fetchWithRetry(url, options, retries - 1, backoff * 2);
-    }
+  while (attempt < maxRetries) {
+    try {
+      const response = await fetch(url, options);
 
-    return response;
-  } catch (error) {
-    // Retry on network errors
-    if (retries > 0) {
-      console.warn(`[AI API] Network error fetching ${url}. Retrying in ${backoff}ms...`, error);
-      await new Promise((resolve) => setTimeout(resolve, backoff));
-      return fetchWithRetry(url, options, retries - 1, backoff * 2);
+      // If successful or client error (except 429), return immediately
+      if (response.ok || (response.status >= 400 && response.status < 500 && response.status !== 429)) {
+        return response;
+      }
+
+      // If we're out of retries, return the failed response
+      if (attempt === maxRetries - 1) {
+        return response;
+      }
+
+      // Calculate backoff: 1s, 2s, 4s...
+      const backoffMs = Math.pow(2, attempt) * 1000;
+      // Add jitter to prevent thundering herd
+      const jitterMs = Math.random() * 500;
+
+      await new Promise(resolve => setTimeout(resolve, backoffMs + jitterMs));
+      attempt++;
+    } catch (error) {
+      // Network errors (e.g. failed to fetch)
+      if (attempt === maxRetries - 1) {
+        throw error;
+      }
+
+      const backoffMs = Math.pow(2, attempt) * 1000;
+      const jitterMs = Math.random() * 500;
+      await new Promise(resolve => setTimeout(resolve, backoffMs + jitterMs));
+      attempt++;
     }
-    throw error;
   }
-};
+
+  throw new Error('Maximum retries exceeded');
+}
 
 export interface AIAnalysisRequest {
   prompt: string;
