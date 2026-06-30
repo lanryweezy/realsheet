@@ -83,6 +83,31 @@ export interface AIGenerateResponse {
 }
 
 /**
+ * Utility: Fetch with exponential backoff and retry logic for transient errors.
+ */
+const fetchWithRetry = async (url: string, options: RequestInit, maxRetries = 3, initialBackoff = 1000): Promise<Response> => {
+  let attempt = 0;
+  while (attempt < maxRetries) {
+    try {
+      const response = await fetch(url, options);
+      // Retry on 429 (Too Many Requests) or 5xx (Server Errors)
+      if (!response.ok && (response.status === 429 || response.status >= 500)) {
+        throw new Error(`Transient error: ${response.status}`);
+      }
+      return response;
+    } catch (error) {
+      attempt++;
+      if (attempt >= maxRetries) {
+        throw error;
+      }
+      const backoff = initialBackoff * Math.pow(2, attempt - 1);
+      await new Promise((resolve) => setTimeout(resolve, backoff));
+    }
+  }
+  throw new Error('Max retries exceeded');
+};
+
+/**
  * Call AI analysis endpoint
  */
 export const analyzeData = async (
