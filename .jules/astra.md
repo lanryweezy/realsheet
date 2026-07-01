@@ -16,3 +16,6 @@
 ## 2024-07-25 - Context Bloat from Reusing Complex Agent Endpoints for Simple Text Tasks
 **Learning:** Reusing the primary `analyzeDataViaAPI` endpoint (which injects the heavy "NexAgent" multi-tool system prompt) for simple AI functions like `=CLASSIFY()` or `=EXTRACT()` leads to massive context bloat and token waste. This also creates instructional conflicts because the model is primed for complex workbook edits rather than simple text classification or generation.
 **Action:** Always route simple, single-turn text generation tasks to a lightweight, targeted endpoint like `generateContentViaAPI`. Reserve heavy, tool-enabled endpoints solely for tasks requiring reasoning or data manipulation.
+## 2024-07-26 - Exponential Backoff for AI API Resilience
+**Learning:** Client-side AI API requests are vulnerable to transient errors such as rate limits (429) or temporary server errors (5xx). Without retry logic, these transient failures result in immediate poor user experiences and failed AI operations.
+**Action:** Always wrap external AI API calls in a retry helper like `fetchWithRetry` that implements exponential backoff. This ensures transient issues are automatically mitigated, increasing resilience. Do not apply this logic to health check endpoints, which should fail fast to accurately reflect immediate service availability.
