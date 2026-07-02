@@ -1,5 +1,5 @@
 import { SheetData, AnalysisResult, ChartConfig, FormattingRule } from '../types';
-import { analyzeData as analyzeDataViaAPI } from './apiClient';
+import { analyzeData as analyzeDataViaAPI, generateContent } from './apiClient';
 
 // Define the enhanced analysis result with chain of thought
 export interface EnhancedAnalysisResult extends AnalysisResult {
@@ -363,12 +363,16 @@ const suggestFormulaOffline = (description: string): string => {
  */
 export const chatWithCore = async (prompt: string, systemContext?: string): Promise<string> => {
   try {
-    const apiResponse = await analyzeDataViaAPI({
-      prompt: systemContext ? `${systemContext}\n\nUser Request: ${prompt}` : prompt,
+    // 🤖 Astra: Replaced analyzeDataViaAPI with generateContent to fix context bloat
+    // and token waste for simple single-turn text tasks.
+    const apiResponse = await generateContent({
+      prompt: prompt,
+      context: systemContext,
+      format: 'text',
     });
 
-    if (apiResponse.success && apiResponse.data) {
-      return apiResponse.data.textResponse;
+    if (apiResponse.success && apiResponse.content) {
+      return apiResponse.content;
     }
 
     return "I'm sorry, I couldn't process that request.";
