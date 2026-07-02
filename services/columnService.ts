@@ -1,5 +1,5 @@
 import { SheetData } from '../types';
-import { analyzeData as analyzeDataViaAPI } from './apiClient';
+import { generateContent } from './apiClient';
 
 export const generateColumnDescriptions = async (
     sheetData: SheetData | null,
@@ -7,14 +7,27 @@ export const generateColumnDescriptions = async (
 ): Promise<{ description: string, type: string, tags: string[] }> => {
     if (!sheetData) return { description: 'No data available.', type: 'unknown', tags: [] };
     const sampleData = sheetData.rows.slice(0, 5).map(r => r[column]);
-    const prompt = `Analyze column "${column}" with data: ${JSON.stringify(sampleData)}. Return JSON: { "description": "...", "type": "...", "tags": ["...", "...", "..."] }`;
+
+    // AI Quality Improvement: Use lightweight endpoint for simple text tasks & enforce strict schema
+    const prompt = `Analyze column "${column}" with sample data: ${JSON.stringify(sampleData)}.
+Return ONLY a valid JSON object matching exactly this schema, with no additional markdown or text:
+{ "description": "short description of data", "type": "string|number|date|boolean", "tags": ["tag1", "tag2"] }`;
+
     try {
-        const res = await analyzeDataViaAPI({ prompt, data: sheetData });
-        if (res.success && res.data) {
-            const text = res.data.textResponse;
-            const match = text.match(/\{[\s\S]*\}/);
-            if (match) return JSON.parse(match[0]);
+        const res = await generateContent({ prompt, format: 'text' });
+        if (res.success && res.content) {
+            const match = res.content.match(/\{[\s\S]*\}/);
+            if (match) {
+                // AI Quality Improvement: Validate JSON shape before returning to prevent silent failures
+                const parsed = JSON.parse(match[0]);
+                if (parsed && typeof parsed === 'object' && 'description' in parsed && 'type' in parsed && 'tags' in parsed && Array.isArray(parsed.tags)) {
+                    return parsed as { description: string, type: string, tags: string[] };
+                }
+                console.warn('AI Output Validation Failed: Missing required properties', parsed);
+            }
         }
-    } catch (e) {}
+    } catch (e) {
+        console.error('generateColumnDescriptions AI error:', e);
+    }
     return { description: `Column representing ${column} data.`, type: 'string', tags: [column.toLowerCase()] };
 };

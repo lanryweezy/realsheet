@@ -19,3 +19,6 @@
 ## 2024-07-26 - Exponential Backoff for AI API Resilience
 **Learning:** Client-side AI API requests are vulnerable to transient errors such as rate limits (429) or temporary server errors (5xx). Without retry logic, these transient failures result in immediate poor user experiences and failed AI operations.
 **Action:** Always wrap external AI API calls in a retry helper like `fetchWithRetry` that implements exponential backoff. This ensures transient issues are automatically mitigated, increasing resilience. Do not apply this logic to health check endpoints, which should fail fast to accurately reflect immediate service availability.
+## 2024-07-28 - Validate LLM Object Properties and Schema Strictly
+**Learning:** Returning parsed JSON from an LLM without explicitly checking the presence of all expected properties causes silent downstream logic failures (e.g., trying to access `parsed.tags` when it doesn't exist).
+**Action:** When enforcing a JSON schema, use type guard checks on the parsed output (e.g., `typeof parsed === 'object' && 'tags' in parsed && Array.isArray(parsed.tags)`) before returning or using the data.
