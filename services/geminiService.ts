@@ -1,5 +1,8 @@
 import { SheetData, AnalysisResult, ChartConfig, FormattingRule } from '../types';
-import { analyzeData as analyzeDataViaAPI } from './apiClient';
+import {
+  analyzeData as analyzeDataViaAPI,
+  generateContent as generateContentViaAPI,
+} from './apiClient';
 
 // Define the enhanced analysis result with chain of thought
 export interface EnhancedAnalysisResult extends AnalysisResult {
@@ -46,7 +49,7 @@ export const analyzeDataWithGemini = async (
 
 const prepareContext = (prompt: string, sheetData: SheetData | null, history: any[]) => {
   if (!sheetData) {
-    return "No data available. User wants to: " + prompt;
+    return 'No data available. User wants to: ' + prompt;
   }
 
   // Extract relevant context from the sheet data
@@ -62,103 +65,114 @@ Current Request: ${prompt}
   return context;
 };
 
-const generateMockEnhancedResponse = (prompt: string, sheetData: SheetData | null): EnhancedAnalysisResult => {
+const generateMockEnhancedResponse = (
+  prompt: string,
+  sheetData: SheetData | null
+): EnhancedAnalysisResult => {
   // Create a chain of thought based on the prompt
-  let chainOfThought = "";
+  let chainOfThought = '';
   let taskPlan: string[] = [];
   let executionSteps: string[] = [];
-  
+
   if (prompt.toLowerCase().includes('analyze') || prompt.toLowerCase().includes('summary')) {
     chainOfThought = `I need to analyze the data to provide insights. First, I'll examine the structure of the dataset including columns and sample data. Then I'll look for patterns, trends, or anomalies that might be relevant to the user's request.`;
     taskPlan = [
-      "Examine dataset structure",
-      "Identify key metrics and patterns", 
-      "Generate summary statistics",
-      "Provide actionable insights"
+      'Examine dataset structure',
+      'Identify key metrics and patterns',
+      'Generate summary statistics',
+      'Provide actionable insights',
     ];
     executionSteps = [
-      "Calculate summary statistics for numerical columns",
-      "Identify unique values in categorical columns", 
-      "Look for correlations between variables",
-      "Highlight any unusual data points"
+      'Calculate summary statistics for numerical columns',
+      'Identify unique values in categorical columns',
+      'Look for correlations between variables',
+      'Highlight any unusual data points',
     ];
   } else if (prompt.toLowerCase().includes('filter') || prompt.toLowerCase().includes('find')) {
     chainOfThought = `The user wants to filter or find specific data. I need to understand the criteria for filtering, identify the relevant columns, and construct the appropriate filter logic.`;
     taskPlan = [
-      "Identify the column to filter on",
-      "Determine the filter criteria",
-      "Apply the filter to the dataset",
-      "Return the filtered results"
+      'Identify the column to filter on',
+      'Determine the filter criteria',
+      'Apply the filter to the dataset',
+      'Return the filtered results',
     ];
     executionSteps = [
-      "Parse the filter condition from user input",
-      "Construct filter function based on condition",
-      "Apply filter to the dataset",
-      "Return filtered rows with explanation"
+      'Parse the filter condition from user input',
+      'Construct filter function based on condition',
+      'Apply filter to the dataset',
+      'Return filtered rows with explanation',
     ];
-  } else if (prompt.toLowerCase().includes('chart') || prompt.toLowerCase().includes('graph') || prompt.toLowerCase().includes('visualize')) {
+  } else if (
+    prompt.toLowerCase().includes('chart') ||
+    prompt.toLowerCase().includes('graph') ||
+    prompt.toLowerCase().includes('visualize')
+  ) {
     chainOfThought = `The user wants to create a visualization. I need to identify the appropriate chart type based on the data and user request, select the relevant columns for x-axis and y-axis, and configure the chart settings.`;
     taskPlan = [
-      "Determine appropriate chart type",
-      "Select data columns for visualization",
-      "Configure chart settings",
-      "Generate chart configuration"
+      'Determine appropriate chart type',
+      'Select data columns for visualization',
+      'Configure chart settings',
+      'Generate chart configuration',
     ];
     executionSteps = [
-      "Analyze data types in columns",
-      "Match data to appropriate chart type",
-      "Select primary and secondary axes",
-      "Generate configuration object"
+      'Analyze data types in columns',
+      'Match data to appropriate chart type',
+      'Select primary and secondary axes',
+      'Generate configuration object',
     ];
-  } else if (prompt.toLowerCase().includes('calculate') || prompt.toLowerCase().includes('sum') || prompt.toLowerCase().includes('average')) {
+  } else if (
+    prompt.toLowerCase().includes('calculate') ||
+    prompt.toLowerCase().includes('sum') ||
+    prompt.toLowerCase().includes('average')
+  ) {
     chainOfThought = `The user wants to perform a calculation. I need to identify the target column, determine the calculation type, and possibly define a range or conditions for the calculation.`;
     taskPlan = [
-      "Identify target column(s)",
-      "Determine calculation type",
-      "Apply calculation",
-      "Return result with context"
+      'Identify target column(s)',
+      'Determine calculation type',
+      'Apply calculation',
+      'Return result with context',
     ];
     executionSteps = [
-      "Validate column data types",
-      "Construct calculation formula",
-      "Apply formula to data",
-      "Format and return result"
+      'Validate column data types',
+      'Construct calculation formula',
+      'Apply formula to data',
+      'Format and return result',
     ];
   } else {
     chainOfThought = `The user has made a general request. I'll interpret the request, consider possible interpretations, and provide the most helpful response based on the available data.`;
     taskPlan = [
-      "Interpret user request",
-      "Analyze available data",
-      "Formulate appropriate response",
-      "Provide helpful information"
+      'Interpret user request',
+      'Analyze available data',
+      'Formulate appropriate response',
+      'Provide helpful information',
     ];
     executionSteps = [
-      "Parse user intent from request",
-      "Scan data for relevant information",
-      "Structure response appropriately",
-      "Include relevant examples or suggestions"
+      'Parse user intent from request',
+      'Scan data for relevant information',
+      'Structure response appropriately',
+      'Include relevant examples or suggestions',
     ];
   }
 
   // Generate a sample response based on the prompt
   let textResponse = `Based on my analysis, I've identified the following insights from your data. `;
-  
+
   if (sheetData && sheetData.rows.length > 0) {
     textResponse += `Your dataset contains ${sheetData.rows.length} rows and ${sheetData.columns.length} columns. `;
-    
+
     // Add more specific insights based on data
-    const numericColumns = sheetData.columns.filter(col => {
+    const numericColumns = sheetData.columns.filter((col) => {
       const sampleValue = sheetData.rows[0][col];
       return sampleValue !== null && sampleValue !== undefined && !isNaN(Number(sampleValue));
     });
-    
+
     if (numericColumns.length > 0) {
       textResponse += `I found ${numericColumns.length} numeric columns: ${numericColumns.join(', ')}. `;
     }
   } else {
     textResponse += `No data is currently loaded for analysis. `;
   }
-  
+
   textResponse += `Would you like me to perform a specific analysis or transformation?`;
 
   return {
@@ -171,94 +185,112 @@ const generateMockEnhancedResponse = (prompt: string, sheetData: SheetData | nul
   };
 };
 
-const generateOfflineFallback = (prompt: string, sheetData: SheetData | null): EnhancedAnalysisResult => {
+const generateOfflineFallback = (
+  prompt: string,
+  sheetData: SheetData | null
+): EnhancedAnalysisResult => {
   // Provide intelligent offline responses that mimic AI behavior
   const lowerPrompt = prompt.toLowerCase();
-  
+
   if (lowerPrompt.includes('hello') || lowerPrompt.includes('hi') || lowerPrompt.includes('hey')) {
     return {
-      textResponse: "Hello! I'm your data assistant. I can help you analyze your spreadsheet, create visualizations, apply formatting, and more. What would you like to do?",
-      chainOfThought: "User initiated greeting. Respond with welcome message and offer assistance.",
-      taskPlan: ["Greet user", "Offer help", "Wait for specific request"],
-      executionSteps: ["Display welcome message", "List capabilities"],
-      confidence: 1.0
-    };
-  }
-  
-  if (lowerPrompt.includes('analyze') || lowerPrompt.includes('summary') || lowerPrompt.includes('insight')) {
-    const dataSummary = sheetData 
-      ? `Your dataset has ${sheetData.rows.length} rows and ${sheetData.columns.length} columns: ${sheetData.columns.join(', ')}.` 
-      : "No data is loaded for analysis.";
-    
-    return {
-      textResponse: `I'd be happy to analyze your data. ${dataSummary} Could you specify what particular aspect you'd like me to focus on? For example, you can ask me to calculate averages, find patterns, create charts, or filter specific records.`,
-      chainOfThought: "User requested data analysis. Summarize available data and ask for specifics.",
-      taskPlan: ["Summarize data", "Request specifics", "Prepare for analysis"],
-      executionSteps: ["Count rows/columns", "List column names", "Suggest specific analyses"],
-      confidence: 0.9
-    };
-  }
-  
-  if (lowerPrompt.includes('chart') || lowerPrompt.includes('graph') || lowerPrompt.includes('visual')) {
-    return {
-      textResponse: "I can help create various charts from your data. Please specify what type of chart you'd like (e.g., bar, line, pie) and which columns to use for the visualization.",
-      chainOfThought: "User wants to create a visualization. Explain the process and request specific details.",
-      taskPlan: ["Explain chart creation", "Request chart type", "Request data columns"],
-      executionSteps: ["List chart types", "Identify data columns", "Configure visualization"],
-      confidence: 0.85
-    };
-  }
-  
-  if (lowerPrompt.includes('filter') || lowerPrompt.includes('find') || lowerPrompt.includes('where')) {
-    return {
-      textResponse: "I'll start by searching for relevant cells to apply your filter.",
-      chainOfThought: "User wants to filter data. Searching for headers first.",
-      taskPlan: ["Locate headers", "Identify filter column", "Apply filter"],
-      executionSteps: ["Call find_cells", "Parse criteria"],
-      confidence: 0.8,
-      toolCalls: [
-        { tool: 'find_cells', parameters: { query: 'ID' } }
-      ]
+      textResponse:
+        "Hello! I'm your data assistant. I can help you analyze your spreadsheet, create visualizations, apply formatting, and more. What would you like to do?",
+      chainOfThought: 'User initiated greeting. Respond with welcome message and offer assistance.',
+      taskPlan: ['Greet user', 'Offer help', 'Wait for specific request'],
+      executionSteps: ['Display welcome message', 'List capabilities'],
+      confidence: 1.0,
     };
   }
 
-  if (lowerPrompt.includes('calculate') || lowerPrompt.includes('sum') || lowerPrompt.includes('average')) {
+  if (
+    lowerPrompt.includes('analyze') ||
+    lowerPrompt.includes('summary') ||
+    lowerPrompt.includes('insight')
+  ) {
+    const dataSummary = sheetData
+      ? `Your dataset has ${sheetData.rows.length} rows and ${sheetData.columns.length} columns: ${sheetData.columns.join(', ')}.`
+      : 'No data is loaded for analysis.';
+
     return {
-        textResponse: "I'll analyze the numeric ranges in your sheet to perform the requested calculation.",
-        chainOfThought: "User requested a calculation. Inspecting ranges for numeric data.",
-        taskPlan: ["Identify numeric columns", "Perform calculation", "Verify result"],
-        executionSteps: ["Call inspect_range", "Apply formula"],
-        confidence: 0.9,
-        toolCalls: [
-            { tool: 'inspect_range', parameters: { range: 'A1:C20' } }
-        ]
+      textResponse: `I'd be happy to analyze your data. ${dataSummary} Could you specify what particular aspect you'd like me to focus on? For example, you can ask me to calculate averages, find patterns, create charts, or filter specific records.`,
+      chainOfThought:
+        'User requested data analysis. Summarize available data and ask for specifics.',
+      taskPlan: ['Summarize data', 'Request specifics', 'Prepare for analysis'],
+      executionSteps: ['Count rows/columns', 'List column names', 'Suggest specific analyses'],
+      confidence: 0.9,
     };
   }
-  
-  // Default response - Simulate multi-turn tool usage
-  if (prompt.includes("results")) {
+
+  if (
+    lowerPrompt.includes('chart') ||
+    lowerPrompt.includes('graph') ||
+    lowerPrompt.includes('visual')
+  ) {
     return {
-        textResponse: "I've processed the tool results and verified the data. The spreadsheet has been updated successfully.",
-        chainOfThought: "Tool execution finished. Verification passed. Finalizing task.",
-        taskPlan: ["Complete task"],
-        executionSteps: ["Summarize changes"],
-        confidence: 0.95,
-        toolCalls: []
+      textResponse:
+        "I can help create various charts from your data. Please specify what type of chart you'd like (e.g., bar, line, pie) and which columns to use for the visualization.",
+      chainOfThought:
+        'User wants to create a visualization. Explain the process and request specific details.',
+      taskPlan: ['Explain chart creation', 'Request chart type', 'Request data columns'],
+      executionSteps: ['List chart types', 'Identify data columns', 'Configure visualization'],
+      confidence: 0.85,
+    };
+  }
+
+  if (
+    lowerPrompt.includes('filter') ||
+    lowerPrompt.includes('find') ||
+    lowerPrompt.includes('where')
+  ) {
+    return {
+      textResponse: "I'll start by searching for relevant cells to apply your filter.",
+      chainOfThought: 'User wants to filter data. Searching for headers first.',
+      taskPlan: ['Locate headers', 'Identify filter column', 'Apply filter'],
+      executionSteps: ['Call find_cells', 'Parse criteria'],
+      confidence: 0.8,
+      toolCalls: [{ tool: 'find_cells', parameters: { query: 'ID' } }],
+    };
+  }
+
+  if (
+    lowerPrompt.includes('calculate') ||
+    lowerPrompt.includes('sum') ||
+    lowerPrompt.includes('average')
+  ) {
+    return {
+      textResponse:
+        "I'll analyze the numeric ranges in your sheet to perform the requested calculation.",
+      chainOfThought: 'User requested a calculation. Inspecting ranges for numeric data.',
+      taskPlan: ['Identify numeric columns', 'Perform calculation', 'Verify result'],
+      executionSteps: ['Call inspect_range', 'Apply formula'],
+      confidence: 0.9,
+      toolCalls: [{ tool: 'inspect_range', parameters: { range: 'A1:C20' } }],
+    };
+  }
+
+  // Default response - Simulate multi-turn tool usage
+  if (prompt.includes('results')) {
+    return {
+      textResponse:
+        "I've processed the tool results and verified the data. The spreadsheet has been updated successfully.",
+      chainOfThought: 'Tool execution finished. Verification passed. Finalizing task.',
+      taskPlan: ['Complete task'],
+      executionSteps: ['Summarize changes'],
+      confidence: 0.95,
+      toolCalls: [],
     };
   }
 
   return {
     textResponse: `I understand you're asking about "${prompt}". I'll start by inspecting the current state of the workbook.`,
-    chainOfThought: "General request received. Initiating multi-turn workflow with inspection.",
-    taskPlan: ["Inspect workbook", "Plan edits", "Apply changes", "Verify"],
-    executionSteps: ["Call inspect_range", "Analyze results"],
+    chainOfThought: 'General request received. Initiating multi-turn workflow with inspection.',
+    taskPlan: ['Inspect workbook', 'Plan edits', 'Apply changes', 'Verify'],
+    executionSteps: ['Call inspect_range', 'Analyze results'],
     confidence: 0.85,
-    toolCalls: [
-        { tool: 'inspect_range', parameters: { range: 'A1:E10' } }
-    ]
+    toolCalls: [{ tool: 'inspect_range', parameters: { range: 'A1:E10' } }],
   };
 };
-
 
 export const generateSmartColumnData = async (
   sheetData: SheetData | null,
@@ -267,11 +299,11 @@ export const generateSmartColumnData = async (
 ): Promise<any[]> => {
   // If no data is available, return empty array
   if (!sheetData) return [];
-  
+
   // Generate mock data based on the prompt and existing data patterns
   const rowCount = sheetData.rows.length;
   const mockData: any[] = [];
-  
+
   // Simple heuristic to generate data based on the prompt
   if (prompt.toLowerCase().includes('email')) {
     for (let i = 0; i < rowCount; i++) {
@@ -287,7 +319,11 @@ export const generateSmartColumnData = async (
       const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
       mockData.push(date.toISOString().split('T')[0]);
     }
-  } else if (prompt.toLowerCase().includes('price') || prompt.toLowerCase().includes('cost') || prompt.toLowerCase().includes('amount')) {
+  } else if (
+    prompt.toLowerCase().includes('price') ||
+    prompt.toLowerCase().includes('cost') ||
+    prompt.toLowerCase().includes('amount')
+  ) {
     for (let i = 0; i < rowCount; i++) {
       mockData.push(Math.floor(Math.random() * 1000) + 10);
     }
@@ -340,21 +376,22 @@ export const generateFormulaFromDescription = async (
  */
 const suggestFormulaOffline = (description: string): string => {
   const desc = description.toLowerCase();
-  
+
   if (desc.includes('sum')) return '=SUM(A:A)';
   if (desc.includes('average') || desc.includes('mean')) return '=AVERAGE(A:A)';
   if (desc.includes('count')) return '=COUNT(A:A)';
   if (desc.includes('min')) return '=MIN(A:A)';
   if (desc.includes('max')) return '=MAX(A:A)';
   if (desc.includes('if')) return '=IF(A1>10,"Yes","No")';
-  if (desc.includes('lookup') || desc.includes('vlookup')) return '=VLOOKUP(value, table, col_index, FALSE)';
+  if (desc.includes('lookup') || desc.includes('vlookup'))
+    return '=VLOOKUP(value, table, col_index, FALSE)';
   if (desc.includes('xlookup')) return '=XLOOKUP(lookup, lookup_array, return_array)';
   if (desc.includes('index')) return '=INDEX(array, row_num, [col_num])';
   if (desc.includes('match')) return '=MATCH(lookup_value, lookup_array, 0)';
   if (desc.includes('concatenate') || desc.includes('join')) return '=TEXTJOIN(", ", TRUE, A1:A10)';
   if (desc.includes('date')) return '=TODAY()';
   if (desc.includes('payment') || desc.includes('pmt')) return '=PMT(rate, nper, pv)';
-  
+
   return '=FORMULA_HERE';
 };
 
@@ -363,17 +400,20 @@ const suggestFormulaOffline = (description: string): string => {
  */
 export const chatWithCore = async (prompt: string, systemContext?: string): Promise<string> => {
   try {
-    const apiResponse = await analyzeDataViaAPI({
-      prompt: systemContext ? `${systemContext}\n\nUser Request: ${prompt}` : prompt,
+    // 🤖 Astra: Using generateContentViaAPI instead of analyzeDataViaAPI for simple text tasks
+    // to prevent context bloat and token waste from heavy agent endpoints.
+    const apiResponse = await generateContentViaAPI({
+      prompt,
+      context: systemContext,
     });
 
-    if (apiResponse.success && apiResponse.data) {
-      return apiResponse.data.textResponse;
+    if (apiResponse.success && apiResponse.content) {
+      return apiResponse.content;
     }
 
     return "I'm sorry, I couldn't process that request.";
   } catch (error) {
     console.error('AI Chat Error:', error);
-    return "Error connecting to AI service.";
+    return 'Error connecting to AI service.';
   }
 };
