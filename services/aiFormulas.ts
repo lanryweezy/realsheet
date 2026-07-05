@@ -7,6 +7,14 @@ import { generateContent as generateContentViaAPI } from './apiClient';
 import { SheetData, Row } from '../types';
 
 /**
+ * Helper to prevent context blowout on large ranges
+ */
+const truncateData = <T>(data: T[], maxItems: number = 100, keepTail: boolean = false): T[] => {
+  if (!Array.isArray(data) || data.length <= maxItems) return data;
+  return keepTail ? data.slice(-maxItems) : data.slice(0, maxItems);
+};
+
+/**
  * =AI(prompt, [context])
  * General purpose AI function for any query
  * Example: =AI("What is the capital of France?")
@@ -43,7 +51,7 @@ export const evaluateINFER = async (
 ): Promise<number | string> => {
   try {
     const prompt = `Given this data:
-${JSON.stringify(dataRange, null, 2)}
+${JSON.stringify(truncateData(dataRange), null, 2)}
 
 Predict the value for column "${targetColumn}" given this input:
 ${JSON.stringify(predictionData)}
@@ -192,7 +200,7 @@ export const evaluateANALYZE = async (dataRange: any[][], analysisType: string):
   try {
     const prompt = `Perform ${analysisType} analysis on this data and provide key insights:
 
-${JSON.stringify(dataRange, null, 2)}
+${JSON.stringify(truncateData(dataRange), null, 2)}
 
 Provide a concise summary of findings.`;
     
@@ -211,7 +219,7 @@ Provide a concise summary of findings.`;
  */
 export const evaluateFORECAST = async (historicalData: number[], periodsAhead: number): Promise<string> => {
   try {
-    const prompt = `Given this historical data: ${historicalData.join(', ')}
+    const prompt = `Given this historical data: ${truncateData(historicalData, 100, true).join(', ')}
 
 Forecast the next ${periodsAhead} values. Respond with ONLY the forecasted values separated by commas, no explanation.`;
     
