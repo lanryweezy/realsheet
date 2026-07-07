@@ -36,6 +36,9 @@ export const evaluateAI = async (prompt: string, context?: string): Promise<stri
  * Predict values based on patterns in data
  * Example: =INFER(A1:C10, "Sales", A11)
  */
+// AI Quality: Context Efficiency
+// Truncate unbounded arrays to prevent context window blowout and 400 Bad Request errors.
+// Keep the head of the data range for inference.
 export const evaluateINFER = async (
   dataRange: any[][],
   targetColumn: string,
@@ -43,7 +46,7 @@ export const evaluateINFER = async (
 ): Promise<number | string> => {
   try {
     const prompt = `Given this data:
-${JSON.stringify(dataRange, null, 2)}
+${JSON.stringify(dataRange.slice(0, 100), null, 2)}
 
 Predict the value for column "${targetColumn}" given this input:
 ${JSON.stringify(predictionData)}
@@ -188,11 +191,14 @@ export const evaluateGENERATE = async (prompt: string, format: string = 'text'):
  * Example: =ANALYZE(A1:A100, "outliers")
  * Example: =ANALYZE(A1:B100, "correlation")
  */
+// AI Quality: Context Efficiency
+// Truncate unbounded arrays to prevent context window blowout.
+// Keep the head of the data range for analysis.
 export const evaluateANALYZE = async (dataRange: any[][], analysisType: string): Promise<string> => {
   try {
     const prompt = `Perform ${analysisType} analysis on this data and provide key insights:
 
-${JSON.stringify(dataRange, null, 2)}
+${JSON.stringify(dataRange.slice(0, 100), null, 2)}
 
 Provide a concise summary of findings.`;
     
@@ -209,9 +215,12 @@ Provide a concise summary of findings.`;
  * Forecast future values based on historical data
  * Example: =FORECAST(A1:A12, 3)
  */
+// AI Quality: Context Efficiency
+// Truncate unbounded arrays to prevent context window blowout.
+// Keep the tail of historical data for forecasting as recent data is most relevant.
 export const evaluateFORECAST = async (historicalData: number[], periodsAhead: number): Promise<string> => {
   try {
-    const prompt = `Given this historical data: ${historicalData.join(', ')}
+    const prompt = `Given this historical data: ${historicalData.slice(-100).join(', ')}
 
 Forecast the next ${periodsAhead} values. Respond with ONLY the forecasted values separated by commas, no explanation.`;
     
