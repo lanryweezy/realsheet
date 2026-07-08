@@ -42,8 +42,13 @@ export const evaluateINFER = async (
   predictionData: any[]
 ): Promise<number | string> => {
   try {
+    // Astra AI Quality: Direction-aware truncation to prevent context blowout
+    // For INFER, we need the head of the data to understand the schema/patterns
+    const truncatedData = dataRange.length > 100 ? dataRange.slice(0, 100) : dataRange;
+    const dataSuffix = dataRange.length > 100 ? '\n... (data truncated to save context)' : '';
+
     const prompt = `Given this data:
-${JSON.stringify(dataRange, null, 2)}
+${JSON.stringify(truncatedData, null, 2)}${dataSuffix}
 
 Predict the value for column "${targetColumn}" given this input:
 ${JSON.stringify(predictionData)}
@@ -190,9 +195,14 @@ export const evaluateGENERATE = async (prompt: string, format: string = 'text'):
  */
 export const evaluateANALYZE = async (dataRange: any[][], analysisType: string): Promise<string> => {
   try {
+    // Astra AI Quality: Direction-aware truncation to prevent context blowout
+    // For ANALYZE, we need a representative sample (head) to perform analysis
+    const truncatedData = dataRange.length > 100 ? dataRange.slice(0, 100) : dataRange;
+    const dataSuffix = dataRange.length > 100 ? '\n... (data truncated to save context)' : '';
+
     const prompt = `Perform ${analysisType} analysis on this data and provide key insights:
 
-${JSON.stringify(dataRange, null, 2)}
+${JSON.stringify(truncatedData, null, 2)}${dataSuffix}
 
 Provide a concise summary of findings.`;
     
@@ -211,7 +221,12 @@ Provide a concise summary of findings.`;
  */
 export const evaluateFORECAST = async (historicalData: number[], periodsAhead: number): Promise<string> => {
   try {
-    const prompt = `Given this historical data: ${historicalData.join(', ')}
+    // Astra AI Quality: Direction-aware truncation to prevent context blowout
+    // For FORECAST, we need the tail of the data (most recent points) for accurate prediction
+    const truncatedData = historicalData.length > 100 ? historicalData.slice(-100) : historicalData;
+    const dataPrefix = historicalData.length > 100 ? '... (data truncated to save context), ' : '';
+
+    const prompt = `Given this historical data: ${dataPrefix}${truncatedData.join(', ')}
 
 Forecast the next ${periodsAhead} values. Respond with ONLY the forecasted values separated by commas, no explanation.`;
     
