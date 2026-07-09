@@ -19,3 +19,6 @@
 ## 2024-07-26 - Exponential Backoff for AI API Resilience
 **Learning:** Client-side AI API requests are vulnerable to transient errors such as rate limits (429) or temporary server errors (5xx). Without retry logic, these transient failures result in immediate poor user experiences and failed AI operations.
 **Action:** Always wrap external AI API calls in a retry helper like `fetchWithRetry` that implements exponential backoff. This ensures transient issues are automatically mitigated, increasing resilience. Do not apply this logic to health check endpoints, which should fail fast to accurately reflect immediate service availability.
+## 2024-07-27 - Context Blowout from Unbounded Spreadsheet Ranges
+**Learning:** Passing unbounded data arrays (e.g., full spreadsheet ranges) to AI functions like `=INFER()`, `=ANALYZE()`, or `=FORECAST()` can cause the context window to blow out, resulting in massive token waste and 400 Bad Request errors.
+**Action:** Implement direction-aware truncation on data arrays passed to prompts. For example, keep the head of the array (e.g., `dataRange.slice(0, 100)`) for INFER/ANALYZE to establish patterns, and keep the tail (e.g., `historicalData.slice(-100)`) for FORECAST to preserve the most recent signal.
