@@ -46,7 +46,12 @@ export const generateFormSchema = async (sheetData: SheetData): Promise<FormSche
     try {
         const jsonMatch = response.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-            return JSON.parse(jsonMatch[0]);
+            const parsed = JSON.parse(jsonMatch[0]);
+            // ASTRA: Validate expected JSON structure to prevent silent downstream errors
+            if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.fields)) {
+                throw new Error('AI output missing required fields array');
+            }
+            return parsed;
         }
         throw new Error('Invalid form schema format');
     } catch (e) {
