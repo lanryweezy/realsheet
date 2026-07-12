@@ -6,6 +6,11 @@
 import { generateContent as generateContentViaAPI } from './apiClient';
 import { SheetData, Row } from '../types';
 
+// AI Quality: Prevent context window blowouts by limiting unbounded array inputs
+const MAX_DATA_ROWS_INFER = 100;
+const MAX_DATA_ROWS_ANALYZE = 200;
+const MAX_FORECAST_ITEMS = 500;
+
 /**
  * =AI(prompt, [context])
  * General purpose AI function for any query
@@ -43,7 +48,7 @@ export const evaluateINFER = async (
 ): Promise<number | string> => {
   try {
     const prompt = `Given this data:
-${JSON.stringify(dataRange, null, 2)}
+${JSON.stringify(dataRange.length > MAX_DATA_ROWS_INFER ? dataRange.slice(0, MAX_DATA_ROWS_INFER) : dataRange, null, 2)}
 
 Predict the value for column "${targetColumn}" given this input:
 ${JSON.stringify(predictionData)}
@@ -192,7 +197,7 @@ export const evaluateANALYZE = async (dataRange: any[][], analysisType: string):
   try {
     const prompt = `Perform ${analysisType} analysis on this data and provide key insights:
 
-${JSON.stringify(dataRange, null, 2)}
+${JSON.stringify(dataRange.length > MAX_DATA_ROWS_ANALYZE ? dataRange.slice(0, MAX_DATA_ROWS_ANALYZE) : dataRange, null, 2)}
 
 Provide a concise summary of findings.`;
     
@@ -211,7 +216,7 @@ Provide a concise summary of findings.`;
  */
 export const evaluateFORECAST = async (historicalData: number[], periodsAhead: number): Promise<string> => {
   try {
-    const prompt = `Given this historical data: ${historicalData.join(', ')}
+    const prompt = `Given this historical data: ${historicalData.length > MAX_FORECAST_ITEMS ? historicalData.slice(-MAX_FORECAST_ITEMS).join(', ') : historicalData.join(', ')}
 
 Forecast the next ${periodsAhead} values. Respond with ONLY the forecasted values separated by commas, no explanation.`;
     
