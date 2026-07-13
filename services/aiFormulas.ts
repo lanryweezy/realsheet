@@ -42,8 +42,13 @@ export const evaluateINFER = async (
   predictionData: any[]
 ): Promise<number | string> => {
   try {
-    const prompt = `Given this data:
-${JSON.stringify(dataRange, null, 2)}
+    // Truncate dataRange to prevent context blowout (keep head for patterns)
+    const MAX_ROWS = 100;
+    const truncatedData = dataRange.slice(0, MAX_ROWS);
+    const hasMore = dataRange.length > MAX_ROWS;
+
+    const prompt = `Given this data${hasMore ? ` (showing first ${MAX_ROWS} rows)` : ''}:
+${JSON.stringify(truncatedData, null, 2)}
 
 Predict the value for column "${targetColumn}" given this input:
 ${JSON.stringify(predictionData)}
@@ -190,9 +195,14 @@ export const evaluateGENERATE = async (prompt: string, format: string = 'text'):
  */
 export const evaluateANALYZE = async (dataRange: any[][], analysisType: string): Promise<string> => {
   try {
-    const prompt = `Perform ${analysisType} analysis on this data and provide key insights:
+    // Truncate dataRange to prevent context blowout (keep head for sample structure)
+    const MAX_ROWS = 100;
+    const truncatedData = dataRange.slice(0, MAX_ROWS);
+    const hasMore = dataRange.length > MAX_ROWS;
 
-${JSON.stringify(dataRange, null, 2)}
+    const prompt = `Perform ${analysisType} analysis on this data${hasMore ? ` (showing first ${MAX_ROWS} rows)` : ''} and provide key insights:
+
+${JSON.stringify(truncatedData, null, 2)}
 
 Provide a concise summary of findings.`;
     
@@ -211,7 +221,12 @@ Provide a concise summary of findings.`;
  */
 export const evaluateFORECAST = async (historicalData: number[], periodsAhead: number): Promise<string> => {
   try {
-    const prompt = `Given this historical data: ${historicalData.join(', ')}
+    // Truncate historicalData to prevent context blowout (keep tail for recent trends)
+    const MAX_ITEMS = 100;
+    const truncatedData = historicalData.slice(-MAX_ITEMS);
+    const hasMore = historicalData.length > MAX_ITEMS;
+
+    const prompt = `Given this historical data${hasMore ? ` (showing last ${MAX_ITEMS} periods)` : ''}: ${truncatedData.join(', ')}
 
 Forecast the next ${periodsAhead} values. Respond with ONLY the forecasted values separated by commas, no explanation.`;
     
