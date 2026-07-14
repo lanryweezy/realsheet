@@ -42,8 +42,10 @@ export const evaluateINFER = async (
   predictionData: any[]
 ): Promise<number | string> => {
   try {
+    // Truncate from head to preserve schema context and prevent context window blowout
+    const truncatedData = dataRange.slice(0, 100);
     const prompt = `Given this data:
-${JSON.stringify(dataRange, null, 2)}
+${JSON.stringify(truncatedData, null, 2)}
 
 Predict the value for column "${targetColumn}" given this input:
 ${JSON.stringify(predictionData)}
@@ -190,9 +192,11 @@ export const evaluateGENERATE = async (prompt: string, format: string = 'text'):
  */
 export const evaluateANALYZE = async (dataRange: any[][], analysisType: string): Promise<string> => {
   try {
+    // Truncate from head to prevent context window blowout
+    const truncatedData = dataRange.slice(0, 100);
     const prompt = `Perform ${analysisType} analysis on this data and provide key insights:
 
-${JSON.stringify(dataRange, null, 2)}
+${JSON.stringify(truncatedData, null, 2)}
 
 Provide a concise summary of findings.`;
     
@@ -211,7 +215,9 @@ Provide a concise summary of findings.`;
  */
 export const evaluateFORECAST = async (historicalData: number[], periodsAhead: number): Promise<string> => {
   try {
-    const prompt = `Given this historical data: ${historicalData.join(', ')}
+    // Truncate from tail to keep the most recent data for time-series forecasting and prevent context window blowout
+    const truncatedData = historicalData.slice(-100);
+    const prompt = `Given this historical data: ${truncatedData.join(', ')}
 
 Forecast the next ${periodsAhead} values. Respond with ONLY the forecasted values separated by commas, no explanation.`;
     
