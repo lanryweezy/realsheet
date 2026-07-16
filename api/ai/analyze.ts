@@ -162,6 +162,7 @@ Note: For tool calls involving ranges, use A1 notation (e.g., "A1:C5"). For dele
 
     // Try to parse as JSON
     let parsedResponse;
+    let isParseSuccessful = false;
     try {
       // Extract JSON from response if it contains markdown
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -169,18 +170,22 @@ Note: For tool calls involving ranges, use A1 notation (e.g., "A1:C5"). For dele
         responseText = jsonMatch[0];
       }
       parsedResponse = JSON.parse(responseText);
+      isParseSuccessful = true;
+    } catch {
+      // If JSON parsing fails, fall back gracefully
+      parsedResponse = {
+        textResponse: responseText,
+        confidence: 0.5 // Lower confidence for unformatted output
+      };
+    }
 
-      // ✅ GOOD: Output validation before use
-      // Validate that the parsed output actually conforms to the expected contract
+    // ✅ GOOD: Output validation separated from parsing
+    // If we successfully parsed JSON, validate it conforms to the contract.
+    // If it fails this check, we throw explicitly to trigger the error handler (no silent data corruption).
+    if (isParseSuccessful) {
       if (!parsedResponse || typeof parsedResponse !== 'object' || (!('textResponse' in parsedResponse) && !('toolCalls' in parsedResponse))) {
         throw new Error('Unexpected model response shape: missing required fields');
       }
-    } catch {
-      // If parsing fails, return as text response
-      parsedResponse = {
-        textResponse: responseText,
-        confidence: 0.8
-      };
     }
 
     // Return successful response
