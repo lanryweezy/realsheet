@@ -28,3 +28,6 @@
 ## 2026-07-16 - Safe AI Output Validation
 **Learning:** Wrapping `JSON.parse()` and output schema validation within the same `try/catch` block risks silently catching structural contract errors as parse errors. This can cause the system to accept architecturally invalid data and mask logic failures.
 **Action:** Always separate the `try/catch` for parsing JSON from the subsequent structural validation logic. If parsing succeeds but validation fails, throw an explicit error to prevent silent fallbacks and data corruption.
+## 2026-07-18 - Context Bloat from Unbounded Conversation History
+**Learning:** Sending the entire unbounded conversation history on every API call (e.g., in chat panels) leads to context blowout, increased token costs, and potentially API 400 errors once limits are reached.
+**Action:** Always truncate conversation history arrays (e.g., using `.slice(-5)`) before sending them in AI prompts to maintain efficiency while preserving sufficient context for the immediate turn.
