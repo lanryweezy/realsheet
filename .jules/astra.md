@@ -31,3 +31,6 @@
 ## 2026-07-18 - Context Bloat from Unbounded Conversation History
 **Learning:** Sending the entire unbounded conversation history on every API call (e.g., in chat panels) leads to context blowout, increased token costs, and potentially API 400 errors once limits are reached.
 **Action:** Always truncate conversation history arrays (e.g., using `.slice(-5)`) before sending them in AI prompts to maintain efficiency while preserving sufficient context for the immediate turn.
+## 2024-07-28 - Injecting Conversation History in Serverless AI endpoints
+**Learning:** Reusing single-turn API endpoints (like `generateContent`) for multi-turn conversational agents leads to context loss if the `history` array passed by the client is not explicitly formatted and injected into the prompt. The Gemini SDK's `startChat` maintains this automatically, but stateless serverless endpoints using `generateContent` must manually format and inject the conversation history into the system prompt.
+**Action:** Always verify that the `history` array is extracted from the request payload, formatted into a readable string (e.g., `User: ... \n Agent: ...`), and injected into the `prompt` string before calling `model.generateContent()`.
