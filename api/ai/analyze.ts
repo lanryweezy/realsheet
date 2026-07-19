@@ -98,11 +98,23 @@ Data Context:
 - Sample: ${JSON.stringify(data.rows?.slice(0, 3) || [])}
 ` : '';
 
+    // ASTRA: Inject conversation history to prevent context loss across agent turns
+    // Truncate to last 5 interactions to prevent context blowout and token waste
+    const historyContext = history && history.length > 0 ? `
+Previous Conversation Context:
+${history.slice(-5).map((h: any) => {
+  const role = h.role === 'user' ? 'User' : 'Agent';
+  const content = h.parts?.[0]?.text || h.content || '';
+  return `${role}: ${content}`;
+}).join('\n\n')}
+` : '';
+
     // Create enhanced prompt inspired by Spreadsheet-RL
     const enhancedPrompt = `
 You are an advanced spreadsheet automation agent (NexAgent). Your goal is to edit workbooks to satisfy the user's request.
 
 ${context}
+${historyContext}
 
 Role: Edit Excel workbooks to satisfy the user's requested end state. The workbook itself is the answer; do not answer conceptually.
 
