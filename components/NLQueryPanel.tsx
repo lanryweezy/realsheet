@@ -65,7 +65,9 @@ const NLQueryPanel: React.FC<NLQueryPanelProps> = ({
       const response = await analyzeDataViaAPI({
         prompt: userQuery,
         data: data,
-        history: results.map(r => ({ role: 'user', content: r.query }))
+        // ASTRA: Truncate conversation history to the last 5 interactions to prevent
+        // unbounded context growth and token waste on long-running sessions
+        history: results.slice(-5).map(r => ({ role: 'user', content: r.query }))
       });
 
       if (response.success && response.data) {
@@ -273,7 +275,7 @@ const NLQueryPanel: React.FC<NLQueryPanelProps> = ({
             </button>
           </form>
           <p className="text-xs text-slate-500 mt-2">
-            Examples: "What's the average?", "Create a bar chart", "Find outliers", "Summarize the data"
+            Examples: &quot;What&apos;s the average?&quot;, &quot;Create a bar chart&quot;, &quot;Find outliers&quot;, &quot;Summarize the data&quot;
           </p>
         </div>
       </div>
