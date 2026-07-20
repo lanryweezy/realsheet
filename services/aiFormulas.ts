@@ -44,12 +44,13 @@ export const evaluateINFER = async (
   try {
     // Truncate to the first 100 rows to prevent context window blowout (AI quality concern)
     const truncatedData = dataRange.slice(0, 100);
+    const truncatedPredictionData = predictionData.slice(0, 100);
 
     const prompt = `Given this data:
 ${JSON.stringify(truncatedData, null, 2)}
 
 Predict the value for column "${targetColumn}" given this input:
-${JSON.stringify(predictionData)}
+${JSON.stringify(truncatedPredictionData)}
 
 Respond with ONLY the predicted value, no explanation.`;
     
